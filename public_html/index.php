@@ -93,10 +93,9 @@ if ($liveState['media'] !== false) {
         . '<span data-radio-duration>' . gmdate('i:s', $radioDuration) . '</span></small>'
         . '</div>'
         . '<div class="radio-home-controls">'
-        . '<button type="button" id="radio-home-listen">' . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '</button>'
-        . '<canvas class="radio-wave" id="radio-home-wave" width="240" height="42" aria-hidden="true"></canvas>'
+        . '<audio id="radio-home-audio" controls preload="metadata" src="' . htmlspecialchars($liveState['media']['stream_url'], ENT_QUOTES, 'UTF-8') . '"></audio>'
+        . '<canvas class="radio-wave" id="radio-home-wave" width="360" height="56" aria-hidden="true"></canvas>'
         . '</div>'
-        . '<audio id="radio-home-audio" preload="metadata" src="' . htmlspecialchars($liveState['media']['stream_url'], ENT_QUOTES, 'UTF-8') . '"></audio>'
         . '</div>';
 } else {
     $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
