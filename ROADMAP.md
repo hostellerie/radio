@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.4**.
+Current development version: **0.1.5**.
 
 Focus:
 
