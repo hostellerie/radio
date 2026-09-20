@@ -3,10 +3,23 @@ if (!isset($GLOBALS['_CONF'])) {
     die('This file cannot be used on its own.');
 }
 require_once __DIR__ . '/version.php';
+
+$radioLanguage = isset($_CONF['language']) ? basename((string) $_CONF['language']) : 'english';
+$radioLanguageFile = __DIR__ . '/language/' . $radioLanguage . '.php';
+if (!is_file($radioLanguageFile)) {
+    if (strpos($radioLanguage, 'french') === 0 && is_file(__DIR__ . '/language/french.php')) {
+        $radioLanguageFile = __DIR__ . '/language/french.php';
+    } else {
+        $radioLanguageFile = __DIR__ . '/language/english.php';
+    }
+}
+require_once $radioLanguageFile;
+
+require_once __DIR__ . '/autoinstall.php';
 require_once __DIR__ . '/lib/feed.inc.php';
 require_once __DIR__ . '/services.inc.php';
 
-global $_TABLES, $_DB_table_prefix, $_RADIO_CONF;
+global $_TABLES, $_DB_table_prefix, $_RADIO_CONF, $LANG_RADIO;
 $_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';

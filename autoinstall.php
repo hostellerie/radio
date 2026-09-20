@@ -3,7 +3,6 @@ if (!isset($GLOBALS['_CONF'])) {
     die('This file cannot be used on its own.');
 }
 require_once __DIR__ . '/version.php';
-require_once __DIR__ . '/functions.inc';
 
 function plugin_autoinstall_radio($pi_name)
 {
@@ -66,6 +65,12 @@ function plugin_compatible_with_this_version_radio($pi_name)
 
 function plugin_postinstall_radio($pi_name)
 {
+    global $_CONF;
+
+    if (!function_exists('RADIO_ensureStorage')) {
+        require_once $_CONF['path'] . 'plugins/radio/functions.inc';
+    }
+
     return RADIO_ensureStorage();
 }
 

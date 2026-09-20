@@ -648,6 +648,16 @@ Focus:
 - `plugin.json`;
 - automated `dist/` archive.
 
+## Uninstall and language bootstrap audit
+
+- [x] `functions.inc` loads the active Radio language file with French-family and English fallback.
+- [x] `functions.inc` loads `autoinstall.php`, making `plugin_autouninstall_radio()` discoverable even when Radio is disabled.
+- [x] `autoinstall.php` no longer loads `functions.inc` at file scope, avoiding the circular dependency.
+- [x] Geeklog core removes Radio configuration rows, tables, features, group, feeds/comments/topic assignments and plugin registration during auto-uninstall.
+- [x] Persistent audio/cover storage is intentionally not deleted by uninstall.
+
+---
+
 ## Plugin API callback contract audit
 
 - [x] `plugin_getadminoption_radio()` uses Geeklog's positional `array(label, url, count)` contract.

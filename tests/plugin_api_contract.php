@@ -55,6 +55,24 @@ radio_contract_require(
     preg_match('/function\s+plugin_autouninstall_radio\s*\(\s*\)/', $autoinstall) === 1,
     'Missing plugin_autouninstall_radio().'
 );
+radio_contract_require(
+    strpos($functions, "require_once __DIR__ . '/autoinstall.php';") !== false,
+    'functions.inc must load autoinstall.php so Geeklog can discover plugin_autouninstall_radio() for disabled plugins.'
+);
+radio_contract_require(
+    strpos($autoinstall, "require_once __DIR__ . '/functions.inc';") === false,
+    'autoinstall.php must not create a circular functions.inc dependency.'
+);
+radio_contract_require(
+    strpos($functions, "/language/' . $radioLanguage . '.php'") !== false
+        || strpos($functions, "/language/" . $radioLanguage") !== false
+        || strpos($functions, "language/' . $radioLanguage") !== false,
+    'functions.inc must bootstrap the Radio language file.'
+);
+radio_contract_require(
+    strpos($functions, "language/english.php") !== false,
+    'Radio language bootstrap must provide an English fallback.'
+);
 
 foreach (array(
     'radio_media',
