@@ -484,10 +484,18 @@
                                 });
                             }
                         });
-                    } else if (Math.abs(player.currentTime - data.current_media.offset) > 5 && !player.paused) {
-                        try {
-                            player.currentTime = data.current_media.offset;
-                        } catch (error) {}
+                    } else {
+                        if (Math.abs(player.currentTime - data.current_media.offset) > 5 && !player.paused) {
+                            try {
+                                player.currentTime = data.current_media.offset;
+                            } catch (error) {}
+                        }
+                        if (play && userStarted && player.paused) {
+                            wave.start();
+                            player.play().catch(function () {
+                                status.textContent = unavailableLabel;
+                            });
+                        }
                     }
                 })
                 .catch(function () {
