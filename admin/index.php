@@ -74,7 +74,9 @@ $content .= '<p><a href="' . htmlspecialchars($configUrl, ENT_QUOTES, 'UTF-8') .
     . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/programs.php', ENT_QUOTES, 'UTF-8') . '">'
     . htmlspecialchars($LANG_RADIO['manage_programs'], ENT_QUOTES, 'UTF-8') . '</a> · '
     . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['manage_schedule'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+    . htmlspecialchars($LANG_RADIO['manage_schedule'], ENT_QUOTES, 'UTF-8') . '</a> · '
+    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/rotation.php', ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8') . '</a></p>';
 
 if (SEC_hasRights('radio.upload')) {
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['upload_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
