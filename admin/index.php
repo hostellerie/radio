@@ -177,6 +177,10 @@ if (count($media) === 0) {
             . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8') . '</option></select></label> '
             . '<label><input type="checkbox" name="allow_download" value="1"' . (!empty($row['allow_download']) ? ' checked' : '') . '> '
             . htmlspecialchars($LANG_RADIO['allow_download'], ENT_QUOTES, 'UTF-8') . '</label></p>'
+            . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend>'
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown((int)$row['group_id'], 3) . '</label></p>'
+            . SEC_getPermissionsHTML((int)$row['perm_owner'], (int)$row['perm_group'], (int)$row['perm_members'], (int)$row['perm_anon'])
+            . '</fieldset>'
             . '<input type="hidden" name="media_id" value="' . $id . '">'
             . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
             . '<button type="submit" name="save_media" value="1">' . htmlspecialchars($LANG_RADIO['save'], ENT_QUOTES, 'UTF-8') . '</button> '
