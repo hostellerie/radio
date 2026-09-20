@@ -10,7 +10,7 @@ if ($row === false) {
     exit;
 }
 
-if ($download) {
+if ($download && RADIO_sourceKind($row) === 'local') {
     RADIO_recordStatEvent($id, 0, 'download', 'download', 0);
 }
 

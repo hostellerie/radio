@@ -427,6 +427,150 @@ function RADIO_sendCover($type, $id)
     exit;
 }
 
+
+function RADIO_externalUrlValidation($url, &$error)
+{
+    $error = '';
+    $url = trim((string) $url);
+    if ($url === '' || strlen($url) > 2048) {
+        $error = 'external_url_invalid';
+        return false;
+    }
+
+    $parts = @parse_url($url);
+    if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])
+        || isset($parts['user']) || isset($parts['pass'])) {
+        $error = 'external_url_invalid';
+        return false;
+    }
+
+    $scheme = strtolower($parts['scheme']);
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        $error = 'external_url_scheme';
+        return false;
+    }
+
+    $host = strtolower(rtrim($parts['host'], '.'));
+    if ($host === 'localhost' || substr($host, -10) === '.localhost' || substr($host, -6) === '.local') {
+        $error = 'external_url_private';
+        return false;
+    }
+
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        if (!filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $error = 'external_url_private';
+            return false;
+        }
+    } else {
+        $addresses = @gethostbynamel($host);
+        if (!is_array($addresses) || count($addresses) === 0) {
+            $error = 'external_url_unresolved';
+            return false;
+        }
+        foreach ($addresses as $address) {
+            if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                $error = 'external_url_private';
+                return false;
+            }
+        }
+    }
+
+    if (isset($parts['port'])) {
+        $port = (int) $parts['port'];
+        if ($port < 1 || $port > 65535) {
+            $error = 'external_url_invalid';
+            return false;
+        }
+    }
+
+    return $url;
+}
+
+function RADIO_sourceKind($row)
+{
+    if (!is_array($row) || empty($row['source_kind'])) {
+        return 'local';
+    }
+    return in_array($row['source_kind'], array('local','external','live'), true)
+        ? $row['source_kind']
+        : 'local';
+}
+
+function RADIO_saveExternalMedia($metadata, &$error)
+{
+    global $_TABLES, $_USER;
+
+    $error = '';
+    $sourceKind = isset($metadata['source_kind']) ? (string) $metadata['source_kind'] : 'external';
+    if (!in_array($sourceKind, array('external','live'), true)) {
+        $sourceKind = 'external';
+    }
+
+    $sourceUrl = RADIO_externalUrlValidation(
+        isset($metadata['source_url']) ? $metadata['source_url'] : '',
+        $error
+    );
+    if ($sourceUrl === false) {
+        return false;
+    }
+
+    $title = trim(isset($metadata['title']) ? (string) $metadata['title'] : '');
+    if ($title === '') {
+        $error = 'external_title_required';
+        return false;
+    }
+
+    $mediaType = isset($metadata['media_type']) ? $metadata['media_type'] : ($sourceKind === 'live' ? 'show' : 'music');
+    $allowedTypes = array('music','podcast','interview','show','chronicle','jingle','announcement','promo');
+    if (!in_array($mediaType, $allowedTypes, true)) {
+        $mediaType = $sourceKind === 'live' ? 'show' : 'music';
+    }
+
+    $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
+    $duration = $sourceKind === 'live' ? 0 : max(0, (int) (isset($metadata['duration']) ? $metadata['duration'] : 0));
+    $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
+    $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
+    list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, array());
+    $now = date('Y-m-d H:i:s');
+
+    DB_query(
+        "INSERT INTO {$_TABLES['radio_media']} "
+        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,"
+        . "source_kind,source_url,source_provider,source_external_id,source_attribution,source_license,"
+        . "storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,"
+        . "group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
+        . "'" . DB_escapeString(substr($title,0,255)) . "',"
+        . "'" . DB_escapeString(isset($metadata['description']) ? trim((string)$metadata['description']) : '') . "',"
+        . "'" . DB_escapeString($mediaType) . "',"
+        . "'" . DB_escapeString(substr(trim(isset($metadata['author']) ? (string)$metadata['author'] : ''),0,255)) . "',"
+        . "'" . DB_escapeString(substr(trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : ''),0,255)) . "',"
+        . max(0,(int)(isset($metadata['season_number']) ? $metadata['season_number'] : 0)) . ","
+        . max(0,(int)(isset($metadata['episode_number']) ? $metadata['episode_number'] : 0)) . ","
+        . "'" . DB_escapeString(isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : '') . "',"
+        . "'" . DB_escapeString($sourceKind) . "',"
+        . "'" . DB_escapeString($sourceUrl) . "',"
+        . "'" . DB_escapeString(substr(trim(isset($metadata['source_provider']) ? (string)$metadata['source_provider'] : ''),0,255)) . "',"
+        . "'" . DB_escapeString(substr(trim(isset($metadata['source_external_id']) ? (string)$metadata['source_external_id'] : ''),0,255)) . "',"
+        . "'" . DB_escapeString(isset($metadata['source_attribution']) ? trim((string)$metadata['source_attribution']) : '') . "',"
+        . "'" . DB_escapeString(substr(trim(isset($metadata['source_license']) ? (string)$metadata['source_license'] : ''),0,255)) . "',"
+        . "'','',''," . $duration . ",0,"
+        . "'" . DB_escapeString($status) . "',0,0,"
+        . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
+        . "'" . DB_escapeString($now) . "','" . DB_escapeString($now) . "')"
+    );
+
+    if (DB_error()) {
+        $error = 'database_error';
+        return false;
+    }
+
+    $id = (int) DB_insertId();
+    if (function_exists('PLG_itemSaved')) {
+        PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
+    }
+    return $id;
+}
+
 function RADIO_allowedAudio()
 {
     return array(
@@ -689,7 +833,7 @@ function RADIO_deleteMedia($id)
     }
 
     $path = RADIO_storageDir() . basename($row['storage_name']);
-    if (is_file($path) && !@unlink($path)) {
+    if (RADIO_sourceKind($row) === 'local' && is_file($path) && !@unlink($path)) {
         COM_errorLog('Radio: database row deleted but media file could not be removed: ' . $path, 1);
     }
 
@@ -712,6 +856,21 @@ function RADIO_mediaUrl($id, $download)
 function RADIO_sendMedia($row, $download)
 {
     global $_RADIO_CONF;
+
+    $sourceKind = RADIO_sourceKind($row);
+    if ($sourceKind === 'external' || $sourceKind === 'live') {
+        if ($download) {
+            return false;
+        }
+        $error = '';
+        $remote = RADIO_externalUrlValidation(isset($row['source_url']) ? $row['source_url'] : '', $error);
+        if ($remote === false) {
+            return false;
+        }
+        header('Cache-Control: no-store');
+        header('Location: ' . $remote, true, 302);
+        exit;
+    }
 
     $path = RADIO_storageDir() . basename($row['storage_name']);
     if (!is_file($path) || !is_readable($path)) {
@@ -2007,7 +2166,8 @@ function plugin_getcapabilities_radio()
             'radio.rotation.read',
             'radio.replay.read',
             'radio.podcast.read',
-            'radio.stats.read'
+            'radio.stats.read',
+            'radio.source.read'
         )
     );
 }
@@ -2104,6 +2264,11 @@ function RADIO_itemInfoFromRow($row, $fields)
         'image' => !empty($row['cover_name']) ? RADIO_coverUrl('media',$id) : '',
         'duration' => isset($row['duration']) ? (int) $row['duration'] : 0,
         'stream_url' => RADIO_mediaUrl($id, false),
+        'source_kind' => RADIO_sourceKind($row),
+        'source_provider' => isset($row['source_provider']) ? $row['source_provider'] : '',
+        'source_external_id' => isset($row['source_external_id']) ? $row['source_external_id'] : '',
+        'attribution' => isset($row['source_attribution']) ? $row['source_attribution'] : '',
+        'license' => isset($row['source_license']) ? $row['source_license'] : '',
         'title' => $row['title'],
         'url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
         'canonical_url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
@@ -2189,6 +2354,12 @@ function plugin_upgrade_radio()
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'season_number',"int(10) unsigned NOT NULL default '0'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'episode_number',"int(10) unsigned NOT NULL default '0'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_kind',"varchar(16) NOT NULL default 'local'") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_url',"text") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_provider',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_external_id',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_attribution',"text") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_license',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'host',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
     foreach (array('radio_media','radio_programs') as $aclTable) {

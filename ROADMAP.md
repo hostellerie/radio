@@ -254,9 +254,9 @@ The plugin should distinguish **remote metadata**, **remote playback**, **cached
 
 Study support for:
 
-- [ ] direct remote audio URLs;
+- [x] direct remote audio URLs as browser-side remote references;
 - [ ] podcast RSS/Atom feeds with audio enclosures;
-- [ ] Icecast/Shoutcast-compatible live stream URLs;
+- [x] Icecast/Shoutcast-compatible live stream URLs as browser-side live references;
 - [ ] remote playlists where the format and licensing permit it;
 - [ ] public/open audio archives and media catalogues;
 - [ ] provider metadata/oEmbed-like endpoints where useful;
@@ -303,7 +303,7 @@ Radio presents and schedules the source but does not reimplement the streaming s
 Follow the principles in `geeklog-external-data-integration-vision-2030.md`.
 
 - [ ] Define an allowlist/provider model rather than unrestricted editor-controlled server-side URL fetching.
-- [ ] Protect against SSRF and private-network/localhost access.
+- [x] Reject localhost, literal private/reserved IPs and hostnames resolving to private/reserved IPv4 before accepting remote references; no server-side remote fetching is performed in this prototype.
 - [ ] Validate redirects.
 - [ ] Apply connection and total timeouts.
 - [ ] Limit response and imported file sizes.
@@ -319,7 +319,7 @@ Follow the principles in `geeklog-external-data-integration-vision-2030.md`.
   - attribution;
   - license where known.
 - [ ] Preserve copyright and redistribution rules.
-- [ ] Never assume that technical accessibility grants republication or download rights.
+- [x] Never assume that technical accessibility grants republication or download rights; remote references default to no Radio download.
 - [ ] Isolate credentials, caches, rate limits and synchronization state per Geeklog site.
 - [ ] Never expose provider credentials in public templates or client-side code.
 - [ ] Provide clear administrator diagnostics for remote-source failures.
@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.5**.
+Current development version: **0.1.6**.
 
 Focus:
 
