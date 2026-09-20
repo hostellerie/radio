@@ -51,8 +51,15 @@ if (isset($_POST['save_media'])) {
         if ($coverName !== false) {
             $_POST['cover_name'] = $coverName !== '' ? $coverName : ($existing ? $existing['cover_name'] : '');
         }
+        $savedMedia = $coverName !== false && RADIO_updateMedia($id, $_POST);
+        if ($savedMedia && $coverName !== '' && $existing && !empty($existing['cover_name'])) {
+            RADIO_deleteCover($existing['cover_name']);
+        }
+        if (!$savedMedia && $coverName !== '') {
+            RADIO_deleteCover($coverName);
+        }
         $message = COM_showMessageText(
-            $coverName !== false && RADIO_updateMedia($id, $_POST) ? $LANG_RADIO['media_saved'] : $LANG_RADIO['media_save_failed'],
+            $savedMedia ? $LANG_RADIO['media_saved'] : $LANG_RADIO['media_save_failed'],
             $LANG_RADIO['admin_title']
         );
     }
@@ -134,7 +141,7 @@ if (count($media) === 0) {
     $content .= '<style>.radio-admin-item{border:1px solid rgba(127,127,127,.3);padding:1rem;margin:1rem 0;border-radius:.4rem}.radio-admin-item input[type=text],.radio-admin-item textarea,.radio-admin-item select{max-width:100%;box-sizing:border-box}.radio-admin-player{width:100%;max-width:700px}</style>';
     foreach ($media as $row) {
         $id = (int) $row['media_id'];
-        $content .= '<div class="radio-admin-item"><form method="post" action="">'
+        $content .= '<div class="radio-admin-item"><form method="post" enctype="multipart/form-data" action="">'
             . '<p><audio class="radio-admin-player radio-duration-source" data-duration-target="radio-duration-' . $id . '" controls preload="metadata" src="'
             . htmlspecialchars(RADIO_mediaUrl($id, false), ENT_QUOTES, 'UTF-8') . '"></audio></p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
