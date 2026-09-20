@@ -473,7 +473,7 @@ Now playing: ...
 External sources: 3 / 3 healthy
 ```
 
-- [ ] Expose `dashboard.summary` through the shared capability/service model.
+- [x] Expose `dashboard.summary` through the shared capability/service model.
 - [ ] Do not make Radio depend on Eclipse.
 - [ ] Do not let Eclipse query Radio tables directly.
 - [ ] Consider exposing:

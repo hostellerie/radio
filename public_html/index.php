@@ -32,6 +32,22 @@ COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title, 'footer
     if ($row['description'] !== '') {
         $content .= '<p>' . nl2br(htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
     }
+    if (RADIO_sourceKind($row) !== 'local') {
+        $content .= '<p><small><strong>' . htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+            . htmlspecialchars(RADIO_sourceKind($row) === 'live' ? $LANG_RADIO['source_live'] : $LANG_RADIO['source_external'], ENT_QUOTES, 'UTF-8');
+        if (!empty($row['source_provider'])) {
+            $content .= ' · ' . htmlspecialchars($row['source_provider'], ENT_QUOTES, 'UTF-8');
+        }
+        if (!empty($row['source_attribution'])) {
+            $content .= '<br><strong>' . htmlspecialchars($LANG_RADIO['source_attribution'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+                . htmlspecialchars($row['source_attribution'], ENT_QUOTES, 'UTF-8');
+        }
+        if (!empty($row['source_license'])) {
+            $content .= '<br><strong>' . htmlspecialchars($LANG_RADIO['source_license'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+                . htmlspecialchars($row['source_license'], ENT_QUOTES, 'UTF-8');
+        }
+        $content .= '</small></p>';
+    }
     $content .= '<p><audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="metadata" style="width:100%;max-width:800px" src="'
         . htmlspecialchars(RADIO_mediaUrl($id, false), ENT_QUOTES, 'UTF-8') . '"></audio></p>';
 

@@ -2093,6 +2093,29 @@ function RADIO_getLiveState($timestamp)
     );
 }
 
+
+function RADIO_sourceSummary()
+{
+    global $_TABLES;
+
+    $summary = array('local' => 0, 'external' => 0, 'live' => 0);
+    $result = DB_query(
+        "SELECT source_kind,COUNT(*) AS total FROM {$_TABLES['radio_media']} "
+        . "WHERE status='published'" . RADIO_permissionSql('radio_media', 0)
+        . " GROUP BY source_kind"
+    );
+
+    while ($row = DB_fetchArray($result)) {
+        $kind = isset($row['source_kind']) ? $row['source_kind'] : 'local';
+        if (!isset($summary[$kind])) {
+            $kind = 'local';
+        }
+        $summary[$kind] = (int) $row['total'];
+    }
+
+    return $summary;
+}
+
 function RADIO_dashboardSummary()
 {
     global $_TABLES;
@@ -2128,6 +2151,7 @@ function RADIO_dashboardSummary()
         'scheduled_next_7_days' => $scheduledWeek,
         'replay_count' => $replayCount,
         'stats' => RADIO_getStatsSummary(30),
+        'sources' => RADIO_sourceSummary(),
         'live_source' => $live['source'],
         'current_media' => $live['media'] !== false ? array(
             'media_id' => $live['media']['external_id'],
@@ -2167,7 +2191,8 @@ function plugin_getcapabilities_radio()
             'radio.replay.read',
             'radio.podcast.read',
             'radio.stats.read',
-            'radio.source.read'
+            'radio.source.read',
+            'radio.source.summary'
         )
     );
 }
