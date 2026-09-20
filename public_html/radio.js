@@ -47,8 +47,9 @@
         }).catch(function () {});
     }
 
-    function bindTracking(root) {
-        var eventEndpoint = root ? root.getAttribute('data-event-endpoint') : '';
+    function bindTracking() {
+        var script = document.getElementById('radio-public-js');
+        var eventEndpoint = script ? script.getAttribute('data-event-endpoint') : '';
         if (!eventEndpoint) {
             return;
         }
@@ -468,8 +469,7 @@
         sync(false);
     }
 
-    var publicRoot = q('[data-radio-public]');
-    bindTracking(publicRoot);
+    bindTracking();
 
     initHomePlayer(q('[data-radio-home-live]'));
     initLivePage(q('.radio-live[data-now-endpoint]'));
