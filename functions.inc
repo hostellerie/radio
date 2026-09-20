@@ -118,6 +118,42 @@ function RADIO_livePageScript()
         . '})();</script>';
 }
 
+
+function RADIO_adminUploadPageScript()
+{
+    return '<script>(function(){'
+        . 'var file=document.getElementById("radio-upload-file");'
+        . 'var target=document.getElementById("radio-upload-duration");'
+        . 'if(!file||!target){return;}'
+        . 'file.addEventListener("change",function(){'
+        . 'if(!file.files||!file.files[0])return;'
+        . 'var audio=document.createElement("audio");'
+        . 'var url=URL.createObjectURL(file.files[0]);'
+        . 'audio.preload="metadata";audio.src=url;'
+        . 'audio.addEventListener("loadedmetadata",function(){'
+        . 'if(isFinite(audio.duration)&&audio.duration>0){target.value=Math.round(audio.duration);}'
+        . 'URL.revokeObjectURL(url);'
+        . '});'
+        . 'audio.addEventListener("error",function(){URL.revokeObjectURL(url);});'
+        . '});'
+        . '})();</script>';
+}
+
+function RADIO_adminEditPageScript()
+{
+    return '<script>(function(){'
+        . 'var audio=document.querySelector(".radio-duration-source");'
+        . 'if(!audio){return;}'
+        . 'audio.addEventListener("loadedmetadata",function(){'
+        . 'var id=audio.getAttribute("data-duration-target");'
+        . 'var input=document.getElementById(id);'
+        . 'if(input&&parseInt(input.value,10)<=0&&isFinite(audio.duration)&&audio.duration>0){'
+        . 'input.value=Math.round(audio.duration);'
+        . '}'
+        . '});'
+        . '})();</script>';
+}
+
 function plugin_getfootercode_radio()
 {
     $path = '';
@@ -132,6 +168,14 @@ function plugin_getfootercode_radio()
 
     if (substr($path, -15) === '/radio/live.php') {
         return RADIO_livePageScript();
+    }
+
+    if (substr($path, -24) === '/admin/plugins/radio/upload.php') {
+        return RADIO_adminUploadPageScript();
+    }
+
+    if (substr($path, -22) === '/admin/plugins/radio/edit.php') {
+        return RADIO_adminEditPageScript();
     }
 
     if (substr($path, -16) === '/radio/index.php'
