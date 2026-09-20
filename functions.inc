@@ -4,6 +4,7 @@ if (!isset($GLOBALS['_CONF'])) {
 }
 require_once __DIR__ . '/version.php';
 require_once __DIR__ . '/lib/feed.inc.php';
+require_once __DIR__ . '/services.inc.php';
 
 global $_TABLES, $_DB_table_prefix, $_RADIO_CONF;
 $_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
@@ -2172,6 +2173,11 @@ function RADIO_dashboardSummary()
     );
 }
 
+function plugin_wsEnabled_radio()
+{
+    return true;
+}
+
 function plugin_getcapabilities_radio()
 {
     return array(
@@ -2189,6 +2195,7 @@ function plugin_getcapabilities_radio()
             'radio.media.read',
             'radio.program.read',
             'radio.schedule.read',
+            'radio.upcoming.read',
             'radio.now-playing.read',
             'radio.current-media.read',
             'radio.rotation.read',

@@ -89,6 +89,8 @@ jobs:
           ARCHIVE="dist/${{ steps.metadata.outputs.archive }}"
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/autoinstall.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/functions.inc'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/services.inc.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/docs/SERVICES.md'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
