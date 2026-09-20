@@ -185,6 +185,7 @@ $LANG_RADIO = array(
     'feed_import' => 'Importer comme référence distante',
     'feed_imported' => 'L’épisode a été importé comme référence Radio distante en brouillon.',
     'feed_import_failed' => 'L’épisode n’a pas pu être importé.',
+    'feed_episode_exists' => 'Cet épisode du flux est déjà présent dans Radio.',
     'feed_last_checked' => 'Dernière vérification',
     'feed_last_status' => 'Statut HTTP',
     'feed_last_error' => 'Dernière erreur',
