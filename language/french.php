@@ -150,6 +150,13 @@ $LANG_RADIO = array(
     'add' => 'Ajouter',
     'remove' => 'Retirer',
     'back_to_library_admin' => 'Retour à la médiathèque audio',
+    'statistics' => 'Statistiques d’écoute',
+    'stats_period' => 'Période',
+    'stats_plays' => 'Démarrages de lecture',
+    'stats_downloads' => 'Téléchargements',
+    'stats_listen_time' => 'Temps d’écoute',
+    'stats_top_media' => 'Médias les plus écoutés',
+    'stats_privacy_note' => 'Les statistiques Radio ne stockent ni adresse IP, ni identifiant utilisateur, ni identifiant visiteur persistant.',
     'type_music' => 'Musique',
     'type_podcast' => 'Podcast',
     'type_interview' => 'Interview',
@@ -176,6 +183,8 @@ $LANG_confignames['radio'] = array(
     'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)',
     'whatsnew_enabled' => 'Afficher Radio dans Quoi de neuf ?',
     'whatsnew_interval' => 'Période Quoi de neuf (secondes)',
-    'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf'
+    'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf',
+    'stats_enabled' => 'Activer les statistiques d’écoute respectueuses de la vie privée ?',
+    'stats_retention_days' => 'Conservation des statistiques (jours)'
 );
 $LANG_configselects['radio'] = array(0 => array('Activé' => 1, 'Désactivé' => 0));
