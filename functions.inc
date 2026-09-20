@@ -9,6 +9,7 @@ $_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
+$_TABLES['radio_events'] = $_DB_table_prefix . 'radio_events';
 
 if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     $_RADIO_CONF = array();
@@ -20,6 +21,164 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     }
 }
 
+
+
+function RADIO_statsEnabled()
+{
+    global $_RADIO_CONF;
+    return !isset($_RADIO_CONF['stats_enabled']) || !empty($_RADIO_CONF['stats_enabled']);
+}
+
+function RADIO_statsRetentionDays()
+{
+    global $_RADIO_CONF;
+    return isset($_RADIO_CONF['stats_retention_days'])
+        ? max(1, min(3650, (int) $_RADIO_CONF['stats_retention_days']))
+        : 90;
+}
+
+function RADIO_ensureStatsTable()
+{
+    global $_TABLES;
+
+    $table = $_TABLES['radio_events'];
+    $result = DB_query("SHOW TABLES LIKE '" . DB_escapeString($table) . "'");
+    if (DB_numRows($result) > 0) {
+        return true;
+    }
+
+    DB_query("CREATE TABLE " . $table . " (
+      event_id bigint(20) unsigned NOT NULL auto_increment,
+      media_id int(10) unsigned NOT NULL default '0',
+      program_id int(10) unsigned NOT NULL default '0',
+      event_type varchar(24) NOT NULL default 'play',
+      source varchar(24) NOT NULL default 'catalogue',
+      seconds_listened int(10) unsigned NOT NULL default '0',
+      created datetime NOT NULL,
+      PRIMARY KEY (event_id),
+      KEY created (created),
+      KEY media_event (media_id,event_type),
+      KEY source_event (source,event_type)
+    ) ENGINE=MyISAM");
+
+    return !DB_error();
+}
+
+function RADIO_purgeOldStats()
+{
+    global $_TABLES;
+
+    if (!RADIO_ensureStatsTable()) {
+        return false;
+    }
+
+    $cutoff = date('Y-m-d H:i:s', strtotime('-' . RADIO_statsRetentionDays() . ' days'));
+    DB_query(
+        "DELETE FROM {$_TABLES['radio_events']} WHERE created<'"
+        . DB_escapeString($cutoff) . "'"
+    );
+    return !DB_error();
+}
+
+function RADIO_recordStatEvent($mediaId, $programId, $eventType, $source, $seconds)
+{
+    global $_TABLES;
+
+    if (!RADIO_statsEnabled() || !RADIO_ensureStatsTable()) {
+        return false;
+    }
+
+    $allowedEvents = array('play','listen','download');
+    $allowedSources = array('catalogue','program','replay','live','podcast','download');
+    $eventType = in_array($eventType, $allowedEvents, true) ? $eventType : 'play';
+    $source = in_array($source, $allowedSources, true) ? $source : 'catalogue';
+
+    $mediaId = max(0, (int) $mediaId);
+    $programId = max(0, (int) $programId);
+    $seconds = max(0, min(86400, (int) $seconds));
+
+    if ($mediaId < 1) {
+        return false;
+    }
+
+    $media = RADIO_getMedia($mediaId, true);
+    if ($media === false) {
+        return false;
+    }
+
+    DB_query(
+        "INSERT INTO {$_TABLES['radio_events']} "
+        . "(media_id,program_id,event_type,source,seconds_listened,created) VALUES ("
+        . $mediaId . ","
+        . $programId . ","
+        . "'" . DB_escapeString($eventType) . "',"
+        . "'" . DB_escapeString($source) . "',"
+        . $seconds . ","
+        . "'" . DB_escapeString(date('Y-m-d H:i:s')) . "')"
+    );
+
+    if (!DB_error()) {
+        RADIO_purgeOldStats();
+        return true;
+    }
+    return false;
+}
+
+function RADIO_getStatsSummary($days)
+{
+    global $_TABLES;
+
+    $days = max(1, min(RADIO_statsRetentionDays(), (int) $days));
+    if (!RADIO_statsEnabled() || !RADIO_ensureStatsTable()) {
+        return array(
+            'days' => $days,
+            'plays' => 0,
+            'downloads' => 0,
+            'listen_seconds' => 0,
+            'top_media' => array()
+        );
+    }
+
+    $since = DB_escapeString(date('Y-m-d H:i:s', strtotime('-' . $days . ' days')));
+
+    $result = DB_query(
+        "SELECT "
+        . "SUM(event_type='play') AS plays,"
+        . "SUM(event_type='download') AS downloads,"
+        . "SUM(CASE WHEN event_type='listen' THEN seconds_listened ELSE 0 END) AS listen_seconds "
+        . "FROM {$_TABLES['radio_events']} WHERE created>='" . $since . "'"
+    );
+    $row = DB_fetchArray($result);
+
+    $top = array();
+    $topResult = DB_query(
+        "SELECT e.media_id,m.title,COUNT(*) AS plays "
+        . "FROM {$_TABLES['radio_events']} e "
+        . "INNER JOIN {$_TABLES['radio_media']} m ON m.media_id=e.media_id "
+        . "WHERE e.created>='" . $since . "' AND e.event_type='play' "
+        . "GROUP BY e.media_id,m.title ORDER BY plays DESC,e.media_id DESC LIMIT 10"
+    );
+    while ($item = DB_fetchArray($topResult)) {
+        $media = RADIO_getMedia((int) $item['media_id'], true);
+        if ($media === false) {
+            continue;
+        }
+        $top[] = array(
+            'media_id' => RADIO_externalId('media', (int) $item['media_id']),
+            'title' => $item['title'],
+            'plays' => (int) $item['plays'],
+            'url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id']))
+        );
+    }
+
+    return array(
+        'days' => $days,
+        'plays' => isset($row['plays']) ? (int) $row['plays'] : 0,
+        'downloads' => isset($row['downloads']) ? (int) $row['downloads'] : 0,
+        'listen_seconds' => isset($row['listen_seconds']) ? (int) $row['listen_seconds'] : 0,
+        'top_media' => $top
+    );
+}
 
 function RADIO_defaultGroupId()
 {
@@ -1774,6 +1933,7 @@ function RADIO_dashboardSummary()
         'program_count' => $programCount,
         'scheduled_next_7_days' => $scheduledWeek,
         'replay_count' => $replayCount,
+        'stats' => RADIO_getStatsSummary(30),
         'live_source' => $live['source'],
         'current_media' => $live['media'] !== false ? array(
             'media_id' => $live['media']['external_id'],
@@ -1811,7 +1971,8 @@ function plugin_getcapabilities_radio()
             'radio.current-media.read',
             'radio.rotation.read',
             'radio.replay.read',
-            'radio.podcast.read'
+            'radio.podcast.read',
+            'radio.stats.read'
         )
     );
 }
@@ -2002,7 +2163,7 @@ function plugin_upgrade_radio()
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_members',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_anon',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
     }
-    if (!$ok) return false;
+    if (!$ok || !RADIO_ensureStatsTable()) return false;
 
     DB_query(
         "UPDATE {$_TABLES['plugins']} SET "
