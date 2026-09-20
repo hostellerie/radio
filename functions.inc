@@ -79,6 +79,10 @@ function RADIO_hasEditAccess($row)
 
 function RADIO_permissionSql($alias, $uid)
 {
+    $alias = trim((string) $alias);
+    if ($alias === '' || $alias === 'radio_media' || $alias === 'radio_programs') {
+        return COM_getPermSQL('AND', (int) $uid, 2);
+    }
     return COM_getPermSQL('AND', (int) $uid, 2, $alias);
 }
 
@@ -923,7 +927,9 @@ function RADIO_getSchedules($enabledOnly)
     $result = DB_query("SELECT s.*,p.title AS program_title,p.status AS program_status "
         . "FROM {$_TABLES['radio_schedule']} s "
         . "INNER JOIN {$_TABLES['radio_programs']} p ON p.program_id=s.program_id"
-        . $where . " ORDER BY s.starts_at ASC,s.schedule_id ASC");
+        . $where
+        . ($enabledOnly ? COM_getPermSQL('AND', 0, 2, 'p') : '')
+        . " ORDER BY s.starts_at ASC,s.schedule_id ASC");
     $items = array();
     while ($row = DB_fetchArray($result)) {
         $items[] = $row;
@@ -1670,7 +1676,7 @@ function RADIO_programDuration($programId)
     $items = RADIO_getProgramItems($programId);
     $duration = 0;
     foreach ($items as $item) {
-        if ($item['status'] === 'published' && (int) $item['duration'] > 0) {
+        if ($item['status'] === 'published' && RADIO_hasReadAccess($item) && (int) $item['duration'] > 0) {
             $duration += (int) $item['duration'];
         }
     }
@@ -1684,7 +1690,7 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
     $cursor = 0;
 
     foreach ($items as $item) {
-        if ($item['status'] !== 'published') {
+        if ($item['status'] !== 'published' || !RADIO_hasReadAccess($item)) {
             continue;
         }
         $duration = (int) $item['duration'];
@@ -2137,7 +2143,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     $items = array();
 
     $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2, 'radio_media') . " ORDER BY modified DESC,media_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2) . " ORDER BY modified DESC,media_id DESC";
     $media = DB_query($mediaSql);
     while ($row = DB_fetchArray($media)) {
         $modified = strtotime($row['modified']);
@@ -2151,7 +2157,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     }
 
     $programSql = "SELECT program_id,modified FROM {$_TABLES['radio_programs']} "
-        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2, 'radio_programs') . " ORDER BY modified DESC,program_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2) . " ORDER BY modified DESC,program_id DESC";
     $programs = DB_query($programSql);
     while ($row = DB_fetchArray($programs)) {
         $modified = strtotime($row['modified']);
