@@ -40,6 +40,45 @@ if ($current !== false) {
         . (int) $current['offset'] . ' ' . htmlspecialchars($LANG_RADIO['admin_seconds_short'], ENT_QUOTES, 'UTF-8') . ' / ' . (int) $current['duration'] . ' ' . htmlspecialchars($LANG_RADIO['admin_seconds_short'], ENT_QUOTES, 'UTF-8') . '</p>';
 }
 
+
+$eligibility = RADIO_rotationEligibilityDiagnostics();
+$content .= '<section class="radio-admin__panel"><h2>'
+    . htmlspecialchars($LANG_RADIO['rotation_diagnostics_title'], ENT_QUOTES, 'UTF-8')
+    . '</h2>';
+
+if (count($eligibility) === 0) {
+    $content .= '<p>' . htmlspecialchars($LANG_RADIO['rotation_diagnostics_none'], ENT_QUOTES, 'UTF-8') . '</p>';
+} else {
+    $content .= '<div class="radio-admin__table-wrap"><table class="radio-admin__table"><thead><tr>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['rotation_public_access'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['rotation_eligibility'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '</tr></thead><tbody>';
+
+    foreach ($eligibility as $item) {
+        $reasonLabels = array();
+        foreach ($item['_rotation_reasons'] as $reason) {
+            $key = 'rotation_reason_' . $reason;
+            $reasonLabels[] = isset($LANG_RADIO[$key]) ? $LANG_RADIO[$key] : $reason;
+        }
+        $content .= '<tr><td><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong><br><small>'
+            . htmlspecialchars($item['original_name'], ENT_QUOTES, 'UTF-8') . '</small></td>'
+            . '<td>' . htmlspecialchars(RADIO_adminStatusLabel($item['status']), ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . (int) $item['duration'] . '</td>'
+            . '<td>' . htmlspecialchars((int) $item['perm_anon'] >= 2 ? $LANG_RADIO['yes'] : $LANG_RADIO['no'], ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td><strong>' . htmlspecialchars($item['_rotation_eligible'] ? $LANG_RADIO['rotation_eligible'] : $LANG_RADIO['rotation_excluded'], ENT_QUOTES, 'UTF-8') . '</strong>'
+            . (!$item['_rotation_eligible'] ? '<br><small>' . htmlspecialchars(implode(', ', $reasonLabels), ENT_QUOTES, 'UTF-8') . '</small>' : '')
+            . '</td></tr>';
+    }
+
+    $content .= '</tbody></table></div>';
+}
+$content .= '</section>';
+
 $content .= '<h2>' . htmlspecialchars($LANG_RADIO['rotation_today'], ENT_QUOTES, 'UTF-8') . '</h2>';
 if (count($sequence) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['rotation_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
