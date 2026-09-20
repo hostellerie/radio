@@ -1688,9 +1688,11 @@ function plugin_getcapabilities_radio()
         'capabilities' => array(
             'content.read',
             'content.collection',
+            'content.search',
             'content.url.resolve',
             'content.lifecycle',
             'content.syndication',
+            'content.related',
             'dashboard.summary',
             'radio.media.read',
             'radio.program.read',
@@ -1889,4 +1891,229 @@ function plugin_upgrade_radio()
     );
 
     return !DB_error();
+}
+
+
+function plugin_searchtypes_radio()
+{
+    global $LANG_RADIO;
+    return array('radio' => isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio');
+}
+
+function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type, $author, $keyType, $page = -1, $perpage = -1)
+{
+    global $_TABLES, $_CONF, $LANG_RADIO;
+
+    if (empty($type)) {
+        $type = 'all';
+    }
+    if ($type !== 'all' && $type !== 'radio') {
+        return array();
+    }
+
+    $query = trim(DB_escapeString($query));
+    $siteUrl = DB_escapeString(rtrim($_CONF['site_url'], '/'));
+
+    $sql = "SELECT rs.id,rs.title,rs.description,rs.date,rs.uid,rs.hits,rs.url FROM ("
+        . "SELECT CONCAT('media:',m.media_id) AS id,m.title,m.description,m.modified AS date,"
+        . "m.owner_id AS uid,m.hits,"
+        . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url,"
+        . "m.author AS author "
+        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' "
+        . "UNION ALL "
+        . "SELECT CONCAT('program:',p.program_id) AS id,p.title,p.description,p.modified AS date,"
+        . "p.owner_id AS uid,0 AS hits,"
+        . "CONCAT('" . $siteUrl . "/radio/program.php?id=',p.program_id) AS url,"
+        . "p.host AS author "
+        . "FROM {$_TABLES['radio_programs']} p WHERE p.status='published'"
+        . ") rs WHERE 1 ";
+
+    if ((int) $author > 0) {
+        $sql .= "AND rs.uid=" . (int) $author . " ";
+    }
+
+    $search = new SearchCriteria('radio', isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio');
+    $columns = array('title' => 'rs.title', 'rs.description', 'rs.author');
+    $sql .= $search->getDateRangeSQL('AND', 'rs.date', $datestart, $dateend);
+    list($sql, $ftsql) = $search->buildSearchSQL($keyType, $query, $columns, $sql);
+
+    $search->setSQL($sql);
+    $search->setFtSQL($ftsql);
+    $search->setRank(3);
+    $search->setAppendQuery(false);
+
+    return array($search, null);
+}
+
+function plugin_whatsnewsupported_radio()
+{
+    global $_RADIO_CONF, $LANG_RADIO, $LANG_WHATSNEW;
+
+    if (isset($_RADIO_CONF['whatsnew_enabled']) && empty($_RADIO_CONF['whatsnew_enabled'])) {
+        return false;
+    }
+
+    $interval = isset($_RADIO_CONF['whatsnew_interval'])
+        ? max(60, (int) $_RADIO_CONF['whatsnew_interval'])
+        : 1209600;
+    $title = isset($LANG_RADIO['whatsnew_title']) ? $LANG_RADIO['whatsnew_title'] : 'Radio';
+    $byline = isset($LANG_WHATSNEW['new_last'])
+        ? COM_formatTimeString($LANG_WHATSNEW['new_last'], $interval)
+        : '';
+
+    return array($title, $byline);
+}
+
+function plugin_getwhatsnew_radio()
+{
+    global $_RADIO_CONF, $LANG_RADIO;
+
+    if (isset($_RADIO_CONF['whatsnew_enabled']) && empty($_RADIO_CONF['whatsnew_enabled'])) {
+        return '';
+    }
+
+    $interval = isset($_RADIO_CONF['whatsnew_interval'])
+        ? max(60, (int) $_RADIO_CONF['whatsnew_interval'])
+        : 1209600;
+    $limit = isset($_RADIO_CONF['whatsnew_limit'])
+        ? max(1, min(50, (int) $_RADIO_CONF['whatsnew_limit']))
+        : 10;
+    $since = time() - $interval;
+
+    $items = array_merge(
+        plugin_getiteminfo_radio('*', '*', 0, array('type' => 'media', 'since' => $since, 'limit' => $limit, 'order' => 'modified-desc')),
+        plugin_getiteminfo_radio('*', '*', 0, array('type' => 'program', 'since' => $since, 'limit' => $limit, 'order' => 'modified-desc'))
+    );
+
+    usort($items, 'RADIO_compareItemModifiedDesc');
+    if (count($items) > $limit) {
+        $items = array_slice($items, 0, $limit);
+    }
+
+    $links = array();
+    foreach ($items as $item) {
+        if (empty($item['title']) || empty($item['url'])) {
+            continue;
+        }
+        $title = $item['title'];
+        $links[] = COM_createLink(
+            COM_truncate($title, 60, '...'),
+            $item['url'],
+            array('title' => $title)
+        ) . LB;
+    }
+
+    if (empty($links)) {
+        return isset($LANG_RADIO['whatsnew_none'])
+            ? $LANG_RADIO['whatsnew_none'] . '<br' . XHTML . '>'
+            : '';
+    }
+
+    if (function_exists('PLG_getThemeItem')) {
+        return COM_makeList($links, PLG_getThemeItem('core-css-list-new', 'core'));
+    }
+    return COM_makeList($links);
+}
+
+function RADIO_compareItemModifiedDesc($a, $b)
+{
+    $at = isset($a['date-modified']) ? strtotime($a['date-modified']) : 0;
+    $bt = isset($b['date-modified']) ? strtotime($b['date-modified']) : 0;
+    if ($at === $bt) {
+        return 0;
+    }
+    return $at > $bt ? -1 : 1;
+}
+
+function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
+{
+    global $_TABLES, $_CONF;
+
+    $limit = max(0, (int) $limit);
+    $items = array();
+
+    $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
+        . "WHERE status='published' ORDER BY modified DESC,media_id DESC";
+    $media = DB_query($mediaSql);
+    while ($row = DB_fetchArray($media)) {
+        $modified = strtotime($row['modified']);
+        $items[] = array(
+            'url' => $_CONF['site_url'] . '/radio/index.php?id=' . (int) $row['media_id'],
+            'date-modified' => $modified === false ? 0 : $modified
+        );
+        if ($limit > 0 && count($items) >= $limit) {
+            return $items;
+        }
+    }
+
+    $programSql = "SELECT program_id,modified FROM {$_TABLES['radio_programs']} "
+        . "WHERE status='published' ORDER BY modified DESC,program_id DESC";
+    $programs = DB_query($programSql);
+    while ($row = DB_fetchArray($programs)) {
+        $modified = strtotime($row['modified']);
+        $items[] = array(
+            'url' => $_CONF['site_url'] . '/radio/program.php?id=' . (int) $row['program_id'],
+            'date-modified' => $modified === false ? 0 : $modified
+        );
+        if ($limit > 0 && count($items) >= $limit) {
+            break;
+        }
+    }
+
+    return $items;
+}
+
+function plugin_getrelateditems_radio($tids, $max, $trim)
+{
+    global $_TABLES;
+
+    if (!isset($_TABLES['topic_assignments']) || !is_array($tids) || empty($tids)) {
+        return array();
+    }
+
+    $safeTids = array();
+    foreach ($tids as $tid) {
+        $tid = trim((string) $tid);
+        if ($tid !== '') {
+            $safeTids[] = "'" . DB_escapeString($tid) . "'";
+        }
+    }
+    if (empty($safeTids)) {
+        return array();
+    }
+
+    $max = max(1, min(100, (int) $max));
+    $trim = max(1, (int) $trim);
+
+    $sql = "SELECT ta.id FROM {$_TABLES['topic_assignments']} ta "
+        . "WHERE ta.type='radio' AND ta.tid IN (" . implode(',', $safeTids) . ") "
+        . "ORDER BY ta.inherit DESC LIMIT " . ($max * 2);
+    $result = DB_query($sql);
+
+    $related = array();
+    while ($row = DB_fetchArray($result)) {
+        $info = plugin_getiteminfo_radio($row['id'], '*');
+        if (empty($info['title']) || empty($info['url'])) {
+            continue;
+        }
+
+        $timestamp = !empty($info['date-modified']) ? strtotime($info['date-modified']) : time();
+        if ($timestamp === false || $timestamp <= 0) {
+            $timestamp = time();
+        }
+        while (isset($related[$timestamp])) {
+            $timestamp--;
+        }
+
+        $related[$timestamp] = COM_createLink(
+            htmlspecialchars(COM_truncate($info['title'], $trim, '...'), ENT_QUOTES, 'UTF-8'),
+            $info['url']
+        );
+
+        if (count($related) >= $max) {
+            break;
+        }
+    }
+
+    return $related;
 }
