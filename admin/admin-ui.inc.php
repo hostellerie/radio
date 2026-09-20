@@ -126,3 +126,30 @@ function RADIO_adminRenderPage($active, $title, $intro, $helpTitle, $helpText, $
 
     return $template->finish($template->parse('output', 'page'));
 }
+
+function RADIO_adminMediaTypeLabel($type)
+{
+    global $LANG_RADIO;
+    $key = 'type_' . (string) $type;
+    return isset($LANG_RADIO[$key]) ? $LANG_RADIO[$key] : (string) $type;
+}
+
+function RADIO_adminStatusLabel($status)
+{
+    global $LANG_RADIO;
+    $key = (string) $status;
+    return isset($LANG_RADIO[$key]) ? $LANG_RADIO[$key] : $key;
+}
+
+function RADIO_adminSourceKindLabel($kind)
+{
+    global $LANG_RADIO;
+    return $kind === 'live' ? $LANG_RADIO['source_live'] : $LANG_RADIO['source_external'];
+}
+
+function RADIO_adminSyncModeLabel($mode)
+{
+    global $LANG_RADIO;
+    $key = $mode === 'drafts' ? 'feed_sync_drafts' : 'feed_sync_preview';
+    return $LANG_RADIO[$key];
+}
