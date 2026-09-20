@@ -2405,13 +2405,43 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
         $sql = "SELECT * FROM {$_TABLES['radio_programs']} WHERE program_id=" . (int) $identity['id'] . " AND status='published'" . RADIO_permissionSql('radio_programs', (int) $uid);
         $result = DB_query($sql);
         $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
-        return $row === false ? array() : RADIO_programInfoFromRow($row, $fields);
+        if ($row === false) {
+            return array();
+        }
+        return RADIO_singleItemInfoResult(
+            RADIO_programInfoFromRow($row, $fields),
+            $fields
+        );
     }
 
     $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id'] . " AND status='published'" . RADIO_permissionSql('radio_media', (int) $uid);
     $result = DB_query($sql);
     $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
-    return $row === false ? array() : RADIO_itemInfoFromRow($row, $fields);
+    if ($row === false) {
+        return array();
+    }
+    return RADIO_singleItemInfoResult(
+        RADIO_itemInfoFromRow($row, $fields),
+        $fields
+    );
+}
+
+function RADIO_singleItemInfoResult($info, $fields)
+{
+    if (!is_array($info)) {
+        return array();
+    }
+
+    $mapped = array();
+    foreach ($fields as $field) {
+        $mapped[] = array_key_exists($field, $info) ? $info[$field] : '';
+    }
+
+    if (count($mapped) === 1) {
+        return $mapped[0];
+    }
+
+    return $mapped;
 }
 
 function RADIO_selectInfoFields($all, $fields)
@@ -2454,8 +2484,8 @@ function RADIO_itemInfoFromRow($row, $fields)
         'canonical_url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
         'description' => $row['description'],
         'excerpt' => $row['description'],
-        'date-created' => $row['created'],
-        'date-modified' => $row['modified'],
+        'date-created' => strtotime($row['created']),
+        'date-modified' => strtotime($row['modified']),
         'hits' => (int) $row['hits']
     );
     return RADIO_selectInfoFields($all, $fields);
@@ -2476,8 +2506,8 @@ function RADIO_programInfoFromRow($row, $fields)
         'canonical_url' => $_CONF['site_url'] . '/radio/program.php?id=' . $id,
         'description' => $row['description'],
         'excerpt' => $row['description'],
-        'date-created' => $row['created'],
-        'date-modified' => $row['modified']
+        'date-created' => strtotime($row['created']),
+        'date-modified' => strtotime($row['modified'])
     );
     return RADIO_selectInfoFields($all, $fields);
 }
