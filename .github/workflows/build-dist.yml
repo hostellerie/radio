@@ -100,6 +100,9 @@ jobs:
           ! grep -Rni "COM_startBlock(" admin --include='*.php'
           test -f admin/admin-ui.inc.php
           test -f admin/radio-admin.css
+          test -f admin/radio-admin.js
+          test -f public_html/radio.css
+          test -f public_html/radio.js
           test -f templates/admin/page.thtml
           test -f templates/admin/navigation.thtml
           test -f templates/admin/configuration-button.thtml
@@ -111,6 +114,16 @@ jobs:
           test -f admin/edit.php
           ! grep -q "name=\"save_media\"" admin/index.php
           ! grep -q "<audio" admin/index.php
+
+      - name: Validate versioned Radio assets
+        shell: bash
+        run: |
+          grep -q "RADIO_publicStylesheetLink" functions.inc
+          grep -q "RADIO_publicScriptTag" functions.inc
+          grep -q "RADIO_adminScriptTag" functions.inc
+          grep -q "RADIO_assetVersion" functions.inc
+          ! grep -Rni "<script>(function" public_html --include='*.php'
+          ! grep -Rni "footercode.*RADIO_" public_html --include='*.php'
 
       - name: Validate security invariants
         shell: bash
@@ -182,6 +195,9 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/stats.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/sources.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/radio.css'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/radio.js'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/radio-admin.js'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/media.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/program.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/schedule.php'
