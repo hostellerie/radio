@@ -50,7 +50,7 @@ COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
         $content .= '</small></p>';
     }
     if ($onDemandEnabled) {
-        $content .= '<p><audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="metadata" style="width:100%;max-width:800px" src="'
+        $content .= '<p><audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="metadata" src="'
             . htmlspecialchars(RADIO_mediaUrl($id, false), ENT_QUOTES, 'UTF-8') . '"></audio></p>';
     } else {
         $content .= '<p>' . htmlspecialchars($LANG_RADIO['public_on_demand_disabled'], ENT_QUOTES, 'UTF-8') . '</p>';
@@ -71,11 +71,15 @@ $liveState = RADIO_getLiveState(time());
 $nowPlaying = $liveState['program'];
 $upcomingPrograms = RADIO_getUpcoming(5, time());
 
-$content = '<div class="radio-status" style="margin:0 0 1.5rem;padding:1rem;border:1px solid rgba(127,127,127,.3);border-radius:.4rem">';
+$content = '<div class="radio-status">';
 if ($liveState['media'] !== false) {
     $radioDuration = max(1, (int) $liveState['media']['duration']);
     $radioOffset = max(0, min($radioDuration, (int) $liveState['media']['offset']));
-    $content .= '<div class="radio-home-live" data-radio-home-live>'
+    $content .= '<div class="radio-home-live" data-radio-home-live'
+        . ' data-now-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/now.php', ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-event-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/event.php', ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-listen-label="' . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-pause-label="' . htmlspecialchars($LANG_RADIO['public_pause'], ENT_QUOTES, 'UTF-8') . '">'
         . '<div><strong>' . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . '<a data-radio-home-title href="' . htmlspecialchars($liveState['media']['item_url'], ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a></div>';
@@ -84,13 +88,13 @@ if ($liveState['media'] !== false) {
             . ' · ' . date('H:i', $nowPlaying['start']) . '–' . date('H:i', $nowPlaying['end']) . '</small></div>';
     }
     $content .= '<div class="radio-on-air-progress" data-radio-progress data-offset="' . $radioOffset . '" data-duration="' . $radioDuration . '">'
-        . '<progress value="' . $radioOffset . '" max="' . $radioDuration . '" style="width:100%;max-width:520px"></progress> '
+        . '<progress value="' . $radioOffset . '" max="' . $radioDuration . '"></progress> '
         . '<small><span data-radio-elapsed>' . gmdate('i:s', $radioOffset) . '</span> / '
         . '<span data-radio-duration>' . gmdate('i:s', $radioDuration) . '</span></small>'
         . '</div>'
-        . '<div class="radio-home-controls" style="display:flex;align-items:center;gap:.75rem;margin-top:.75rem;flex-wrap:wrap">'
+        . '<div class="radio-home-controls">'
         . '<button type="button" id="radio-home-listen">' . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '</button>'
-        . '<canvas id="radio-home-wave" width="240" height="42" aria-hidden="true" style="width:240px;max-width:60vw;height:42px"></canvas>'
+        . '<canvas class="radio-wave" id="radio-home-wave" width="240" height="42" aria-hidden="true"></canvas>'
         . '</div>'
         . '<audio id="radio-home-audio" preload="metadata" src="' . htmlspecialchars($liveState['media']['stream_url'], ENT_QUOTES, 'UTF-8') . '"></audio>'
         . '</div>';
@@ -122,7 +126,7 @@ if ($onDemandEnabled) {
         $content .= '<div class="radio-list">';
         foreach ($media as $row) {
             $itemUrl = $_CONF['site_url'] . '/radio/index.php?id=' . (int) $row['media_id'];
-            $content .= '<article style="margin:0 0 1.5rem"><h2><a href="'
+            $content .= '<article><h2><a href="'
                 . htmlspecialchars($itemUrl, ENT_QUOTES, 'UTF-8') . '">'
                 . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . '</a></h2>';
             if ($row['description'] !== '') {
