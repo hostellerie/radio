@@ -96,6 +96,8 @@ $LANG_RADIO = array(
     'live_unavailable' => 'The live state could not be loaded.',
 
     'now_playing' => 'Now playing',
+    'public_on_air' => 'On air',
+    'public_on_demand' => 'Listen on demand',
     'nothing_scheduled_now' => 'No programme or automatic rotation is available right now.',
     'automatic_rotation' => 'Automatic radio',
     'rotation_enabled' => 'Fallback enabled',
