@@ -2482,6 +2482,76 @@ function plugin_chkVersion_radio()
     return isset($inst['info']['pi_version']) ? $inst['info']['pi_version'] : RADIO_PLUGIN_VERSION;
 }
 
+
+function RADIO_adminStylesheetLink()
+{
+    global $_CONF;
+
+    $version = RADIO_PLUGIN_VERSION;
+    $cssPath = '';
+
+    if (!empty($_CONF['path_admin'])) {
+        $cssPath = rtrim($_CONF['path_admin'], '/\\')
+            . '/plugins/radio/radio-admin.css';
+    }
+
+    if ($cssPath === '' || !is_file($cssPath)) {
+        $cssPath = rtrim($_CONF['path'], '/\\')
+            . '/plugins/radio/admin/radio-admin.css';
+    }
+
+    if (is_file($cssPath)) {
+        clearstatcache(true, $cssPath);
+        $modified = @filemtime($cssPath);
+        if ($modified !== false && $modified > 0) {
+            $version .= '-' . (int) $modified;
+        }
+    }
+
+    return '<link rel="stylesheet" type="text/css" href="'
+        . htmlspecialchars(
+            rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-admin.css',
+            ENT_QUOTES,
+            'UTF-8'
+        )
+        . '?v=' . rawurlencode($version) . '">' . "\n";
+}
+
+function plugin_getheadercode_radio()
+{
+    global $_RADIO_CONF;
+
+    if (isset($_RADIO_CONF['enabled']) && !$_RADIO_CONF['enabled']) {
+        return '';
+    }
+
+    $path = '';
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $parsedPath = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = is_string($parsedPath) ? $parsedPath : '';
+    }
+    if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+        $path = (string) $_SERVER['SCRIPT_NAME'];
+    }
+    $path = str_replace('\\', '/', $path);
+
+    $isAdmin = strpos($path, '/admin/plugins/radio/') !== false;
+    $configGroup = '';
+    if (isset($_POST['conf_group'])) {
+        $configGroup = (string) $_POST['conf_group'];
+    } elseif (isset($_GET['conf_group'])) {
+        $configGroup = (string) $_GET['conf_group'];
+    }
+    $isRadioConfig = strpos($path, '/admin/configuration.php') !== false
+        && $configGroup === 'radio';
+
+    if ($isAdmin || $isRadioConfig) {
+        return RADIO_adminStylesheetLink();
+    }
+
+    return '';
+}
+
 function plugin_getadminoption_radio()
 {
     global $_CONF, $LANG_RADIO;
