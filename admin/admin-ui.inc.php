@@ -150,3 +150,55 @@ function RADIO_adminSyncModeLabel($mode)
     $key = $mode === 'drafts' ? 'feed_sync_drafts' : 'feed_sync_preview';
     return $LANG_RADIO[$key];
 }
+
+function RADIO_adminSelectOptions($items, $selected)
+{
+    $html = '';
+    foreach ($items as $value => $label) {
+        $html .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"'
+            . ((string) $value === (string) $selected ? ' selected' : '') . '>'
+            . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    return $html;
+}
+
+function RADIO_adminMediaTypeOptions($selected, $includeSpecial)
+{
+    global $LANG_RADIO;
+    $types = array('music','podcast','interview','show','chronicle');
+    if ($includeSpecial) {
+        $types = array_merge($types, array('jingle','announcement','promo'));
+    }
+    $items = array();
+    foreach ($types as $type) {
+        $items[$type] = $LANG_RADIO['type_' . $type];
+    }
+    return RADIO_adminSelectOptions($items, $selected);
+}
+
+function RADIO_adminStatusOptions($selected)
+{
+    global $LANG_RADIO;
+    return RADIO_adminSelectOptions(array(
+        'draft' => $LANG_RADIO['draft'],
+        'published' => $LANG_RADIO['published']
+    ), $selected);
+}
+
+function RADIO_adminQuickActions()
+{
+    global $_CONF, $LANG_RADIO;
+    if (!SEC_hasRights('radio.upload')) {
+        return '';
+    }
+    $template = RADIO_adminTemplate('quick-actions.thtml');
+    $template->set_var(array(
+        'quick_actions_title' => htmlspecialchars($LANG_RADIO['admin_quick_actions'], ENT_QUOTES, 'UTF-8'),
+        'upload_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/upload.php', ENT_QUOTES, 'UTF-8'),
+        'upload_label' => htmlspecialchars($LANG_RADIO['admin_add_audio'], ENT_QUOTES, 'UTF-8'),
+        'external_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/external.php', ENT_QUOTES, 'UTF-8'),
+        'external_label' => htmlspecialchars($LANG_RADIO['admin_add_external'], ENT_QUOTES, 'UTF-8'),
+        'quick_actions_help' => htmlspecialchars($LANG_RADIO['admin_quick_actions_help'], ENT_QUOTES, 'UTF-8')
+    ));
+    return $template->finish($template->parse('output', 'page'));
+}
