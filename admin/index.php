@@ -15,54 +15,6 @@ $storage = RADIO_storageDir();
 $ready = RADIO_ensureStorage();
 $message = '';
 
-if (isset($_POST['save_external_media'])) {
-    if (!SEC_checkToken()) {
-        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
-    } elseif (!SEC_hasRights('radio.upload')) {
-        $message = COM_showMessageText($LANG_RADIO['access_denied'], $LANG_RADIO['admin_title']);
-    } else {
-        $error = '';
-        $coverError = '';
-        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
-        if ($coverName === false) {
-            $error = $coverError;
-            $id = false;
-        } else {
-            $_POST['cover_name'] = $coverName;
-            $id = RADIO_saveExternalMedia($_POST, $error);
-            if ($id === false && $coverName !== '') RADIO_deleteCover($coverName);
-        }
-        $key = $id !== false ? 'external_saved' : (isset($LANG_RADIO[$error]) ? $error : 'external_save_failed');
-        $message = COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['admin_title']);
-    }
-}
-
-if (isset($_POST['upload_media'])) {
-    if (!SEC_checkToken()) {
-        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
-    } elseif (!SEC_hasRights('radio.upload')) {
-        $message = COM_showMessageText($LANG_RADIO['access_denied'], $LANG_RADIO['admin_title']);
-    } else {
-        $error = '';
-        $coverError = '';
-        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
-        if ($coverName === false) {
-            $error = $coverError;
-            $id = false;
-        } else {
-            $_POST['cover_name'] = $coverName;
-            $id = RADIO_saveUpload(isset($_FILES['audio_file']) ? $_FILES['audio_file'] : array(), $_POST, $error);
-            if ($id === false && $coverName !== '') RADIO_deleteCover($coverName);
-        }
-        if ($id !== false) {
-            $message = COM_showMessageText($LANG_RADIO['upload_saved'], $LANG_RADIO['admin_title']);
-        } else {
-            $key = isset($LANG_RADIO[$error]) ? $error : 'upload_failed';
-            $message = COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['admin_title']);
-        }
-    }
-}
-
 if (isset($_POST['save_media'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
@@ -107,65 +59,7 @@ $content = '<section class="radio-admin__panel"><h2>'
     . htmlspecialchars($ready ? $LANG_RADIO['storage_ready'] : $LANG_RADIO['storage_unavailable'], ENT_QUOTES, 'UTF-8')
     . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p></section>';
 
-if (SEC_hasRights('radio.upload')) {
-    $content .= '<h2>' . htmlspecialchars($LANG_RADIO['external_source_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
-    $content .= '<form method="post" enctype="multipart/form-data" action="">'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8') . ' <select name="source_kind"><option value="external">' . htmlspecialchars($LANG_RADIO['source_external'], ENT_QUOTES, 'UTF-8') . '</option><option value="live">' . htmlspecialchars($LANG_RADIO['source_live'], ENT_QUOTES, 'UTF-8') . '</option></select></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_url'], ENT_QUOTES, 'UTF-8') . '<br><input type="url" name="source_url" maxlength="2048" required style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="title" maxlength="255" required style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_provider'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="source_provider" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_external_id'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="source_external_id" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_attribution'], ENT_QUOTES, 'UTF-8') . '<br><textarea name="source_attribution" rows="2" style="width:100%"></textarea></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['source_license'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="source_license" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8') . '<br><textarea name="description" rows="3" style="width:100%"></textarea></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8') . ' <select name="media_type"><option value="music">' . htmlspecialchars($LANG_RADIO['type_music'], ENT_QUOTES, 'UTF-8') . '</option><option value="podcast">' . htmlspecialchars($LANG_RADIO['type_podcast'], ENT_QUOTES, 'UTF-8') . '</option><option value="interview">' . htmlspecialchars($LANG_RADIO['type_interview'], ENT_QUOTES, 'UTF-8') . '</option><option value="show">' . htmlspecialchars($LANG_RADIO['type_show'], ENT_QUOTES, 'UTF-8') . '</option><option value="chronicle">' . htmlspecialchars($LANG_RADIO['type_chronicle'], ENT_QUOTES, 'UTF-8') . '</option></select></label> '
-        . '<label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="duration" min="0" step="1" value="0" style="width:8rem"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8') . ' <select name="status"><option value="draft">' . htmlspecialchars($LANG_RADIO['draft'], ENT_QUOTES, 'UTF-8') . '</option><option value="published">' . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8') . '</option></select></label></p>'
-        . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend><p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown(RADIO_defaultGroupId(), 3) . '</label></p>' . SEC_getPermissionsHTML(3, 2, 2, 2) . '</fieldset>'
-        . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
-        . '<p><button type="submit" name="save_external_media" value="1">' . htmlspecialchars($LANG_RADIO['save_external'], ENT_QUOTES, 'UTF-8') . '</button></p></form>';
-
-    $content .= '<h2>' . htmlspecialchars($LANG_RADIO['upload_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
-    $content .= '<form method="post" enctype="multipart/form-data" action="">'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['audio_file'], ENT_QUOTES, 'UTF-8')
-        . '<br><input type="file" id="radio-upload-file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
-        . '<br><input type="text" name="title" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="author" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['series_title'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="series_title" maxlength="255" style="width:100%"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['season_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="season_number" min="0" value="0" style="width:6rem"></label> '
-        . '<label>' . htmlspecialchars($LANG_RADIO['episode_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="episode_number" min="0" value="0" style="width:6rem"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
-        . '<br><textarea name="description" rows="4" style="width:100%"></textarea></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8')
-        . '<br><select name="media_type">'
-        . '<option value="music">' . htmlspecialchars($LANG_RADIO['type_music'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="podcast">' . htmlspecialchars($LANG_RADIO['type_podcast'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="interview">' . htmlspecialchars($LANG_RADIO['type_interview'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="show">' . htmlspecialchars($LANG_RADIO['type_show'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="chronicle">' . htmlspecialchars($LANG_RADIO['type_chronicle'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="jingle">' . htmlspecialchars($LANG_RADIO['type_jingle'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="announcement">' . htmlspecialchars($LANG_RADIO['type_announcement'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '<option value="promo">' . htmlspecialchars($LANG_RADIO['type_promo'], ENT_QUOTES, 'UTF-8') . '</option>'
-        . '</select></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8')
-        . ' <input type="number" id="radio-upload-duration" name="duration" min="0" step="1" value="0" style="width:8rem"></label></p>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8')
-        . ' <select name="status"><option value="draft">' . htmlspecialchars($LANG_RADIO['draft'], ENT_QUOTES, 'UTF-8')
-        . '</option><option value="published">' . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8')
-        . '</option></select></label> '
-        . '<label><input type="checkbox" name="allow_download" value="1" checked> '
-        . htmlspecialchars($LANG_RADIO['allow_download'], ENT_QUOTES, 'UTF-8') . '</label></p>'
-        . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend>'
-        . '<p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown(RADIO_defaultGroupId(), 3) . '</label></p>'
-        . SEC_getPermissionsHTML(3, 2, 2, 2)
-        . '</fieldset>'
-        . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
-        . '<button type="submit" name="upload_media" value="1">' . htmlspecialchars($LANG_RADIO['upload'], ENT_QUOTES, 'UTF-8') . '</button>'
-        . '</form>';
-}
+$content .= RADIO_adminQuickActions();
 
 $content .= '<h2>' . htmlspecialchars($LANG_RADIO['library'], ENT_QUOTES, 'UTF-8') . '</h2>';
 if (count($media) === 0) {
@@ -226,10 +120,6 @@ if (count($media) === 0) {
 }
 
 $durationJs = '<script>(function(){'
-    . 'var file=document.getElementById("radio-upload-file");var target=document.getElementById("radio-upload-duration");'
-    . 'if(file&&target){file.addEventListener("change",function(){if(!file.files||!file.files[0])return;'
-    . 'var a=document.createElement("audio");var u=URL.createObjectURL(file.files[0]);a.preload="metadata";a.src=u;'
-    . 'a.addEventListener("loadedmetadata",function(){if(isFinite(a.duration)&&a.duration>0){target.value=Math.round(a.duration);}URL.revokeObjectURL(u);});});}'
     . 'var sources=document.querySelectorAll(".radio-duration-source");'
     . 'for(var i=0;i<sources.length;i++){(function(a){a.addEventListener("loadedmetadata",function(){'
     . 'var id=a.getAttribute("data-duration-target");var input=document.getElementById(id);'
