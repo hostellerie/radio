@@ -260,40 +260,44 @@
         var eventEndpoint = root.getAttribute('data-event-endpoint');
         var audio = q('#radio-home-audio', root);
         var title = q('[data-radio-home-title]', root);
-        var progressBox = q('[data-radio-progress]', root);
-        var progress = q('progress', progressBox);
-        var elapsedNode = q('[data-radio-elapsed]', root);
-        var durationNode = q('[data-radio-duration]', root);
         var canvas = q('#radio-home-wave', root);
 
-        if (!endpoint || !audio || !progress || !progressBox) {
+        if (!endpoint || !audio) {
             return;
         }
 
         var mediaId = 0;
         var programId = 0;
-        var duration = intAttr(progressBox, 'data-duration');
-        var offset = intAttr(progressBox, 'data-offset');
         var userStarted = false;
         var listenStart = 0;
         var wave = waveform(canvas, audio);
-
-        function updateProgress() {
-            progress.max = Math.max(1, duration);
-            progress.value = Math.max(0, Math.min(duration, offset));
-            if (elapsedNode) {
-                elapsedNode.textContent = formatTime(offset);
-            }
-            if (durationNode) {
-                durationNode.textContent = formatTime(duration);
-            }
-        }
 
         function flush() {
             if (listenStart) {
                 postEvent(eventEndpoint, mediaId, programId, 'listen', 'live-home',
                     (Date.now() - listenStart) / 1000);
                 listenStart = 0;
+            }
+        }
+
+        function seekAndMaybePlay(offset, play) {
+            function applySeek() {
+                try {
+                    audio.currentTime = Math.max(0, offset || 0);
+                } catch (error) {}
+                if (play && userStarted) {
+                    wave.start();
+                    audio.play().catch(function () {});
+                }
+            }
+
+            if (audio.readyState >= 1) {
+                applySeek();
+            } else {
+                audio.addEventListener('loadedmetadata', function once() {
+                    audio.removeEventListener('loadedmetadata', once);
+                    applySeek();
+                });
             }
         }
 
@@ -310,9 +314,9 @@
             var nextProgram = data.now_playing
                 ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                 : 0;
+            var offset = parseInt(data.current_media.offset || 0, 10);
+            var streamUrl = data.current_media.stream_url || '';
 
-            duration = parseInt(data.current_media.duration || 0, 10);
-            offset = parseInt(data.current_media.offset || 0, 10);
             wave.setExternal(data.current_media.source_kind && data.current_media.source_kind !== 'local');
 
             if (title) {
@@ -320,39 +324,27 @@
                 title.href = data.current_media.url || '#';
             }
 
-            var changed = mediaId !== nextId || audio.getAttribute('src') !== data.current_media.stream_url;
+            var changed = mediaId !== nextId || audio.getAttribute('src') !== streamUrl;
             mediaId = nextId;
             programId = nextProgram;
-            updateProgress();
-
-            function seekAndPlay() {
-                try {
-                    audio.currentTime = offset;
-                } catch (error) {}
-                if (play && userStarted) {
-                    wave.start();
-                    audio.play().catch(function () {});
-                }
-            }
 
             if (changed) {
                 flush();
-                audio.src = data.current_media.stream_url;
+                audio.src = streamUrl;
                 audio.load();
-                audio.addEventListener('loadedmetadata', function once() {
-                    audio.removeEventListener('loadedmetadata', once);
-                    seekAndPlay();
-                });
-            } else {
-                if (!audio.paused && Math.abs(audio.currentTime - offset) > 5) {
-                    try {
-                        audio.currentTime = offset;
-                    } catch (error) {}
-                }
-                if (play && userStarted && audio.paused) {
-                    wave.start();
-                    audio.play().catch(function () {});
-                }
+                seekAndMaybePlay(offset, play);
+                return;
+            }
+
+            if (Math.abs(audio.currentTime - offset) > 5) {
+                try {
+                    audio.currentTime = offset;
+                } catch (error) {}
+            }
+
+            if (play && userStarted && audio.paused) {
+                wave.start();
+                audio.play().catch(function () {});
             }
         }
 
@@ -377,6 +369,7 @@
                 sync(true);
                 return;
             }
+            wave.start();
             postEvent(eventEndpoint, mediaId, programId, 'play', 'live-home', 0);
             listenStart = Date.now();
         });
@@ -388,18 +381,11 @@
         window.addEventListener('pagehide', flush);
 
         window.setInterval(function () {
-            if (offset < duration) {
-                offset++;
-                updateProgress();
-            }
-        }, 1000);
-
-        window.setInterval(function () {
             sync(userStarted && !audio.paused);
         }, 15000);
 
-        updateProgress();
         wave.draw();
+        sync(false);
     }
 
     function initLivePage(root) {
