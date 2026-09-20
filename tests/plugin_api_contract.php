@@ -2,6 +2,8 @@
 $root = dirname(__DIR__);
 $functions = file_get_contents($root . '/functions.inc');
 $autoinstall = file_get_contents($root . '/autoinstall.php');
+$english = file_get_contents($root . '/language/english.php');
+$french = file_get_contents($root . '/language/french.php');
 
 $errors = array();
 
@@ -71,6 +73,16 @@ radio_contract_require(
     strpos($functions, "language/english.php") !== false,
     'Radio language bootstrap must provide an English fallback.'
 );
+foreach (array('english' => $english, 'french' => $french) as $languageName => $languageFile) {
+    radio_contract_require(
+        strpos($languageFile, 'global $LANG_RADIO, $LANG_configsections, $LANG_confignames, $LANG_configsubgroups, $LANG_tab, $LANG_fs, $LANG_configselects;') !== false,
+        'Radio language files must declare Geeklog configuration language arrays as globals: ' . $languageName
+    );
+    radio_contract_require(
+        strpos($languageFile, "$LANG_confignames['radio']") !== false,
+        'Radio language file must define LANG_confignames[radio]: ' . $languageName
+    );
+}
 
 foreach (array(
     'radio_media',
