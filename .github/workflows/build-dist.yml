@@ -11,9 +11,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: radio-build-dist-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   compatibility-lint:
