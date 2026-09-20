@@ -3,7 +3,18 @@ require_once '../lib-common.php';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $download = !empty($_GET['download']);
-$row = RADIO_getMedia($id, true);
+$row = RADIO_getMedia($id, false);
+
+if ($row !== false) {
+    $published = isset($row['status']) && $row['status'] === 'published';
+    if ($published) {
+        if (!RADIO_hasReadAccess($row)) {
+            $row = false;
+        }
+    } elseif (!RADIO_hasEditAccess($row)) {
+        $row = false;
+    }
+}
 
 if ($row === false) {
     header('HTTP/1.1 404 Not Found');
