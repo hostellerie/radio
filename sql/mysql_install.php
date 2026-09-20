@@ -77,3 +77,18 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_schedule']} (
   KEY starts_at (starts_at),
   KEY program_id (program_id)
 ) ENGINE=MyISAM;";
+
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_events']} (
+  event_id bigint(20) unsigned NOT NULL auto_increment,
+  media_id int(10) unsigned NOT NULL default '0',
+  program_id int(10) unsigned NOT NULL default '0',
+  event_type varchar(24) NOT NULL default 'play',
+  source varchar(24) NOT NULL default 'catalogue',
+  seconds_listened int(10) unsigned NOT NULL default '0',
+  created datetime NOT NULL,
+  PRIMARY KEY (event_id),
+  KEY created (created),
+  KEY media_event (media_id,event_type),
+  KEY source_event (source,event_type)
+) ENGINE=MyISAM;";
