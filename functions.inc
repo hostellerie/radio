@@ -174,6 +174,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
+    $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
     $now = date('Y-m-d H:i:s');
 
@@ -185,7 +186,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
         . "'" . DB_escapeString($storageName) . "',"
         . "'" . DB_escapeString($validated['original_name']) . "',"
         . "'" . DB_escapeString($validated['mime']) . "',"
-        . "0,"
+        . $duration . ","
         . (int) $validated['size'] . ","
         . "'" . DB_escapeString($status) . "',"
         . $allowDownload . ",0,"
@@ -258,6 +259,7 @@ function RADIO_updateMedia($id, $metadata)
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
+    $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
     $now = date('Y-m-d H:i:s');
 
     DB_query(
@@ -267,6 +269,7 @@ function RADIO_updateMedia($id, $metadata)
         . "media_type='" . DB_escapeString($mediaType) . "',"
         . "status='" . DB_escapeString($status) . "',"
         . "allow_download=" . $allowDownload . ","
+        . "duration=" . $duration . ","
         . "modified='" . DB_escapeString($now) . "' "
         . "WHERE media_id=" . (int) $id
     );
@@ -902,6 +905,72 @@ function RADIO_getUpcoming($limit, $fromTs)
 }
 
 
+
+function RADIO_programDuration($programId)
+{
+    $items = RADIO_getProgramItems($programId);
+    $duration = 0;
+    foreach ($items as $item) {
+        if ($item['status'] === 'published' && (int) $item['duration'] > 0) {
+            $duration += (int) $item['duration'];
+        }
+    }
+    return $duration;
+}
+
+function RADIO_resolveProgramPlayback($programId, $elapsed)
+{
+    $elapsed = max(0, (int) $elapsed);
+    $items = RADIO_getProgramItems($programId);
+    $cursor = 0;
+
+    foreach ($items as $item) {
+        if ($item['status'] !== 'published') {
+            continue;
+        }
+        $duration = (int) $item['duration'];
+        if ($duration < 1) {
+            continue;
+        }
+        if ($elapsed < ($cursor + $duration)) {
+            return array(
+                'media_id' => (int) $item['media_id'],
+                'external_id' => RADIO_externalId('media', (int) $item['media_id']),
+                'title' => $item['title'],
+                'media_type' => $item['media_type'],
+                'duration' => $duration,
+                'offset' => $elapsed - $cursor,
+                'starts_after' => $cursor,
+                'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
+                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id']))
+            );
+        }
+        $cursor += $duration;
+    }
+
+    return false;
+}
+
+function RADIO_getLiveState($timestamp)
+{
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $program = RADIO_getNowPlaying($timestamp);
+    if ($program === false) {
+        return array(
+            'timestamp' => $timestamp,
+            'program' => false,
+            'media' => false
+        );
+    }
+
+    $media = RADIO_resolveProgramPlayback($program['program_id'], $program['elapsed']);
+    return array(
+        'timestamp' => $timestamp,
+        'program' => $program,
+        'media' => $media
+    );
+}
+
 function RADIO_dashboardSummary()
 {
     global $_TABLES;
@@ -946,7 +1015,8 @@ function plugin_getcapabilities_radio()
             'radio.media.read',
             'radio.program.read',
             'radio.schedule.read',
-            'radio.now-playing.read'
+            'radio.now-playing.read',
+            'radio.current-media.read'
         )
     );
 }

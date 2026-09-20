@@ -96,6 +96,8 @@ if (SEC_hasRights('radio.upload')) {
         . '<option value="announcement">' . htmlspecialchars($LANG_RADIO['type_announcement'], ENT_QUOTES, 'UTF-8') . '</option>'
         . '<option value="promo">' . htmlspecialchars($LANG_RADIO['type_promo'], ENT_QUOTES, 'UTF-8') . '</option>'
         . '</select></label></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8')
+        . ' <input type="number" name="duration" min="0" step="1" value="0" style="width:8rem"></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8')
         . ' <select name="status"><option value="draft">' . htmlspecialchars($LANG_RADIO['draft'], ENT_QUOTES, 'UTF-8')
         . '</option><option value="published">' . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8')
@@ -127,6 +129,8 @@ if (count($media) === 0) {
             . htmlspecialchars($row['original_name'], ENT_QUOTES, 'UTF-8') . '</code> · '
             . htmlspecialchars($row['mime_type'], ENT_QUOTES, 'UTF-8') . ' · '
             . number_format(((int) $row['file_size']) / 1048576, 2) . ' MB</p>'
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8')
+            . ' <input type="number" name="duration" min="0" step="1" value="' . (int) $row['duration'] . '" style="width:8rem"></label></p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8') . ' <select name="media_type">';
 
         $types = array('music','podcast','interview','show','chronicle','jingle','announcement','promo');
