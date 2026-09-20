@@ -39,17 +39,33 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
+## Implementation status snapshot — 0.1.9
+
+The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
+
+Current state:
+
+- **Foundation / storage / installer:** substantially implemented; remaining work is mainly compatibility testing and security audit.
+- **Local media / public player:** implemented for core upload, metadata editing, covers, ACL, controlled delivery and HTML5 playback; drag-and-drop, full codec inspection and richer tags/categories remain open.
+- **Programmes / scheduling / synchronized radio:** core model, recurrence, weekly schedule, deterministic fallback rotation, now-playing and synchronized offset are implemented.
+- **Replay / podcast:** replay, RSS podcast generation, podcast metadata and listening/download statistics are implemented; richer per-programme download policies remain open.
+- **External sources:** direct remote references, live stream references, bounded RSS/Atom preview/import and controlled feed synchronization are implemented experimentally; provider allowlists, credentialed providers and deeper MIME/content validation remain open.
+- **Interoperability:** Item Info, lifecycle events, URL resolution, Search, What’s New, XML Sitemap, related items, capability declaration and bounded Geeklog services are implemented.
+- **Eclipse / Agent readiness:** structured dashboard, now-playing, upcoming, replay, source/sync and stats services are implemented. Agent/Eclipse integration still needs end-to-end testing against their current branches.
+- **Hub:** Radio exposes the contracts Hub can consume, but explicit Hub relationship workflows are not yet implemented/tested.
+- **Security / multisite / compatibility:** still a pre-stable priority. The code is designed for Geeklog 2.1.1–2.2.2 and PHP 5.6+, but the full compatibility matrix, two-site isolation test and security audit remain open.
+
 # Phase 0 — Architecture and plugin skeleton
 
-- [ ] Define the canonical plugin id as `radio`.
-- [ ] Create standard Geeklog plugin structure, installer, uninstall and upgrade paths.
-- [ ] Add `plugin.json` following the memorandum metadata manifest.
+- [x] Define the canonical plugin id as `radio`.
+- [x] Create standard Geeklog plugin structure, installer, uninstall and upgrade paths.
+- [x] Add `plugin.json` following the memorandum metadata manifest.
 - [ ] Add repository-root `README.md`, `ROADMAP.md` and changelog/release notes convention.
-- [ ] Add automated packaging to `dist/radio-x.y.z.zip`.
-- [ ] Ensure generated archives contain no dot-prefixed files that can break Geeklog plugin upload/install workflows.
-- [ ] Define database tables through `$_TABLES`; never hard-code table prefixes.
+- [x] Add automated packaging to `dist/radio-x.y.z.zip`.
+- [x] Ensure generated archives contain no dot-prefixed files that can break Geeklog plugin upload/install workflows.
+- [x] Define database tables through `$_TABLES`; never hard-code table prefixes.
 - [ ] Define permissions for administration, upload, edit, schedule, publish, download management and playback of restricted content.
-- [ ] Define clean separation between persistent audio files, generated/cache data and plugin executable files.
+- [x] Define clean separation between persistent audio files, generated/cache data and plugin executable files.
 
 Candidate logical tables:
 
@@ -78,16 +94,16 @@ The final schema should be driven by stable domain objects rather than UI screen
 
 ## Local audio management
 
-- [ ] Upload audio files from the administration interface.
+- [x] Upload audio files from the administration interface.
 - [ ] Support safe drag-and-drop upload.
 - [ ] Validate extension, MIME type, actual media type and configured size limits.
-- [ ] Generate filesystem-safe storage names independently from the uploaded filename.
-- [ ] Keep the original human filename and metadata separately when useful.
+- [x] Generate filesystem-safe storage names independently from the uploaded filename.
+- [x] Keep the original human filename and metadata separately when useful.
 - [ ] Extract available audio metadata such as title, artist, album, duration and embedded artwork.
-- [ ] Let administrators correct or override extracted metadata.
+- [x] Let administrators correct or override extracted metadata.
 - [ ] Support at least the formats that can be played reliably by current browsers; document the accepted format matrix.
 - [ ] Store title, author/artist, description, category, tags, duration, file size, publication state and dates.
-- [ ] Support a media subtype such as:
+- [x] Support a media subtype such as:
   - music;
   - podcast;
   - interview;
@@ -96,33 +112,33 @@ The final schema should be driven by stable domain objects rather than UI screen
   - jingle;
   - announcement;
   - promo.
-- [ ] Support an optional cover/image.
+- [x] Support an optional cover/image.
 - [ ] Support draft, published, disabled and archived states.
-- [ ] Support per-item download permission.
+- [x] Support per-item download permission.
 
 ## Persistent storage
 
 Follow `plugin-persistent-storage-guide.md` and `multisite-development-principles.md`.
 
-- [ ] Derive persistent storage from the current site's `$_CONF['path_data']`.
-- [ ] Keep uploaded media outside disposable plugin/cache directories.
-- [ ] Prefer storage outside the public web root where practical.
-- [ ] Provide controlled file delivery when ACL, logging or download rules require it.
-- [ ] Make storage initialization failures explicit.
-- [ ] Ensure cache cleanup can never delete persistent audio.
-- [ ] Keep all migration procedures non-destructive and idempotent.
-- [ ] Never scan or modify sibling multisite storage during normal requests.
+- [x] Derive persistent storage from the current site's `$_CONF['path_data']`.
+- [x] Keep uploaded media outside disposable plugin/cache directories.
+- [x] Prefer storage outside the public web root where practical.
+- [x] Provide controlled file delivery when ACL, logging or download rules require it.
+- [x] Make storage initialization failures explicit.
+- [x] Ensure cache cleanup can never delete persistent audio.
+- [x] Keep all migration procedures non-destructive and idempotent.
+- [x] Never scan or modify sibling multisite storage during normal requests.
 
 ---
 
 # Phase 2 — Public audio player
 
-- [ ] Provide an HTML5-based player.
+- [x] Provide an HTML5-based player.
 - [x] Display title, author/artist, programme and cover where available.
-- [ ] Expose play/pause, seek and volume controls where the playback mode permits them.
-- [ ] Provide a controlled download action when enabled.
-- [ ] Provide canonical public pages for addressable media.
-- [ ] Support responsive presentation.
+- [x] Expose play/pause, seek and volume controls where the playback mode permits them.
+- [x] Provide a controlled download action when enabled.
+- [x] Provide canonical public pages for addressable media.
+- [x] Support responsive presentation.
 - [ ] Provide accessible controls, labels and keyboard operation.
 - [ ] Define reusable rendering helpers/autotags only after the basic content model is stable.
 
@@ -134,10 +150,10 @@ Normal HTTP media delivery and browser range requests should be preferred.
 
 # Phase 3 — Programmes, shows and playlists
 
-- [ ] Add a `programme` / `show` object independent from the underlying media files.
-- [ ] Allow a programme to contain ordered programme items.
-- [ ] Reuse the same audio item in multiple programmes without duplicating the file.
-- [ ] Support programme metadata:
+- [x] Add a `programme` / `show` object independent from the underlying media files.
+- [x] Allow a programme to contain ordered programme items.
+- [x] Reuse the same audio item in multiple programmes without duplicating the file.
+- [x] Support programme metadata:
   - title;
   - description;
   - image;
@@ -145,7 +161,7 @@ Normal HTTP media delivery and browser range requests should be preferred.
   - category;
   - publication state.
 - [ ] Provide an intuitive item-ordering interface.
-- [ ] Allow jingles, announcements and promotional items in the same sequence as music and spoken content.
+- [x] Allow jingles, announcements and promotional items in the same sequence as music and spoken content.
 - [ ] Allow a programme to reference another reusable playlist where this remains understandable for administrators.
 
 Example:
@@ -166,19 +182,19 @@ Jingle
 
 ## Daily and weekly schedule
 
-- [ ] Provide day and week administration views.
-- [ ] Schedule a programme once or recurrently.
-- [ ] Support:
+- [x] Provide day and week administration views.
+- [x] Schedule a programme once or recurrently.
+- [x] Support:
   - one-time broadcasts;
   - daily recurrence;
   - selected weekdays;
   - weekly recurrence;
   - active date ranges.
-- [ ] Detect schedule conflicts.
-- [ ] Expose the currently scheduled item.
-- [ ] Expose upcoming programmes.
-- [ ] Define deterministic behaviour for gaps in the schedule.
-- [ ] Support automatic fallback playlists when no explicit programme is scheduled.
+- [x] Detect schedule conflicts.
+- [x] Expose the currently scheduled item.
+- [x] Expose upcoming programmes.
+- [x] Define deterministic behaviour for gaps in the schedule.
+- [x] Support automatic fallback playlists when no explicit programme is scheduled.
 - [ ] Keep scheduling calculations timezone-aware and based on the active Geeklog site configuration.
 
 ## Rotation rules
@@ -209,12 +225,12 @@ start time + media duration
 browser starts the audio at the calculated position
 ```
 
-- [ ] Resolve `now playing` from schedule and rotation rules.
-- [ ] Calculate playback offset for visitors joining an already-started item.
-- [ ] Return enough structured data for the browser player to stay synchronized.
+- [x] Resolve `now playing` from schedule and rotation rules.
+- [x] Calculate playback offset for visitors joining an already-started item.
+- [x] Return enough structured data for the browser player to stay synchronized.
 - [ ] Recover gracefully after pause, browser sleep or connectivity loss.
-- [ ] Define behaviour at programme/item transitions.
-- [ ] Avoid long-running PHP streaming loops.
+- [x] Define behaviour at programme/item transitions.
+- [x] Avoid long-running PHP streaming loops.
 
 This mode must work on a standard Geeklog web server.
 
@@ -226,9 +242,9 @@ This mode must work on a standard Geeklog web server.
 - [x] Provide immediate time-limited replay using `default_replay_days`; delayed/per-programme/permanent policies remain for a later iteration.
 - [x] Keep replay as a reference to existing media/programme objects rather than duplicate files.
 - [ ] Support per-item and per-programme download policy.
-- [ ] Enforce Geeklog permissions before controlled downloads.
-- [ ] Optionally record download counts.
-- [ ] Keep listening statistics separate from permissions and editorial state.
+- [x] Enforce Geeklog permissions before controlled downloads.
+- [x] Optionally record download counts.
+- [x] Keep listening statistics separate from permissions and editorial state.
 
 ---
 
@@ -239,7 +255,7 @@ This mode must work on a standard Geeklog web server.
 - [x] Expose podcast-friendly descriptions, dates, duration, artwork and canonical URLs.
 - [x] Implement Geeklog native Content Syndication callbacks: `plugin_getfeednames_radio()`, `plugin_getfeedcontent_radio()` and `plugin_feedupdatecheck_radio()`.
 - [x] Provide a dedicated RSS 2.0 podcast feed with audio `enclosure` while keeping Radio media as the source of truth.
-- [ ] Keep feed generation permission-aware.
+- [x] Keep feed generation permission-aware for the public podcast feed.
 - [ ] Preserve canonical source attribution and enclosure/download rules.
 
 ---
@@ -334,8 +350,8 @@ Follow `plugin-content-interoperability-contract.md`.
 
 ## Item Info
 
-- [ ] Implement `plugin_getiteminfo_radio()`.
-- [ ] Expose stable normalized fields where meaningful:
+- [x] Implement `plugin_getiteminfo_radio()`.
+- [x] Expose stable normalized fields where meaningful:
   - `id`;
   - `type`;
   - `subtype`;
@@ -351,25 +367,25 @@ Follow `plugin-content-interoperability-contract.md`.
   - `category`;
   - `tags`;
   - `hits` when a real persisted counter exists.
-- [ ] Support `id='*'` collection retrieval.
-- [ ] Support common bounded options:
+- [x] Support `id='*'` collection retrieval.
+- [x] Support common bounded options:
   - `since`;
   - `limit`;
   - `order`.
 - [ ] Add subtype/category filtering where it solves actual consumer needs.
-- [ ] Keep permission checks and canonical URL construction inside Radio.
+- [x] Keep permission checks and canonical URL construction inside Radio.
 
 ## Lifecycle
 
-- [ ] Emit `PLG_itemSaved()` after successful creation or modification of addressable content.
-- [ ] Emit `PLG_itemDeleted()` after successful deletion.
-- [ ] Cover normal administration, imports and later service/API mutation paths.
+- [x] Emit `PLG_itemSaved()` after successful creation or modification of addressable content.
+- [x] Emit `PLG_itemDeleted()` after successful deletion.
+- [x] Cover normal administration and explicit feed imports; current Geeklog services are intentionally read-only.
 - [ ] Preserve subtype information when the active Geeklog API provides it.
 
 ## URL resolution
 
-- [ ] Implement `plugin_idtourl_radio()` where supported.
-- [ ] Keep `url` available through Item Info as the compatibility fallback.
+- [x] Implement `plugin_idtourl_radio()` where supported.
+- [x] Keep `url` available through Item Info as the compatibility fallback.
 
 ## Optional native Geeklog surfaces
 
@@ -432,9 +448,27 @@ radio.source.import
 ```
 
 - [x] Add `plugin_getcapabilities_radio()` and expose shared content/service capabilities.
-- [ ] Use bounded Geeklog services for specialized data that does not naturally fit Item Info.
-- [ ] Do not create Agent-specific, Hub-specific or Eclipse-specific parallel APIs.
-- [ ] Never treat a declared capability as write authorization.
+- [x] Use bounded Geeklog services for specialized data that does not naturally fit Item Info.
+- [x] Do not create Agent-specific, Hub-specific or Eclipse-specific parallel APIs.
+- [x] Never treat a declared capability as write authorization; Radio 0.1.9 services are read-only.
+
+---
+
+## Implemented Radio 0.1.9 service facade
+
+Radio now exposes the following read-only internal Geeklog services through `PLG_invokeService()`:
+
+| Capability | Service action | Access |
+|---|---|---|
+| `dashboard.summary` | `dashboard_summary` | `radio.admin` |
+| `radio.now-playing.read` / `radio.current-media.read` | `now_playing` | current user ACL |
+| `radio.upcoming.read` / `radio.schedule.read` | `upcoming` | current user ACL |
+| `radio.replay.read` | `replays` | current user ACL |
+| `radio.stats.read` | `stats` | `radio.admin` |
+| `radio.source.summary` / `radio.source.feed.read` | `sources` | `radio.admin` |
+| `radio.source.sync.read` | `sync_status` | `radio.admin` |
+
+The services are read-only, reject public `gl_svc` webservice-style calls and do not trigger external feed refreshes or imports.
 
 ---
 
@@ -442,19 +476,19 @@ radio.source.import
 
 Follow `llm-agent-content-representation-contract.md`.
 
-- [ ] Make Radio content consumable without scraping theme HTML.
-- [ ] Keep stable identity as plugin + type + id + optional subtype.
-- [ ] Expose clean content/metadata representations for episodes, programmes and schedule entries where useful.
-- [ ] Preserve canonical human URLs.
+- [x] Make Radio content consumable without scraping theme HTML through Item Info and bounded services.
+- [x] Keep stable identity as plugin + type + id + optional subtype.
+- [x] Expose clean content/metadata representations for episodes, programmes, now-playing, upcoming schedule entries and replays.
+- [x] Preserve canonical human URLs.
 - [ ] Expose language, licensing and attribution fields when known.
-- [ ] Let Agent answer provider-neutral questions such as:
+- [x] Let Agent answer provider-neutral questions such as:
   - what is playing now?
   - what is next?
   - what are the latest podcast episodes?
   - what programmes are scheduled tomorrow?
   - what are the most-listened-to addressable items, if Radio maintains a real counter?
-- [ ] Keep discovery, resources, capabilities and authorized actions separate.
-- [ ] Do not expose private/restricted Radio content through machine-facing resources.
+- [x] Keep discovery, resources, capabilities and authorized actions separate.
+- [x] Do not expose private/restricted Radio content through machine-facing resources.
 
 ---
 
@@ -474,9 +508,9 @@ External sources: 3 / 3 healthy
 ```
 
 - [x] Expose `dashboard.summary` through the shared capability/service model.
-- [ ] Do not make Radio depend on Eclipse.
-- [ ] Do not let Eclipse query Radio tables directly.
-- [ ] Consider exposing:
+- [x] Do not make Radio depend on Eclipse.
+- [x] Do not let Eclipse query Radio tables directly; use `dashboard_summary`.
+- [x] Expose the current dashboard summary set:
   - media count;
   - published programme count;
   - upcoming scheduled count;
@@ -492,7 +526,7 @@ External sources: 3 / 3 healthy
 - [ ] Expose programme/episode relationships without making Hub understand Radio SQL.
 - [ ] Allow Hub to relate stories, documents, videos, maps or other content to Radio episodes/programmes.
 - [ ] Evaluate `content.related` only after the base identity/content contract is stable.
-- [ ] Keep Radio as the owner of Radio content and business rules.
+- [x] Keep Radio as the owner of Radio content and business rules.
 
 ---
 
@@ -545,19 +579,19 @@ Add only useful, privacy-conscious measurements.
 
 Potential data:
 
-- [ ] per-item page/listen counter when it can be measured consistently;
-- [ ] download count;
+- [x] per-item play/listen events and aggregate top-media counts;
+- [x] download count;
 - [ ] programme/replay popularity;
 - [ ] recent playback errors;
 - [ ] schedule execution diagnostics;
 - [x] remote-source health and last synchronization summary;
-- [ ] last successful remote metadata refresh/import.
+- [x] last remote feed synchronization and imported-count summary.
 
 If Radio persists a per-item popularity counter:
 
-- [ ] expose it as normalized `hits`;
-- [ ] support `order => 'hits-desc'`;
-- [ ] keep aggregate statistics separate from Item Info.
+- [x] expose the persisted media page-view counter as normalized `hits`;
+- [x] support `order => 'hits-desc'`;
+- [x] keep aggregate listening/download statistics separate from Item Info.
 
 Do not collect unnecessary personal listener data merely to provide a dashboard.
 
@@ -588,7 +622,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 - [ ] Test two sites with different `path_data`, URLs and table mappings.
 - [ ] Confirm site A cannot read/write site B Radio files, settings or database records.
 - [ ] Keep remote provider credentials and caches site-specific.
-- [ ] Make migrations repeatable.
+- [x] Make schema/config migrations repeatable and idempotent.
 - [ ] Support staggered multisite upgrades when plugin files are shared.
 - [ ] New executable code must tolerate the previous supported persisted schema until the active site completes its upgrade.
 - [ ] Do not force every site sharing plugin code to run a database/files migration simultaneously.
@@ -600,7 +634,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.8**.
+Current development version: **0.1.9**.
 
 Focus:
 
