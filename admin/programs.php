@@ -23,6 +23,12 @@ if (isset($_POST['save_program'])) {
         if ($coverName !== false) {
             $_POST['cover_name'] = $coverName !== '' ? $coverName : ($existingProgram ? $existingProgram['cover_name'] : '');
             $saved = RADIO_saveProgram($selectedId, $_POST);
+            if ($saved !== false && $coverName !== '' && $existingProgram && !empty($existingProgram['cover_name'])) {
+                RADIO_deleteCover($existingProgram['cover_name']);
+            }
+            if ($saved === false && $coverName !== '') {
+                RADIO_deleteCover($coverName);
+            }
         } else {
             $saved = false;
         }
