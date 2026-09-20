@@ -13,10 +13,7 @@ function RADIO_adminTemplate($file)
 
 function RADIO_adminHeaderCode()
 {
-    global $_CONF;
-    return '<link rel="stylesheet" href="'
-        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/radio-admin.css', ENT_QUOTES, 'UTF-8')
-        . '">';
+    return '<meta name="robots" content="noindex,nofollow">' . "\n";
 }
 
 function RADIO_adminConfigurationButton()
