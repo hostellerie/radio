@@ -7,6 +7,9 @@ $french = file_get_contents($root . '/language/french.php');
 $defaults = file_get_contents($root . '/install_defaults.php');
 $publicIndex = file_get_contents($root . '/public_html/index.php');
 $nowEndpoint = file_get_contents($root . '/public_html/now.php');
+$publicJs = file_get_contents($root . '/public_html/radio.js');
+$publicCss = file_get_contents($root . '/public_html/radio.css');
+$adminJs = file_get_contents($root . '/admin/radio-admin.js');
 
 $errors = array();
 
@@ -148,18 +151,37 @@ radio_contract_require(
     'Radio public index must expose the home live player and waveform.'
 );
 radio_contract_require(
-    strpos($functions, 'RADIO_publicIndexPlayerScript') !== false
-        && strpos($functions, '},15000);') !== false,
+    strpos($publicJs, '15000') !== false
+        && strpos($publicJs, 'data.current_media') !== false,
     'Radio public index player must resynchronize with now.php every 15 seconds.'
 );
 radio_contract_require(
-    strpos($functions, 'AudioContext') !== false
-        && strpos($functions, 'createAnalyser') !== false,
+    strpos($publicJs, 'AudioContext') !== false
+        && strpos($publicJs, 'createAnalyser') !== false,
     'Radio public live waveform must use Web Audio analysis where available.'
 );
 radio_contract_require(
     strpos($nowEndpoint, "'source_kind'") !== false,
     'Radio now endpoint must expose source_kind for safe waveform handling.'
+);
+radio_contract_require(
+    strpos($functions, 'RADIO_publicStylesheetLink') !== false
+        && strpos($functions, 'RADIO_publicScriptTag') !== false
+        && strpos($functions, 'RADIO_adminScriptTag') !== false
+        && strpos($functions, 'RADIO_assetVersion') !== false,
+    'Radio must load versioned public CSS/JS and admin JavaScript assets.'
+);
+radio_contract_require(
+    strpos($functions, 'radio.css') !== false
+        && strpos($functions, 'radio.js') !== false
+        && strpos($functions, 'radio-admin.js') !== false,
+    'Radio versioned asset callbacks must reference the packaged asset files.'
+);
+radio_contract_require(
+    strpos($publicJs, 'function initHomePlayer') !== false
+        && strpos($adminJs, 'radio-upload-file') !== false
+        && strlen($publicCss) > 100,
+    'Radio CSS/JS asset files must contain the expected public/admin behavior.'
 );
 
 if (!empty($errors)) {
