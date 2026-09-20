@@ -1,0 +1,4 @@
+<form class="radio-admin__config-form" method="post" action="{configuration_url}">
+    <input type="hidden" name="conf_group" value="radio">
+    <button class="radio-admin__button radio-admin__button--secondary" type="submit">{configuration_label}</button>
+</form>
