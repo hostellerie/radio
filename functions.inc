@@ -2222,6 +2222,46 @@ function RADIO_buildRotationSequence($date)
     return $sequence;
 }
 
+
+function RADIO_rotationEligibilityDiagnostics()
+{
+    global $_TABLES, $_RADIO_CONF;
+
+    $weights = RADIO_parseTypeWeights(
+        isset($_RADIO_CONF['fallback_type_weights']) ? $_RADIO_CONF['fallback_type_weights'] : ''
+    );
+    $allowedTypes = array_keys($weights);
+    $rows = array();
+
+    $result = DB_query(
+        "SELECT media_id,title,media_type,status,duration,perm_anon,source_kind,original_name "
+        . "FROM {$_TABLES['radio_media']} ORDER BY media_id DESC"
+    );
+
+    while ($row = DB_fetchArray($result)) {
+        $reasons = array();
+
+        if ($row['status'] !== 'published') {
+            $reasons[] = 'status';
+        }
+        if ((int) $row['duration'] < 1) {
+            $reasons[] = 'duration';
+        }
+        if (!in_array($row['media_type'], $allowedTypes, true)) {
+            $reasons[] = 'type';
+        }
+        if ((int) $row['perm_anon'] < 2) {
+            $reasons[] = 'anonymous';
+        }
+
+        $row['_rotation_eligible'] = count($reasons) === 0;
+        $row['_rotation_reasons'] = $reasons;
+        $rows[] = $row;
+    }
+
+    return $rows;
+}
+
 function RADIO_rotationDiagnostics($date)
 {
     global $_RADIO_CONF;
