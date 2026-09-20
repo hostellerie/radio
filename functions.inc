@@ -2456,14 +2456,18 @@ function plugin_idtourl_radio($sub_type, $item_id)
 
 function plugin_getadminoption_radio()
 {
-    global $_CONF;
+    global $_CONF, $LANG_RADIO;
+
     if (!SEC_hasRights('radio.admin')) {
-        return false;
+        return null;
     }
+
+    $label = isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio';
+
     return array(
-        'url' => $_CONF['site_admin_url'] . '/plugins/radio/index.php',
-        'text' => 'Radio',
-        'count' => 0
+        $label,
+        $_CONF['site_admin_url'] . '/plugins/radio/index.php',
+        0
     );
 }
 
