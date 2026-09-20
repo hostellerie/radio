@@ -108,6 +108,7 @@
         var fallback = false;
         var external = false;
         var quietFrames = 0;
+        var visualGain = 1;
 
         function setup() {
             if (context || fallback || external) {
@@ -194,13 +195,23 @@
                 }
 
                 if (quietFrames < 10) {
-                    var points = 64;
+                    var peak = 1;
+                    for (var p = 0; p < data.length; p++) {
+                        peak = Math.max(peak, Math.abs(data[p] - 128));
+                    }
+
+                    var targetGain = Math.min(10, Math.max(1.4, 54 / peak));
+                    visualGain += (targetGain - visualGain) * 0.12;
+
+                    var points = 72;
                     var samples = [];
                     for (var i = 0; i < points; i++) {
                         var sampleIndex = Math.floor(i * (data.length - 1) / (points - 1));
+                        var normalized = ((data[sampleIndex] - 128) / 128) * visualGain;
+                        normalized = Math.max(-1, Math.min(1, normalized));
                         samples.push({
                             x: i * width / (points - 1),
-                            y: height / 2 + ((data[sampleIndex] - 128) / 128) * height * 0.34
+                            y: height / 2 + normalized * height * 0.39
                         });
                     }
 
