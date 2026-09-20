@@ -96,6 +96,8 @@ $LANG_RADIO = array(
     'live_unavailable' => 'L’état de la radio en direct n’a pas pu être chargé.',
 
     'now_playing' => 'À l’antenne',
+    'public_on_air' => 'À l’antenne',
+    'public_on_demand' => 'Écoute à la demande',
     'nothing_scheduled_now' => 'Aucune émission ni rotation automatique n’est disponible actuellement.',
     'automatic_rotation' => 'Radio automatique',
     'rotation_enabled' => 'Fallback activé',
