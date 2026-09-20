@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!SEC_hasRights('radio.schedule')) {
     COM_accessLog('User tried to access Radio schedule administration without permission.');
@@ -54,12 +55,7 @@ $weekStart = strtotime('monday this week 00:00:00', $weekStart);
 $weekEnd = strtotime('+7 days', $weekStart);
 $occurrences = RADIO_getOccurrences($weekStart, $weekEnd, false);
 
-$content = COM_startBlock($LANG_RADIO['schedule'], '', COM_getBlockTemplate('_admin_block', 'header'));
-$content .= $message;
-$content .= '<p><a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['back_to_library_admin'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/programs.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['manage_programs'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+$content = '';
 
 $content .= '<h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_schedule'] : $LANG_RADIO['new_schedule'], ENT_QUOTES, 'UTF-8') . '</h2>';
 if (count($programs) === 0) {
@@ -154,6 +150,16 @@ foreach ($schedules as $row) {
         . '</li>';
 }
 $content .= '</ul>';
-$content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
-
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['schedule'])));
+$content = RADIO_adminRenderPage(
+    'schedule',
+    $LANG_RADIO['schedule'],
+    $LANG_RADIO['admin_schedule_intro'],
+    $LANG_RADIO['admin_schedule_help_title'],
+    $LANG_RADIO['admin_schedule_help_text'],
+    $content,
+    $message
+);
+COM_output(COM_createHTMLDocument($content, array(
+    'pagetitle' => $LANG_RADIO['schedule'],
+    'headercode' => RADIO_adminHeaderCode()
+)));
