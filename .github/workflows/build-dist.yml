@@ -103,6 +103,11 @@ jobs:
           test -f templates/admin/page.thtml
           test -f templates/admin/navigation.thtml
           test -f templates/admin/configuration-button.thtml
+          test -f templates/admin/quick-actions.thtml
+          test -f templates/admin/media-upload.thtml
+          test -f templates/admin/media-external.thtml
+          test -f admin/upload.php
+          test -f admin/external.php
 
       - name: Validate security invariants
         shell: bash
@@ -154,10 +159,15 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/page.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/navigation.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/configuration-button.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/quick-actions.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-upload.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-external.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/upload.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/external.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/programs.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/schedule.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/rotation.php'
