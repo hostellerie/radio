@@ -1,0 +1,62 @@
+<?php
+if (stripos($_SERVER['PHP_SELF'], basename(__FILE__)) !== false) {
+    die('This file cannot be used on its own.');
+}
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
+  media_id int(10) unsigned NOT NULL auto_increment,
+  title varchar(255) NOT NULL default '',
+  description text,
+  media_type varchar(32) NOT NULL default 'music',
+  storage_name varchar(255) NOT NULL default '',
+  original_name varchar(255) NOT NULL default '',
+  mime_type varchar(96) NOT NULL default '',
+  duration int(10) unsigned NOT NULL default '0',
+  file_size bigint(20) unsigned NOT NULL default '0',
+  status varchar(24) NOT NULL default 'draft',
+  allow_download tinyint(1) unsigned NOT NULL default '1',
+  hits int(10) unsigned NOT NULL default '0',
+  owner_id int(10) unsigned NOT NULL default '2',
+  created datetime NOT NULL,
+  modified datetime NOT NULL,
+  PRIMARY KEY (media_id),
+  KEY status_modified (status, modified),
+  KEY media_type (media_type)
+) ENGINE=MyISAM;";
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_programs']} (
+  program_id int(10) unsigned NOT NULL auto_increment,
+  title varchar(255) NOT NULL default '',
+  description text,
+  status varchar(24) NOT NULL default 'draft',
+  owner_id int(10) unsigned NOT NULL default '2',
+  created datetime NOT NULL,
+  modified datetime NOT NULL,
+  PRIMARY KEY (program_id),
+  KEY status_modified (status, modified)
+) ENGINE=MyISAM;";
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_program_items']} (
+  item_id int(10) unsigned NOT NULL auto_increment,
+  program_id int(10) unsigned NOT NULL,
+  media_id int(10) unsigned NOT NULL,
+  sort_order int(10) unsigned NOT NULL default '0',
+  PRIMARY KEY (item_id),
+  KEY program_order (program_id, sort_order),
+  KEY media_id (media_id)
+) ENGINE=MyISAM;";
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_schedule']} (
+  schedule_id int(10) unsigned NOT NULL auto_increment,
+  program_id int(10) unsigned NOT NULL,
+  starts_at datetime NOT NULL,
+  ends_at datetime DEFAULT NULL,
+  recurrence varchar(32) NOT NULL default 'once',
+  weekdays varchar(32) NOT NULL default '',
+  active_from date DEFAULT NULL,
+  active_until date DEFAULT NULL,
+  enabled tinyint(1) unsigned NOT NULL default '1',
+  PRIMARY KEY (schedule_id),
+  KEY starts_at (starts_at),
+  KEY program_id (program_id)
+) ENGINE=MyISAM;";

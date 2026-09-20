@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "id": "radio",
+  "name": "Radio",
+  "requires": {
+    "geeklog": "2.1.1",
+    "php": "5.6.0"
+  }
+}

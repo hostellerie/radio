@@ -1,0 +1,121 @@
+name: Build distributable archive
+
+on:
+  push:
+    branches:
+      - develop-1.0
+    paths-ignore:
+      - 'dist/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radio-build-dist-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-dist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read plugin metadata
+        id: metadata
+        shell: bash
+        run: |
+          VERSION="$(php -r 'echo preg_match("/RADIO_PLUGIN_VERSION.+?([0-9]+\\.[0-9]+\\.[0-9]+)/", file_get_contents("version.php"), $m) ? $m[1] : "";')"
+          GL_VERSION="$(php -r 'echo preg_match("/RADIO_MIN_GEEKLOG_VERSION.+?([0-9]+\\.[0-9]+\\.[0-9]+)/", file_get_contents("version.php"), $m) ? $m[1] : "";')"
+
+          test -n "$VERSION" || { echo "Unable to read Radio version" >&2; exit 1; }
+          test -n "$GL_VERSION" || { echo "Unable to read Geeklog version" >&2; exit 1; }
+
+          ARCHIVE="radio_${VERSION}_${GL_VERSION}.zip"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "gl_version=$GL_VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+
+      - name: Validate plugin manifest
+        run: |
+          php -r '
+          $m = json_decode(file_get_contents("plugin.json"), true);
+          if (!is_array($m)
+              || (int) ($m["schema"] ?? 0) !== 1
+              || ($m["id"] ?? "") !== "radio"
+              || ($m["requires"]["geeklog"] ?? "") !== "2.1.1"
+              || ($m["requires"]["php"] ?? "") !== "5.6.0") {
+              fwrite(STDERR, "Invalid plugin.json\n");
+              exit(1);
+          }'
+
+      - name: Validate PHP syntax
+        run: |
+          find . -type f -name '*.php' -not -path './dist/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Build installable ZIP
+        run: |
+          ARCHIVE="${{ steps.metadata.outputs.archive }}"
+          rm -rf build
+          mkdir -p build/radio dist
+
+          rsync -a ./ build/radio/             --exclude='.git/'             --exclude='.github/'             --exclude='dist/'             --exclude='build/'             --exclude='.*'
+
+          rm -f "dist/$ARCHIVE"
+          (cd build && zip -r -q "../dist/$ARCHIVE" radio)
+
+          unzip -l "dist/$ARCHIVE"
+
+      - name: Reject hidden archive entries
+        run: |
+          ARCHIVE="dist/${{ steps.metadata.outputs.archive }}"
+          unzip -Z1 "$ARCHIVE" | awk -F/ '
+          {
+            for (i = 1; i <= NF; i++) {
+              if ($i ~ /^\./) {
+                print "Hidden archive entry: " $0 > "/dev/stderr";
+                found = 1;
+              }
+            }
+          }
+          END { exit found ? 1 : 0 }'
+
+      - name: Validate installable structure
+        run: |
+          ARCHIVE="dist/${{ steps.metadata.outputs.archive }}"
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/autoinstall.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/functions.inc'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/sql/mysql_install.php'
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: radio-${{ steps.metadata.outputs.version }}-geeklog-${{ steps.metadata.outputs.gl_version }}
+          path: dist/${{ steps.metadata.outputs.archive }}
+          if-no-files-found: error
+
+      - name: Commit updated archive
+        run: |
+          ARCHIVE="${{ steps.metadata.outputs.archive }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          find dist -maxdepth 1 -type f -name 'radio_*.zip' ! -name "$ARCHIVE" -delete
+          git add -A dist
+
+          if git diff --cached --quiet; then
+            echo "Archive unchanged; nothing to commit."
+            exit 0
+          fi
+
+          git commit -m "Build Radio ${{ steps.metadata.outputs.version }} distributable [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
