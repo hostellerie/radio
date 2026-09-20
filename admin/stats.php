@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
     COM_accessLog('User tried to access Radio statistics without permission.');
@@ -17,10 +18,8 @@ if (!in_array($days, array(7, 30, 90), true)) {
 }
 $stats = RADIO_getStatsSummary($days);
 
-$content = COM_startBlock($LANG_RADIO['statistics'], '', COM_getBlockTemplate('_admin_block', 'header'));
-$content .= '<p><a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['back_to_library_admin'], ENT_QUOTES, 'UTF-8') . '</a></p>';
-$content .= '<p><small>' . htmlspecialchars($LANG_RADIO['stats_privacy_note'], ENT_QUOTES, 'UTF-8') . '</small></p>';
+$content = '<section class="radio-admin__panel"><p class="radio-admin__muted">'
+    . htmlspecialchars($LANG_RADIO['stats_privacy_note'], ENT_QUOTES, 'UTF-8') . '</p>';
 $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['stats_period'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . '<a href="?days=7">7</a> · <a href="?days=30">30</a> · <a href="?days=90">90</a> days</p>';
 $content .= '<ul>'
@@ -31,7 +30,7 @@ $content .= '<ul>'
 
 $content .= '<h2>' . htmlspecialchars($LANG_RADIO['stats_top_media'], ENT_QUOTES, 'UTF-8') . '</h2>';
 if (empty($stats['top_media'])) {
-    $content .= '<p>—</p>';
+    $content .= '<p>' . htmlspecialchars($LANG_RADIO['admin_empty_value'], ENT_QUOTES, 'UTF-8') . '</p>';
 } else {
     $content .= '<ol>';
     foreach ($stats['top_media'] as $item) {
@@ -41,6 +40,16 @@ if (empty($stats['top_media'])) {
     }
     $content .= '</ol>';
 }
-$content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
-
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['statistics'])));
+$content = RADIO_adminRenderPage(
+    'stats',
+    $LANG_RADIO['statistics'],
+    $LANG_RADIO['admin_stats_intro'],
+    $LANG_RADIO['admin_stats_help_title'],
+    $LANG_RADIO['admin_stats_help_text'],
+    $content,
+    ''
+);
+COM_output(COM_createHTMLDocument($content, array(
+    'pagetitle' => $LANG_RADIO['statistics'],
+    'headercode' => RADIO_adminHeaderCode()
+)));
