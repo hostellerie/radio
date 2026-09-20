@@ -1744,8 +1744,19 @@ function RADIO_dashboardSummary()
 {
     global $_TABLES;
 
-    $mediaCount = (int) DB_getItem($_TABLES['radio_media'], 'COUNT(*)', "status='published'");
-    $programCount = (int) DB_getItem($_TABLES['radio_programs'], 'COUNT(*)', "status='published'");
+    $mediaResult = DB_query(
+        "SELECT COUNT(*) AS total FROM {$_TABLES['radio_media']} WHERE status='published'"
+        . RADIO_permissionSql('', 0)
+    );
+    $mediaRow = DB_fetchArray($mediaResult);
+    $mediaCount = is_array($mediaRow) ? (int) $mediaRow['total'] : 0;
+
+    $programResult = DB_query(
+        "SELECT COUNT(*) AS total FROM {$_TABLES['radio_programs']} WHERE status='published'"
+        . RADIO_permissionSql('', 0)
+    );
+    $programRow = DB_fetchArray($programResult);
+    $programCount = is_array($programRow) ? (int) $programRow['total'] : 0;
     $live = RADIO_getLiveState(time());
     $now = $live['program'];
     $upcoming = RADIO_getUpcoming(50, time());
