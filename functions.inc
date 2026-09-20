@@ -41,19 +41,44 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
 
 
 
-function RADIO_publicIndexProgressScript()
+function RADIO_publicIndexPlayerScript()
 {
+    global $_CONF, $LANG_RADIO;
+
+    $endpoint = $_CONF['site_url'] . '/radio/now.php';
+    $eventEndpoint = $_CONF['site_url'] . '/radio/event.php';
+
     return '<script>(function(){'
-        . 'var box=document.querySelector("[data-radio-progress]");'
-        . 'if(!box){return;}'
-        . 'var progress=box.querySelector("progress");'
-        . 'var elapsedNode=box.querySelector("[data-radio-elapsed]");'
-        . 'var duration=parseInt(box.getAttribute("data-duration")||"0",10);'
-        . 'var offset=parseInt(box.getAttribute("data-offset")||"0",10);'
-        . 'if(!progress||duration<1){return;}'
-        . 'function fmt(s){s=Math.max(0,Math.round(s));var m=Math.floor(s/60);var sec=s%60;return m+":"+(sec<10?"0":"")+sec;}'
-        . 'function tick(){if(offset<duration){offset++;progress.value=offset;if(elapsedNode){elapsedNode.textContent=fmt(offset);}}}'
-        . 'setInterval(tick,1000);'
+        . 'var root=document.querySelector("[data-radio-home-live]");'
+        . 'if(!root){return;}'
+        . 'var endpoint=' . json_encode($endpoint) . ';'
+        . 'var eventEndpoint=' . json_encode($eventEndpoint) . ';'
+        . 'var audio=document.getElementById("radio-home-audio");'
+        . 'var button=document.getElementById("radio-home-listen");'
+        . 'var canvas=document.getElementById("radio-home-wave");'
+        . 'var title=root.querySelector("[data-radio-home-title]");'
+        . 'var progress=root.querySelector("progress");'
+        . 'var elapsedNode=root.querySelector("[data-radio-elapsed]");'
+        . 'var durationNode=root.querySelector("[data-radio-duration]");'
+        . 'if(!audio||!button||!progress){return;}'
+        . 'var mediaId=0,programId=0,duration=parseInt(root.querySelector("[data-radio-progress]").getAttribute("data-duration")||"0",10),offset=parseInt(root.querySelector("[data-radio-progress]").getAttribute("data-offset")||"0",10);'
+        . 'var userStarted=false,listenStart=0,audioContext=null,analyser=null,sourceNode=null,waveData=null,waveFallback=false;'
+        . 'function fmt(s){s=Math.max(0,Math.round(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return (h>0?h+":":"")+(h>0&&m<10?"0":"")+m+":"+(sec<10?"0":"")+sec;}'
+        . 'function updateProgress(){progress.max=Math.max(1,duration);progress.value=Math.max(0,Math.min(duration,offset));if(elapsedNode){elapsedNode.textContent=fmt(offset);}if(durationNode){durationNode.textContent=fmt(duration);}}'
+        . 'function stat(type,seconds){if(!mediaId)return;var b=new URLSearchParams();b.set("media_id",mediaId);b.set("program_id",programId||0);b.set("event_type",type);b.set("source","live-home");b.set("seconds",Math.max(0,Math.round(seconds||0)));if(navigator.sendBeacon){navigator.sendBeacon(eventEndpoint,b);}else{fetch(eventEndpoint,{method:"POST",body:b,credentials:"same-origin",keepalive:true}).catch(function(){});}}'
+        . 'function flush(){if(listenStart){stat("listen",(Date.now()-listenStart)/1000);listenStart=0;}}'
+        . 'function setupAnalyser(){if(!canvas||audioContext||waveFallback)return;try{var AC=window.AudioContext||window.webkitAudioContext;if(!AC){waveFallback=true;return;}audioContext=new AC();sourceNode=audioContext.createMediaElementSource(audio);analyser=audioContext.createAnalyser();analyser.fftSize=64;waveData=new Uint8Array(analyser.frequencyBinCount);sourceNode.connect(analyser);analyser.connect(audioContext.destination);}catch(e){waveFallback=true;analyser=null;}}'
+        . 'function drawWave(){if(!canvas)return;var ctx=canvas.getContext("2d");if(!ctx)return;var w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);var style=window.getComputedStyle(canvas);ctx.fillStyle=style.color||"#000";var bars=24,gap=3,bw=Math.max(2,(w-(bars-1)*gap)/bars);if(audio.paused){for(var i=0;i<bars;i++){ctx.fillRect(i*(bw+gap),h/2-1,bw,2);}requestAnimationFrame(drawWave);return;}if(analyser&&waveData){analyser.getByteFrequencyData(waveData);for(var j=0;j<bars;j++){var idx=Math.floor(j*waveData.length/bars);var amp=Math.max(3,(waveData[idx]/255)*(h-4));ctx.fillRect(j*(bw+gap),(h-amp)/2,bw,amp);}}else{var t=Date.now()/180;for(var k=0;k<bars;k++){var amp2=4+Math.abs(Math.sin(t+k*.55))*(h-8);ctx.fillRect(k*(bw+gap),(h-amp2)/2,bw,amp2);}}requestAnimationFrame(drawWave);}'
+        . 'function apply(data,play){if(!data.current_media){flush();audio.pause();audio.removeAttribute("src");audio.load();button.textContent=' . json_encode($LANG_RADIO['public_listen']) . ';return;}var nextId=parseInt(String(data.current_media.media_id).replace("media:",""),10)||0;var nextProgram=data.now_playing?parseInt(String(data.now_playing.program_id).replace("program:",""),10)||0:0;duration=parseInt(data.current_media.duration||0,10);offset=parseInt(data.current_media.offset||0,10);if(title){title.textContent=data.current_media.title;title.href=data.current_media.url||"#";}var changed=mediaId!==nextId||audio.src!==data.current_media.stream_url;mediaId=nextId;programId=nextProgram;updateProgress();if(changed){flush();audio.src=data.current_media.stream_url;audio.load();audio.addEventListener("loadedmetadata",function seekOnce(){audio.removeEventListener("loadedmetadata",seekOnce);try{audio.currentTime=offset;}catch(e){}if(play&&userStarted){setupAnalyser();if(audioContext&&audioContext.state==="suspended"){audioContext.resume().catch(function(){});}audio.play().catch(function(){});}},false);}else{if(!audio.paused&&Math.abs(audio.currentTime-offset)>5){try{audio.currentTime=offset;}catch(e){}}if(play&&userStarted&&audio.paused){setupAnalyser();if(audioContext&&audioContext.state==="suspended"){audioContext.resume().catch(function(){});}audio.play().catch(function(){});}}}'
+        . 'function sync(play){fetch(endpoint,{cache:"no-store",credentials:"same-origin"}).then(function(r){if(!r.ok){throw new Error("HTTP "+r.status);}return r.json();}).then(function(data){apply(data,play);}).catch(function(){});}'
+        . 'button.addEventListener("click",function(){if(!userStarted){userStarted=true;setupAnalyser();sync(true);return;}if(audio.paused){sync(true);}else{audio.pause();}});'
+        . 'audio.addEventListener("play",function(){button.textContent=' . json_encode($LANG_RADIO['public_pause']) . ';stat("play",0);listenStart=Date.now();});'
+        . 'audio.addEventListener("pause",function(){button.textContent=' . json_encode($LANG_RADIO['public_listen']) . ';flush();});'
+        . 'audio.addEventListener("ended",function(){flush();sync(true);});'
+        . 'window.addEventListener("pagehide",flush);'
+        . 'setInterval(function(){if(offset<duration){offset++;updateProgress();}},1000);'
+        . 'setInterval(function(){sync(userStarted&&!audio.paused);},15000);'
+        . 'updateProgress();drawWave();'
         . '})();</script>';
 }
 
@@ -211,7 +236,7 @@ function plugin_getfootercode_radio()
     }
 
     if (RADIO_pathEndsWith($path, '/radio/index.php')) {
-        return RADIO_trackingScript() . RADIO_publicIndexProgressScript();
+        return RADIO_trackingScript() . RADIO_publicIndexPlayerScript();
     }
 
     if (RADIO_pathEndsWith($path, '/radio/program.php')
