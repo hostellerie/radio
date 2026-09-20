@@ -138,10 +138,6 @@ $template->set_var(array(
 ));
 $content = $template->finish($template->parse('output', 'page'));
 
-$durationJs = '<script>(function(){var a=document.querySelector(".radio-duration-source");'
-    . 'if(a){a.addEventListener("loadedmetadata",function(){var id=a.getAttribute("data-duration-target");'
-    . 'var input=document.getElementById(id);if(input&&parseInt(input.value,10)<=0&&isFinite(a.duration)&&a.duration>0){input.value=Math.round(a.duration);}});}})();</script>';
-
 $content = RADIO_adminRenderPage(
     'library',
     $LANG_RADIO['admin_edit_media'],
@@ -154,6 +150,5 @@ $content = RADIO_adminRenderPage(
 
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['admin_edit_media'],
-    'headercode' => RADIO_adminHeaderCode(),
-    'footercode' => $durationJs
+    'headercode' => RADIO_adminHeaderCode()
 )));
