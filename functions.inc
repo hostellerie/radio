@@ -2,6 +2,7 @@
 if (!isset($GLOBALS['_CONF'])) {
     die('This file cannot be used on its own.');
 }
+global $_CONF, $_TABLES, $_DB_table_prefix, $_RADIO_CONF, $LANG_RADIO;
 require_once __DIR__ . '/version.php';
 
 $radioLanguage = isset($_CONF['language']) ? basename((string) $_CONF['language']) : 'english';
@@ -19,7 +20,6 @@ require_once __DIR__ . '/autoinstall.php';
 require_once __DIR__ . '/lib/feed.inc.php';
 require_once __DIR__ . '/services.inc.php';
 
-global $_TABLES, $_DB_table_prefix, $_RADIO_CONF, $LANG_RADIO;
 $_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
