@@ -108,6 +108,9 @@ jobs:
           test -f templates/admin/media-external.thtml
           test -f admin/upload.php
           test -f admin/external.php
+          test -f admin/edit.php
+          ! grep -q "name=\"save_media\"" admin/index.php
+          ! grep -q "<audio" admin/index.php
 
       - name: Validate security invariants
         shell: bash
@@ -168,6 +171,11 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/index.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/upload.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/external.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/edit.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-list.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-list-table.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-list-row.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-edit.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/programs.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/schedule.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/rotation.php'
