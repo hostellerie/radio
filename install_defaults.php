@@ -17,7 +17,9 @@ $_RADIO_DEFAULT = array(
     'fallback_min_repeat_minutes' => 120,
     'whatsnew_enabled' => 1,
     'whatsnew_interval' => 1209600,
-    'whatsnew_limit' => 10
+    'whatsnew_limit' => 10,
+    'stats_enabled' => 1,
+    'stats_retention_days' => 90
 );
 
 function RADIO_configSortOrder()
@@ -35,13 +37,15 @@ function RADIO_configSortOrder()
         'fallback_min_repeat_minutes' => 100,
         'whatsnew_enabled' => 110,
         'whatsnew_interval' => 120,
-        'whatsnew_limit' => 130
+        'whatsnew_limit' => 130,
+        'stats_enabled' => 140,
+        'stats_retention_days' => 150
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled', 'whatsnew_enabled'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled'), true)
         ? 'select'
         : 'text';
 
