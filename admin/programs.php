@@ -107,6 +107,10 @@ $content .= '<div><h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_program
     . htmlspecialchars($LANG_RADIO['draft'], ENT_QUOTES, 'UTF-8') . '</option><option value="published"'
     . ($selected && $selected['status'] === 'published' ? ' selected' : '') . '>'
     . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8') . '</option></select></label></p>'
+    . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend>'
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown($selected ? (int)$selected['group_id'] : RADIO_defaultGroupId(), 3) . '</label></p>'
+    . SEC_getPermissionsHTML($selected ? (int)$selected['perm_owner'] : 3, $selected ? (int)$selected['perm_group'] : 2, $selected ? (int)$selected['perm_members'] : 2, $selected ? (int)$selected['perm_anon'] : 2)
+    . '</fieldset>'
     . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
     . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
     . '<button type="submit" name="save_program" value="1">' . htmlspecialchars($LANG_RADIO['save'], ENT_QUOTES, 'UTF-8') . '</button>';
