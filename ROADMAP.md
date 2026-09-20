@@ -40,7 +40,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.2.2
+## Implementation status snapshot — 0.2.3
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
