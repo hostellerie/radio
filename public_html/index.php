@@ -123,4 +123,4 @@ if (count($media) === 0) {
 }
 $content .= '</div>';
 
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title, 'footercode' => RADIO_trackingScript())));
+COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
