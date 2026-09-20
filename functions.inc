@@ -556,6 +556,351 @@ function RADIO_moveProgramItem($itemId, $programId, $direction)
     return !DB_error();
 }
 
+
+function RADIO_scheduleRecurrences()
+{
+    return array('once', 'daily', 'weekly', 'weekdays');
+}
+
+function RADIO_parseDateTimeLocal($value)
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return false;
+    }
+    $timestamp = strtotime($value);
+    if ($timestamp === false) {
+        return false;
+    }
+    return $timestamp;
+}
+
+function RADIO_scheduleWeekdaysFromData($data)
+{
+    $days = array();
+    if (!empty($data['weekdays']) && is_array($data['weekdays'])) {
+        foreach ($data['weekdays'] as $day) {
+            $day = (int) $day;
+            if ($day >= 1 && $day <= 7) {
+                $days[$day] = $day;
+            }
+        }
+    }
+    ksort($days);
+    return implode(',', $days);
+}
+
+function RADIO_saveSchedule($id, $data, &$error)
+{
+    global $_TABLES;
+    $error = '';
+
+    $programId = isset($data['program_id']) ? (int) $data['program_id'] : 0;
+    $program = RADIO_getProgram($programId, false);
+    if ($program === false) {
+        $error = 'schedule_program_invalid';
+        return false;
+    }
+
+    $startTs = RADIO_parseDateTimeLocal(isset($data['starts_at']) ? $data['starts_at'] : '');
+    $endTs = RADIO_parseDateTimeLocal(isset($data['ends_at']) ? $data['ends_at'] : '');
+    if ($startTs === false || $endTs === false || $endTs <= $startTs) {
+        $error = 'schedule_time_invalid';
+        return false;
+    }
+
+    $recurrence = isset($data['recurrence']) ? $data['recurrence'] : 'once';
+    if (!in_array($recurrence, RADIO_scheduleRecurrences(), true)) {
+        $recurrence = 'once';
+    }
+
+    $weekdays = RADIO_scheduleWeekdaysFromData($data);
+    if ($recurrence === 'weekdays' && $weekdays === '') {
+        $error = 'schedule_weekdays_required';
+        return false;
+    }
+
+    $activeFrom = isset($data['active_from']) ? trim((string) $data['active_from']) : '';
+    $activeUntil = isset($data['active_until']) ? trim((string) $data['active_until']) : '';
+    if ($activeFrom === '') {
+        $activeFrom = date('Y-m-d', $startTs);
+    }
+    if ($activeUntil !== '' && strtotime($activeUntil . ' 23:59:59') < strtotime($activeFrom . ' 00:00:00')) {
+        $error = 'schedule_date_invalid';
+        return false;
+    }
+
+    $candidate = array(
+        'schedule_id' => (int) $id,
+        'program_id' => $programId,
+        'starts_at' => date('Y-m-d H:i:s', $startTs),
+        'ends_at' => date('Y-m-d H:i:s', $endTs),
+        'recurrence' => $recurrence,
+        'weekdays' => $weekdays,
+        'active_from' => $activeFrom,
+        'active_until' => $activeUntil,
+        'enabled' => !empty($data['enabled']) ? 1 : 0
+    );
+
+    if ($candidate['enabled'] && RADIO_scheduleHasConflict($candidate, (int) $id)) {
+        $error = 'schedule_conflict';
+        return false;
+    }
+
+    if ((int) $id > 0) {
+        DB_query(
+            "UPDATE {$_TABLES['radio_schedule']} SET "
+            . "program_id=" . $programId . ","
+            . "starts_at='" . DB_escapeString($candidate['starts_at']) . "',"
+            . "ends_at='" . DB_escapeString($candidate['ends_at']) . "',"
+            . "recurrence='" . DB_escapeString($recurrence) . "',"
+            . "weekdays='" . DB_escapeString($weekdays) . "',"
+            . "active_from='" . DB_escapeString($activeFrom) . "',"
+            . "active_until=" . ($activeUntil === '' ? "NULL" : "'" . DB_escapeString($activeUntil) . "'") . ","
+            . "enabled=" . (int) $candidate['enabled'] . " "
+            . "WHERE schedule_id=" . (int) $id
+        );
+        return DB_error() ? false : (int) $id;
+    }
+
+    DB_query(
+        "INSERT INTO {$_TABLES['radio_schedule']} "
+        . "(program_id,starts_at,ends_at,recurrence,weekdays,active_from,active_until,enabled) VALUES ("
+        . $programId . ","
+        . "'" . DB_escapeString($candidate['starts_at']) . "',"
+        . "'" . DB_escapeString($candidate['ends_at']) . "',"
+        . "'" . DB_escapeString($recurrence) . "',"
+        . "'" . DB_escapeString($weekdays) . "',"
+        . "'" . DB_escapeString($activeFrom) . "',"
+        . ($activeUntil === '' ? "NULL" : "'" . DB_escapeString($activeUntil) . "'") . ","
+        . (int) $candidate['enabled'] . ")"
+    );
+    return DB_error() ? false : (int) DB_insertId();
+}
+
+function RADIO_getSchedule($id)
+{
+    global $_TABLES;
+    $id = (int) $id;
+    if ($id < 1) {
+        return false;
+    }
+    $result = DB_query("SELECT s.*,p.title AS program_title,p.status AS program_status "
+        . "FROM {$_TABLES['radio_schedule']} s "
+        . "INNER JOIN {$_TABLES['radio_programs']} p ON p.program_id=s.program_id "
+        . "WHERE s.schedule_id=" . $id);
+    return DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
+}
+
+function RADIO_getSchedules($enabledOnly)
+{
+    global $_TABLES;
+    $where = $enabledOnly ? ' WHERE s.enabled=1' : '';
+    $result = DB_query("SELECT s.*,p.title AS program_title,p.status AS program_status "
+        . "FROM {$_TABLES['radio_schedule']} s "
+        . "INNER JOIN {$_TABLES['radio_programs']} p ON p.program_id=s.program_id"
+        . $where . " ORDER BY s.starts_at ASC,s.schedule_id ASC");
+    $items = array();
+    while ($row = DB_fetchArray($result)) {
+        $items[] = $row;
+    }
+    return $items;
+}
+
+function RADIO_deleteSchedule($id)
+{
+    global $_TABLES;
+    DB_query("DELETE FROM {$_TABLES['radio_schedule']} WHERE schedule_id=" . (int) $id);
+    return !DB_error();
+}
+
+function RADIO_scheduleDuration($schedule)
+{
+    $start = strtotime($schedule['starts_at']);
+    $end = strtotime($schedule['ends_at']);
+    return ($start !== false && $end !== false && $end > $start) ? ($end - $start) : 0;
+}
+
+function RADIO_scheduleOccursOnDate($schedule, $date)
+{
+    $dayStart = strtotime($date . ' 00:00:00');
+    if ($dayStart === false) {
+        return false;
+    }
+
+    $activeFrom = !empty($schedule['active_from'])
+        ? strtotime($schedule['active_from'] . ' 00:00:00')
+        : strtotime(date('Y-m-d', strtotime($schedule['starts_at'])) . ' 00:00:00');
+    $activeUntil = !empty($schedule['active_until'])
+        ? strtotime($schedule['active_until'] . ' 23:59:59')
+        : false;
+
+    if ($dayStart < $activeFrom || ($activeUntil !== false && $dayStart > $activeUntil)) {
+        return false;
+    }
+
+    $anchor = strtotime($schedule['starts_at']);
+    if ($anchor === false) {
+        return false;
+    }
+    $anchorDate = date('Y-m-d', $anchor);
+
+    if ($schedule['recurrence'] === 'once') {
+        return $date === $anchorDate;
+    }
+    if ($schedule['recurrence'] === 'daily') {
+        return $dayStart >= strtotime($anchorDate . ' 00:00:00');
+    }
+    if ($schedule['recurrence'] === 'weekly') {
+        if ((int) date('N', $dayStart) !== (int) date('N', $anchor)) {
+            return false;
+        }
+        $days = (int) floor(($dayStart - strtotime($anchorDate . ' 00:00:00')) / 86400);
+        return $days >= 0 && ($days % 7) === 0;
+    }
+    if ($schedule['recurrence'] === 'weekdays') {
+        $allowed = array_filter(array_map('intval', explode(',', $schedule['weekdays'])));
+        return $dayStart >= strtotime($anchorDate . ' 00:00:00')
+            && in_array((int) date('N', $dayStart), $allowed, true);
+    }
+    return false;
+}
+
+function RADIO_scheduleOccurrence($schedule, $date)
+{
+    if (!RADIO_scheduleOccursOnDate($schedule, $date)) {
+        return false;
+    }
+    $anchorStart = strtotime($schedule['starts_at']);
+    $duration = RADIO_scheduleDuration($schedule);
+    if ($anchorStart === false || $duration < 1) {
+        return false;
+    }
+    $start = strtotime($date . ' ' . date('H:i:s', $anchorStart));
+    if ($start === false) {
+        return false;
+    }
+    return array(
+        'schedule_id' => (int) $schedule['schedule_id'],
+        'program_id' => (int) $schedule['program_id'],
+        'program_title' => isset($schedule['program_title']) ? $schedule['program_title'] : '',
+        'program_status' => isset($schedule['program_status']) ? $schedule['program_status'] : '',
+        'start' => $start,
+        'end' => $start + $duration,
+        'recurrence' => $schedule['recurrence']
+    );
+}
+
+function RADIO_getOccurrences($fromTs, $toTs, $enabledOnly)
+{
+    $fromTs = (int) $fromTs;
+    $toTs = (int) $toTs;
+    if ($toTs < $fromTs) {
+        return array();
+    }
+
+    $schedules = RADIO_getSchedules($enabledOnly);
+    $occurrences = array();
+    $dateTs = strtotime(date('Y-m-d', $fromTs) . ' 00:00:00');
+    $lastDateTs = strtotime(date('Y-m-d', $toTs) . ' 00:00:00');
+
+    while ($dateTs <= $lastDateTs) {
+        $date = date('Y-m-d', $dateTs);
+        foreach ($schedules as $schedule) {
+            $occurrence = RADIO_scheduleOccurrence($schedule, $date);
+            if ($occurrence !== false && $occurrence['end'] > $fromTs && $occurrence['start'] < $toTs) {
+                $occurrences[] = $occurrence;
+            }
+        }
+        $dateTs = strtotime('+1 day', $dateTs);
+    }
+
+    usort($occurrences, 'RADIO_compareOccurrences');
+    return $occurrences;
+}
+
+function RADIO_compareOccurrences($a, $b)
+{
+    if ($a['start'] === $b['start']) {
+        return $a['schedule_id'] - $b['schedule_id'];
+    }
+    return $a['start'] < $b['start'] ? -1 : 1;
+}
+
+function RADIO_scheduleHasConflict($candidate, $excludeId)
+{
+    $start = strtotime($candidate['active_from'] . ' 00:00:00');
+    $endDate = $candidate['active_until'] !== ''
+        ? strtotime($candidate['active_until'] . ' 23:59:59')
+        : strtotime('+28 days', $start);
+    if ($candidate['recurrence'] === 'once') {
+        $start = strtotime($candidate['starts_at']);
+        $endDate = strtotime($candidate['ends_at']);
+    } else {
+        $endDate = min($endDate, strtotime('+28 days', $start));
+    }
+
+    $candidate['schedule_id'] = (int) $excludeId;
+    $candidateOccurrences = array();
+    $dateTs = strtotime(date('Y-m-d', $start) . ' 00:00:00');
+    $lastDateTs = strtotime(date('Y-m-d', $endDate) . ' 00:00:00');
+    while ($dateTs <= $lastDateTs) {
+        $occ = RADIO_scheduleOccurrence($candidate, date('Y-m-d', $dateTs));
+        if ($occ !== false) {
+            $candidateOccurrences[] = $occ;
+        }
+        $dateTs = strtotime('+1 day', $dateTs);
+    }
+
+    $existing = RADIO_getOccurrences($start, $endDate + 1, true);
+    foreach ($candidateOccurrences as $candidateOccurrence) {
+        foreach ($existing as $existingOccurrence) {
+            if ((int) $existingOccurrence['schedule_id'] === (int) $excludeId) {
+                continue;
+            }
+            if ($candidateOccurrence['start'] < $existingOccurrence['end']
+                && $candidateOccurrence['end'] > $existingOccurrence['start']) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function RADIO_getNowPlaying($timestamp)
+{
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $occurrences = RADIO_getOccurrences($timestamp, $timestamp + 1, true);
+    foreach ($occurrences as $occurrence) {
+        if ($occurrence['start'] <= $timestamp && $occurrence['end'] > $timestamp
+            && $occurrence['program_status'] === 'published') {
+            $occurrence['elapsed'] = $timestamp - $occurrence['start'];
+            $occurrence['remaining'] = $occurrence['end'] - $timestamp;
+            $occurrence['url'] = plugin_idtourl_radio('program', 'program:' . $occurrence['program_id']);
+            return $occurrence;
+        }
+    }
+    return false;
+}
+
+function RADIO_getUpcoming($limit, $fromTs)
+{
+    $limit = max(1, min(50, (int) $limit));
+    $fromTs = $fromTs ? (int) $fromTs : time();
+    $occurrences = RADIO_getOccurrences($fromTs, strtotime('+14 days', $fromTs), true);
+    $items = array();
+    foreach ($occurrences as $occurrence) {
+        if ($occurrence['start'] >= $fromTs && $occurrence['program_status'] === 'published') {
+            $occurrence['url'] = plugin_idtourl_radio('program', 'program:' . $occurrence['program_id']);
+            $items[] = $occurrence;
+            if (count($items) >= $limit) {
+                break;
+            }
+        }
+    }
+    return $items;
+}
+
 function plugin_getcapabilities_radio()
 {
     return array(
