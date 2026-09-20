@@ -36,8 +36,8 @@ $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_enabled'], EN
 if ($current !== false) {
     $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_current'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . htmlspecialchars($current['title'], ENT_QUOTES, 'UTF-8') . ' — '
-        . htmlspecialchars($current['media_type'], ENT_QUOTES, 'UTF-8') . ' — '
-        . (int) $current['offset'] . 's / ' . (int) $current['duration'] . 's</p>';
+        . htmlspecialchars(RADIO_adminMediaTypeLabel($current['media_type']), ENT_QUOTES, 'UTF-8') . ' — '
+        . (int) $current['offset'] . ' ' . htmlspecialchars($LANG_RADIO['admin_seconds_short'], ENT_QUOTES, 'UTF-8') . ' / ' . (int) $current['duration'] . ' ' . htmlspecialchars($LANG_RADIO['admin_seconds_short'], ENT_QUOTES, 'UTF-8') . '</p>';
 }
 
 $content .= '<h2>' . htmlspecialchars($LANG_RADIO['rotation_today'], ENT_QUOTES, 'UTF-8') . '</h2>';
@@ -47,7 +47,7 @@ if (count($sequence) === 0) {
     $content .= '<ol>';
     foreach ($sequence as $item) {
         $content .= '<li><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
-            . '<small>(' . htmlspecialchars($item['media_type'], ENT_QUOTES, 'UTF-8') . ' · '
+            . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ' · '
             . gmdate('H:i:s', (int) $item['duration']) . ')</small></li>';
     }
     $content .= '</ol>';
