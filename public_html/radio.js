@@ -98,7 +98,7 @@
 
     function waveform(canvas, audio) {
         if (!canvas || !audio) {
-            return { setExternal: function () {}, start: function () {} };
+            return { setExternal: function () {}, start: function () {}, draw: function () {} };
         }
 
         var context = null;
@@ -107,6 +107,7 @@
         var data = null;
         var fallback = false;
         var external = false;
+        var quietFrames = 0;
 
         function setup() {
             if (context || fallback || external) {
@@ -118,17 +119,39 @@
                     fallback = true;
                     return;
                 }
+
                 context = new AudioContext();
                 sourceNode = context.createMediaElementSource(audio);
                 analyser = context.createAnalyser();
-                analyser.fftSize = 64;
-                data = new Uint8Array(analyser.frequencyBinCount);
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.65;
+                data = new Uint8Array(analyser.fftSize);
                 sourceNode.connect(analyser);
                 analyser.connect(context.destination);
             } catch (error) {
                 fallback = true;
                 analyser = null;
+                data = null;
             }
+        }
+
+        function drawFallback(ctx, width, height) {
+            var points = 48;
+            var t = Date.now() / 180;
+            ctx.beginPath();
+            for (var i = 0; i < points; i++) {
+                var x = i * width / (points - 1);
+                var envelope = 0.3 + 0.7 * Math.sin(Math.PI * i / (points - 1));
+                var y = height / 2
+                    + Math.sin(t + i * 0.72) * envelope * height * 0.28
+                    + Math.sin(t * 0.63 + i * 0.27) * height * 0.08;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
         }
 
         function draw() {
@@ -136,33 +159,56 @@
             if (!ctx) {
                 return;
             }
+
             var width = canvas.width;
             var height = canvas.height;
-            var bars = 24;
-            var gap = 3;
-            var barWidth = Math.max(2, (width - (bars - 1) * gap) / bars);
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = window.getComputedStyle(canvas).color || '#000';
+            ctx.strokeStyle = window.getComputedStyle(canvas).color || '#000';
+            ctx.lineWidth = 2;
 
-            var i;
             if (audio.paused) {
-                for (i = 0; i < bars; i++) {
-                    ctx.fillRect(i * (barWidth + gap), height / 2 - 1, barWidth, 2);
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+                window.requestAnimationFrame(draw);
+                return;
+            }
+
+            if (analyser && data && !external) {
+                analyser.getByteTimeDomainData(data);
+
+                var energy = 0;
+                for (var e = 0; e < data.length; e++) {
+                    energy += Math.abs(data[e] - 128);
                 }
-            } else if (analyser && data) {
-                analyser.getByteFrequencyData(data);
-                for (i = 0; i < bars; i++) {
-                    var index = Math.floor(i * data.length / bars);
-                    var amplitude = Math.max(3, (data[index] / 255) * (height - 4));
-                    ctx.fillRect(i * (barWidth + gap), (height - amplitude) / 2, barWidth, amplitude);
+
+                if (energy < data.length * 0.6) {
+                    quietFrames++;
+                } else {
+                    quietFrames = 0;
+                }
+
+                if (quietFrames < 10) {
+                    ctx.beginPath();
+                    for (var i = 0; i < data.length; i++) {
+                        var x = i * width / (data.length - 1);
+                        var normalized = (data[i] - 128) / 128;
+                        var y = height / 2 + normalized * height * 0.44;
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                } else {
+                    drawFallback(ctx, width, height);
                 }
             } else {
-                var t = Date.now() / 180;
-                for (i = 0; i < bars; i++) {
-                    var fallbackAmplitude = 4 + Math.abs(Math.sin(t + i * .55)) * (height - 8);
-                    ctx.fillRect(i * (barWidth + gap), (height - fallbackAmplitude) / 2, barWidth, fallbackAmplitude);
-                }
+                drawFallback(ctx, width, height);
             }
+
             window.requestAnimationFrame(draw);
         }
 
@@ -309,7 +355,6 @@
         button.addEventListener('click', function () {
             if (!userStarted) {
                 userStarted = true;
-                wave.start();
                 sync(true);
                 return;
             }
@@ -366,6 +411,7 @@
         var program = q('#radio-live-program', root);
         var media = q('#radio-live-media', root);
         var start = q('#radio-live-start', root);
+        var canvas = q('#radio-live-wave', root);
 
         if (!endpoint || !player || !status || !program || !media || !start) {
             return;
@@ -376,6 +422,7 @@
         var activeProgramId = 0;
         var listenStart = 0;
         var userStarted = false;
+        var wave = waveform(canvas, player);
 
         function flush() {
             if (listenStart) {
@@ -414,6 +461,7 @@
 
                     media.textContent = data.current_media.title;
                     status.textContent = '';
+                    wave.setExternal(data.current_media.source_kind && data.current_media.source_kind !== 'local');
 
                     if (activeMedia !== data.current_media.media_id) {
                         flush();
@@ -430,6 +478,7 @@
                                 player.currentTime = data.current_media.offset;
                             } catch (error) {}
                             if (play && userStarted) {
+                                wave.start();
                                 player.play().catch(function () {
                                     status.textContent = unavailableLabel;
                                 });
@@ -466,6 +515,7 @@
                 sync(false);
             }
         }, 15000);
+        wave.draw();
         sync(false);
     }
 
