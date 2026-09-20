@@ -1,0 +1,6 @@
+<section class="radio-admin__panel">
+    <div class="radio-admin__panel-heading">
+        <h2>{library_title}</h2>
+    </div>
+    {library_content}
+</section>
