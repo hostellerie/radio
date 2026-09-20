@@ -932,6 +932,37 @@ function RADIO_downloadAllowed($row)
         && !empty($row['allow_download']);
 }
 
+function RADIO_playbackMime($row)
+{
+    $name = '';
+    if (!empty($row['storage_name'])) {
+        $name = (string) $row['storage_name'];
+    } elseif (!empty($row['original_name'])) {
+        $name = (string) $row['original_name'];
+    }
+
+    $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    if ($extension === 'm4a') {
+        return 'audio/mp4';
+    }
+    if ($extension === 'mp3') {
+        return 'audio/mpeg';
+    }
+    if ($extension === 'aac') {
+        return 'audio/aac';
+    }
+    if ($extension === 'ogg') {
+        return 'audio/ogg';
+    }
+    if ($extension === 'wav') {
+        return 'audio/wav';
+    }
+
+    return !empty($row['mime_type'])
+        ? (string) $row['mime_type']
+        : 'application/octet-stream';
+}
+
 function RADIO_sendMedia($row, $download)
 {
     global $_RADIO_CONF;
@@ -1004,7 +1035,7 @@ function RADIO_sendMedia($row, $download)
         header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
     }
 
-    $mime = $row['mime_type'] !== '' ? $row['mime_type'] : 'application/octet-stream';
+    $mime = RADIO_playbackMime($row);
     header('Content-Type: ' . $mime);
     header('Accept-Ranges: bytes');
     header('Content-Length: ' . (($end - $start) + 1));
