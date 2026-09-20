@@ -2143,7 +2143,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     $items = array();
 
     $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2) . " ORDER BY modified DESC,media_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', (int) $uid, 2) . " ORDER BY modified DESC,media_id DESC";
     $media = DB_query($mediaSql);
     while ($row = DB_fetchArray($media)) {
         $modified = strtotime($row['modified']);
@@ -2157,7 +2157,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     }
 
     $programSql = "SELECT program_id,modified FROM {$_TABLES['radio_programs']} "
-        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2) . " ORDER BY modified DESC,program_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', (int) $uid, 2) . " ORDER BY modified DESC,program_id DESC";
     $programs = DB_query($programSql);
     while ($row = DB_fetchArray($programs)) {
         $modified = strtotime($row['modified']);
