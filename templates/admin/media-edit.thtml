@@ -1,0 +1,60 @@
+<form class="radio-admin-form" method="post" enctype="multipart/form-data" action="">
+    <div class="radio-admin__media-preview">
+        <audio class="radio-admin-player radio-duration-source" data-duration-target="radio-duration-{media_id}" controls preload="metadata" src="{media_url}"></audio>
+        {cover_preview}
+    </div>
+
+    <p><label>{title_label}<br>
+        <input type="text" name="title" maxlength="255" value="{title}" required>
+    </label></p>
+
+    <p><label>{author_label}<br>
+        <input type="text" name="author" maxlength="255" value="{author}">
+    </label></p>
+
+    <p><label>{series_title_label}<br>
+        <input type="text" name="series_title" maxlength="255" value="{series_title}">
+    </label></p>
+
+    <p>
+        <label>{season_number_label} <input type="number" name="season_number" min="0" value="{season_number}"></label>
+        <label>{episode_number_label} <input type="number" name="episode_number" min="0" value="{episode_number}"></label>
+    </p>
+
+    <p><label>{replace_cover_label}<br>
+        <input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*">
+    </label></p>
+
+    <p><label>{description_label}<br>
+        <textarea name="description" rows="4">{description}</textarea>
+    </label></p>
+
+    {source_details}
+
+    <p>{file_label}: <code>{original_name}</code> · {mime_type} · {file_size}</p>
+
+    <p><label>{duration_label}
+        <input type="number" id="radio-duration-{media_id}" name="duration" min="0" step="1" value="{duration_value}">
+    </label></p>
+
+    <p>
+        <label>{type_label} <select name="media_type">{media_type_options}</select></label>
+        <label>{status_label} <select name="status">{status_options}</select></label>
+        <label><input type="checkbox" name="allow_download" value="1"{allow_download_checked}> {allow_download_label}</label>
+    </p>
+
+    <fieldset>
+        <legend>{permissions_label}</legend>
+        <p><label>{group_label} {group_dropdown}</label></p>
+        {permissions_html}
+    </fieldset>
+
+    <input type="hidden" name="media_id" value="{media_id}">
+    <input type="hidden" name="{csrf_name}" value="{csrf_token}">
+
+    <div class="radio-admin__toolbar">
+        <button class="radio-admin__button radio-admin__button--primary" type="submit" name="save_media" value="1">{save_label}</button>
+        <a class="radio-admin__button" href="{back_url}">{back_label}</a>
+        <button class="radio-admin__button radio-admin__button--danger" type="submit" name="delete_media" value="1" onclick="return confirm({confirm_delete});">{delete_label}</button>
+    </div>
+</form>
