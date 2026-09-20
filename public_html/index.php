@@ -73,10 +73,16 @@ if ($nowPlaying !== false) {
         . htmlspecialchars($nowPlaying['program_title'], ENT_QUOTES, 'UTF-8') . '</a> '
         . '<small>(' . date('H:i', $nowPlaying['start']) . '–' . date('H:i', $nowPlaying['end']) . ')</small>';
 } elseif ($liveState['media'] !== false) {
-    $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-        . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8') . ' — '
+    $radioDuration = max(1, (int) $liveState['media']['duration']);
+    $radioOffset = max(0, min($radioDuration, (int) $liveState['media']['offset']));
+    $content .= '<strong>' . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . '<a href="' . htmlspecialchars($liveState['media']['item_url'], ENT_QUOTES, 'UTF-8') . '">'
-        . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a>';
+        . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<div class="radio-on-air-progress" data-radio-progress data-offset="' . $radioOffset . '" data-duration="' . $radioDuration . '">'
+        . '<progress value="' . $radioOffset . '" max="' . $radioDuration . '" style="width:100%;max-width:520px"></progress> '
+        . '<small><span data-radio-elapsed>' . gmdate('i:s', $radioOffset) . '</span> / '
+        . '<span data-radio-duration>' . gmdate('i:s', $radioDuration) . '</span></small>'
+        . '</div>';
 } else {
     $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . htmlspecialchars($LANG_RADIO['nothing_scheduled_now'], ENT_QUOTES, 'UTF-8');
@@ -97,7 +103,7 @@ $content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/sched
     . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
     . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
 
-$content .= '<div class="radio-catalogue"><h1>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
+$content .= '<div class="radio-catalogue"><h1>' . htmlspecialchars($LANG_RADIO['public_on_demand'], ENT_QUOTES, 'UTF-8') . '</h1>';
 if (count($media) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['public_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
 } else {
