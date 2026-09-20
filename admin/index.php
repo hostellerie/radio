@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
     COM_accessLog('User tried to access Radio administration without permission.');
@@ -103,24 +104,10 @@ $media = RADIO_getMediaList(100, false);
 $token = SEC_createToken();
 $configUrl = $_CONF['site_admin_url'] . '/configuration.php?conf_group=radio';
 
-$content = COM_startBlock($LANG_RADIO['admin_title'], '', COM_getBlockTemplate('_admin_block', 'header'));
-$content .= $message;
-$content .= '<p>' . htmlspecialchars($LANG_RADIO['admin_intro'], ENT_QUOTES, 'UTF-8') . '</p>';
-$content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+$content = '<section class="radio-admin__panel"><h2>'
+    . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . '</h2><p><strong>'
     . htmlspecialchars($ready ? $LANG_RADIO['storage_ready'] : $LANG_RADIO['storage_unavailable'], ENT_QUOTES, 'UTF-8')
-    . '<br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p>';
-$content .= '<p><a href="' . htmlspecialchars($configUrl, ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['open_configuration'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/programs.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['manage_programs'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['manage_schedule'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/rotation.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/stats.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['statistics'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/sources.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['feed_sources'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+    . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p></section>';
 
 if (SEC_hasRights('radio.upload')) {
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['external_source_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
@@ -240,7 +227,6 @@ if (count($media) === 0) {
     }
 }
 
-$content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
 $durationJs = '<script>(function(){'
     . 'var file=document.getElementById("radio-upload-file");var target=document.getElementById("radio-upload-duration");'
     . 'if(file&&target){file.addEventListener("change",function(){if(!file.files||!file.files[0])return;'
@@ -252,7 +238,17 @@ $durationJs = '<script>(function(){'
     . 'if(input&&parseInt(input.value,10)<=0&&isFinite(a.duration)&&a.duration>0){input.value=Math.round(a.duration);}'
     . '});})(sources[i]);}'
     . '})();</script>';
+$content = RADIO_adminRenderPage(
+    'library',
+    $LANG_RADIO['admin_title'],
+    $LANG_RADIO['admin_library_intro'],
+    $LANG_RADIO['admin_library_help_title'],
+    $LANG_RADIO['admin_library_help_text'],
+    $content,
+    $message
+);
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['admin_title'],
+    'headercode' => RADIO_adminHeaderCode(),
     'footercode' => $durationJs
 )));
