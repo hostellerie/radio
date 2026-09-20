@@ -40,6 +40,11 @@ $LANG_RADIO = array(
     'automatic_rotation' => 'Automatic radio',
     'rotation_enabled' => 'Fallback enabled',
     'rotation_jingle_interval' => 'Jingle interval',
+    'rotation_announcement_interval' => 'Announcement/promo interval',
+    'rotation_weights' => 'Type weights',
+    'rotation_repeat_target' => 'Target minimum repeat interval',
+    'rotation_repeat_ok' => 'library cycle meets the target',
+    'rotation_repeat_short' => 'library cycle is shorter than the target',
     'rotation_duration' => 'Current rotation cycle duration',
     'rotation_current' => 'Current fallback media',
     'rotation_today' => 'Today’s deterministic rotation',
@@ -142,6 +147,9 @@ $LANG_confignames['radio'] = array(
     'allow_downloads' => 'Allow downloads globally?',
     'max_upload_mb' => 'Maximum audio upload size (MB)',
     'fallback_enabled' => 'Enable automatic fallback radio?',
-    'fallback_jingle_interval' => 'Insert a jingle every N rotation items (0 = never)'
+    'fallback_jingle_interval' => 'Insert a jingle every N rotation items (0 = never)',
+    'fallback_announcement_interval' => 'Insert an announcement/promo every N regular items (0 = never)',
+    'fallback_type_weights' => 'Rotation type weights (example: music=5,podcast=2)',
+    'fallback_min_repeat_minutes' => 'Target minimum repeat interval (minutes)'
 );
 $LANG_configselects['radio'] = array(0 => array('Enabled' => 1, 'Disabled' => 0));

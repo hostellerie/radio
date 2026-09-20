@@ -183,12 +183,12 @@ Jingle
 
 ## Rotation rules
 
-- [ ] Prevent the same media item from replaying within a configurable interval.
+- [x] Prevent the same media item from replaying within the deterministic rotation cycle; expose a configurable minimum-repeat target diagnostic.
 - [ ] Optionally prevent the same artist/author from repeating within a configurable number of items.
 - [ ] Allow category-restricted rotations.
-- [ ] Allow weighted/random selections.
+- [x] Allow deterministic weighted selections by media type.
 - [ ] Support priority and active date ranges.
-- [ ] Allow periodic insertion of jingles or announcements.
+- [x] Allow periodic insertion of jingles and announcements/promos.
 - [ ] Keep rotation history separate from permanent editorial content.
 
 ---

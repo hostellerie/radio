@@ -13,6 +13,7 @@ global $LANG_RADIO, $_CONF, $_RADIO_CONF;
 
 $sequence = RADIO_buildRotationSequence(date('Y-m-d'));
 $totalDuration = RADIO_rotationDuration($sequence);
+$diagnostics = RADIO_rotationDiagnostics(date('Y-m-d'));
 $current = RADIO_getRotationState(time());
 
 $content = COM_startBlock($LANG_RADIO['automatic_rotation'], '', COM_getBlockTemplate('_admin_block', 'header'));
@@ -25,8 +26,16 @@ $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_enabled'], EN
     . htmlspecialchars(!empty($_RADIO_CONF['fallback_enabled']) ? $LANG_RADIO['yes'] : $LANG_RADIO['no'], ENT_QUOTES, 'UTF-8') . '<br>'
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_jingle_interval'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . (int) (isset($_RADIO_CONF['fallback_jingle_interval']) ? $_RADIO_CONF['fallback_jingle_interval'] : 4) . '<br>'
+    . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_announcement_interval'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+    . (int) (isset($_RADIO_CONF['fallback_announcement_interval']) ? $_RADIO_CONF['fallback_announcement_interval'] : 8) . '<br>'
+    . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_weights'], ENT_QUOTES, 'UTF-8') . ':</strong> <code>'
+    . htmlspecialchars(isset($_RADIO_CONF['fallback_type_weights']) ? $_RADIO_CONF['fallback_type_weights'] : '', ENT_QUOTES, 'UTF-8') . '</code><br>'
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_duration'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-    . ($totalDuration > 0 ? gmdate('H:i:s', $totalDuration) : '00:00:00') . '</p>';
+    . ($totalDuration > 0 ? gmdate('H:i:s', $totalDuration) : '00:00:00') . '<br>'
+    . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_repeat_target'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+    . (int) $diagnostics['target_repeat_minutes'] . ' min — '
+    . htmlspecialchars($diagnostics['repeat_target_met'] ? $LANG_RADIO['rotation_repeat_ok'] : $LANG_RADIO['rotation_repeat_short'], ENT_QUOTES, 'UTF-8')
+    . '</p>';
 
 if ($current !== false) {
     $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_current'], ENT_QUOTES, 'UTF-8') . ':</strong> '

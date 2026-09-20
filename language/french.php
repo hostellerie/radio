@@ -40,6 +40,11 @@ $LANG_RADIO = array(
     'automatic_rotation' => 'Radio automatique',
     'rotation_enabled' => 'Fallback activé',
     'rotation_jingle_interval' => 'Intervalle des jingles',
+    'rotation_announcement_interval' => 'Intervalle des annonces/promotions',
+    'rotation_weights' => 'Poids par type',
+    'rotation_repeat_target' => 'Intervalle minimal cible avant répétition',
+    'rotation_repeat_ok' => 'la durée de la bibliothèque respecte la cible',
+    'rotation_repeat_short' => 'la bibliothèque est trop courte pour respecter cette cible',
     'rotation_duration' => 'Durée du cycle de rotation actuel',
     'rotation_current' => 'Média actuellement joué en fallback',
     'rotation_today' => 'Rotation déterministe du jour',
@@ -142,6 +147,9 @@ $LANG_confignames['radio'] = array(
     'allow_downloads' => 'Autoriser globalement les téléchargements ?',
     'max_upload_mb' => 'Taille maximale d’un fichier audio (Mo)',
     'fallback_enabled' => 'Activer la radio automatique hors programmation ?',
-    'fallback_jingle_interval' => 'Insérer un jingle tous les N éléments (0 = jamais)'
+    'fallback_jingle_interval' => 'Insérer un jingle tous les N éléments (0 = jamais)',
+    'fallback_announcement_interval' => 'Insérer une annonce/promotion tous les N éléments (0 = jamais)',
+    'fallback_type_weights' => 'Poids des types (exemple : music=5,podcast=2)',
+    'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)'
 );
 $LANG_configselects['radio'] = array(0 => array('Activé' => 1, 'Désactivé' => 0));

@@ -907,22 +907,59 @@ function RADIO_getUpcoming($limit, $fromTs)
 
 
 
-function RADIO_getRotationMedia($jingles)
+function RADIO_getRotationMediaByTypes($types)
 {
     global $_TABLES;
 
-    if ($jingles) {
-        $where = "status='published' AND media_type='jingle' AND duration>0";
-    } else {
-        $where = "status='published' AND media_type IN ('music','podcast','interview','chronicle','announcement','promo') AND duration>0";
+    if (!is_array($types) || count($types) === 0) {
+        return array();
     }
 
-    $result = DB_query("SELECT * FROM {$_TABLES['radio_media']} WHERE " . $where . " ORDER BY media_id ASC");
+    $safe = array();
+    foreach ($types as $type) {
+        $type = trim((string) $type);
+        if ($type !== '') {
+            $safe[] = "'" . DB_escapeString($type) . "'";
+        }
+    }
+    if (count($safe) === 0) {
+        return array();
+    }
+
+    $result = DB_query(
+        "SELECT * FROM {$_TABLES['radio_media']} "
+        . "WHERE status='published' AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
+        . "ORDER BY media_id ASC"
+    );
+
     $items = array();
     while ($row = DB_fetchArray($result)) {
         $items[] = $row;
     }
     return $items;
+}
+
+function RADIO_parseTypeWeights($value)
+{
+    $allowed = array('music','podcast','interview','chronicle','show');
+    $weights = array();
+
+    foreach (explode(',', (string) $value) as $part) {
+        $bits = explode('=', trim($part), 2);
+        if (count($bits) !== 2) {
+            continue;
+        }
+        $type = trim($bits[0]);
+        $weight = max(0, min(20, (int) trim($bits[1])));
+        if (in_array($type, $allowed, true) && $weight > 0) {
+            $weights[$type] = $weight;
+        }
+    }
+
+    if (count($weights) === 0) {
+        $weights = array('music' => 5, 'podcast' => 2, 'interview' => 2, 'chronicle' => 2);
+    }
+    return $weights;
 }
 
 function RADIO_rotationCompare($a, $b)
@@ -933,50 +970,129 @@ function RADIO_rotationCompare($a, $b)
     return strcmp($a['_rotation_key'], $b['_rotation_key']);
 }
 
+function RADIO_rotationShuffle($items, $date, $scope)
+{
+    foreach ($items as $index => $item) {
+        $items[$index]['_rotation_key'] = sha1($date . ':' . $scope . ':' . (int) $item['media_id']);
+    }
+    if (count($items) > 1) {
+        usort($items, 'RADIO_rotationCompare');
+    }
+    foreach ($items as $index => $item) {
+        unset($items[$index]['_rotation_key']);
+    }
+    return $items;
+}
+
+function RADIO_buildWeightedRegularSequence($date)
+{
+    global $_RADIO_CONF;
+
+    $weights = RADIO_parseTypeWeights(
+        isset($_RADIO_CONF['fallback_type_weights']) ? $_RADIO_CONF['fallback_type_weights'] : ''
+    );
+    $queues = array();
+    foreach ($weights as $type => $weight) {
+        $queues[$type] = RADIO_rotationShuffle(
+            RADIO_getRotationMediaByTypes(array($type)),
+            $date,
+            'type-' . $type
+        );
+    }
+
+    $pattern = array();
+    foreach ($weights as $type => $weight) {
+        for ($i = 0; $i < $weight; $i++) {
+            $pattern[] = $type;
+        }
+    }
+
+    $sequence = array();
+    while (true) {
+        $added = false;
+        foreach ($pattern as $type) {
+            if (!empty($queues[$type])) {
+                $sequence[] = array_shift($queues[$type]);
+                $added = true;
+            }
+        }
+        if (!$added) {
+            break;
+        }
+    }
+
+    return $sequence;
+}
+
 function RADIO_buildRotationSequence($date)
 {
     global $_RADIO_CONF;
 
-    $items = RADIO_getRotationMedia(false);
-    if (count($items) === 0) {
+    $regular = RADIO_buildWeightedRegularSequence($date);
+    if (count($regular) === 0) {
         return array();
     }
 
-    foreach ($items as $index => $item) {
-        $items[$index]['_rotation_key'] = sha1($date . ':media:' . (int) $item['media_id']);
-    }
-    usort($items, 'RADIO_rotationCompare');
+    $jingles = RADIO_rotationShuffle(
+        RADIO_getRotationMediaByTypes(array('jingle')),
+        $date,
+        'jingle'
+    );
+    $announcements = RADIO_rotationShuffle(
+        RADIO_getRotationMediaByTypes(array('announcement','promo')),
+        $date,
+        'announcement'
+    );
 
-    $jingles = RADIO_getRotationMedia(true);
-    foreach ($jingles as $index => $item) {
-        $jingles[$index]['_rotation_key'] = sha1($date . ':jingle:' . (int) $item['media_id']);
-    }
-    if (count($jingles) > 1) {
-        usort($jingles, 'RADIO_rotationCompare');
-    }
-
-    $interval = isset($_RADIO_CONF['fallback_jingle_interval'])
+    $jingleInterval = isset($_RADIO_CONF['fallback_jingle_interval'])
         ? max(0, (int) $_RADIO_CONF['fallback_jingle_interval'])
         : 4;
+    $announcementInterval = isset($_RADIO_CONF['fallback_announcement_interval'])
+        ? max(0, (int) $_RADIO_CONF['fallback_announcement_interval'])
+        : 8;
 
     $sequence = array();
     $regularCount = 0;
     $jingleIndex = 0;
+    $announcementIndex = 0;
 
-    foreach ($items as $item) {
-        unset($item['_rotation_key']);
+    foreach ($regular as $item) {
         $sequence[] = $item;
         $regularCount++;
 
-        if ($interval > 0 && count($jingles) > 0 && ($regularCount % $interval) === 0) {
-            $jingle = $jingles[$jingleIndex % count($jingles)];
-            unset($jingle['_rotation_key']);
-            $sequence[] = $jingle;
+        if ($announcementInterval > 0 && count($announcements) > 0
+            && ($regularCount % $announcementInterval) === 0) {
+            $sequence[] = $announcements[$announcementIndex % count($announcements)];
+            $announcementIndex++;
+        }
+
+        if ($jingleInterval > 0 && count($jingles) > 0
+            && ($regularCount % $jingleInterval) === 0) {
+            $sequence[] = $jingles[$jingleIndex % count($jingles)];
             $jingleIndex++;
         }
     }
 
     return $sequence;
+}
+
+function RADIO_rotationDiagnostics($date)
+{
+    global $_RADIO_CONF;
+
+    $sequence = RADIO_buildRotationSequence($date);
+    $cycleDuration = RADIO_rotationDuration($sequence);
+    $targetMinutes = isset($_RADIO_CONF['fallback_min_repeat_minutes'])
+        ? max(0, (int) $_RADIO_CONF['fallback_min_repeat_minutes'])
+        : 120;
+
+    return array(
+        'items' => count($sequence),
+        'cycle_duration' => $cycleDuration,
+        'cycle_minutes' => (int) floor($cycleDuration / 60),
+        'target_repeat_minutes' => $targetMinutes,
+        'repeat_target_met' => $targetMinutes === 0 || $cycleDuration >= ($targetMinutes * 60)
+    );
 }
 
 function RADIO_rotationDuration($sequence)
