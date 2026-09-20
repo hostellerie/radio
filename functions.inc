@@ -276,7 +276,7 @@ function RADIO_hasEditAccess($row)
 function RADIO_permissionSql($alias, $uid)
 {
     $alias = trim((string) $alias);
-    if ($alias === '' || $alias === 'radio_media' || $alias === 'radio_programs') {
+    if ($alias === '' || $alias === 'radio_media' || $alias === 'radio_programs' || $alias === 'radio_sources') {
         return COM_getPermSQL('AND', (int) $uid, 2);
     }
     return COM_getPermSQL('AND', (int) $uid, 2, $alias);
