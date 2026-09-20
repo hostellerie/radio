@@ -1018,6 +1018,32 @@ function RADIO_getReplay($scheduleId, $start)
     );
 }
 
+
+function RADIO_getReplayService($options)
+{
+    $limit = isset($options['limit']) ? (int) $options['limit'] : 20;
+    $timestamp = isset($options['timestamp']) ? (int) $options['timestamp'] : time();
+    $items = RADIO_getReplayOccurrences($limit, $timestamp);
+    $result = array();
+
+    foreach ($items as $item) {
+        $result[] = array(
+            'id' => $item['replay_id'],
+            'type' => 'radio',
+            'subtype' => 'replay',
+            'program_id' => $item['program_external_id'],
+            'title' => $item['title'],
+            'description' => $item['description'],
+            'url' => $item['url'],
+            'date-start' => date('c', $item['start']),
+            'date-end' => date('c', $item['end']),
+            'available-until' => date('c', $item['available_until'])
+        );
+    }
+
+    return $result;
+}
+
 function RADIO_getRotationMediaByTypes($types)
 {
     global $_TABLES;
@@ -1341,6 +1367,7 @@ function RADIO_dashboardSummary()
     $live = RADIO_getLiveState(time());
     $now = $live['program'];
     $upcoming = RADIO_getUpcoming(50, time());
+    $replayCount = count(RADIO_getReplayOccurrences(100, time()));
     $weekLimit = strtotime('+7 days');
     $scheduledWeek = 0;
     foreach ($upcoming as $item) {
@@ -1353,6 +1380,7 @@ function RADIO_dashboardSummary()
         'media_count' => $mediaCount,
         'program_count' => $programCount,
         'scheduled_next_7_days' => $scheduledWeek,
+        'replay_count' => $replayCount,
         'live_source' => $live['source'],
         'current_media' => $live['media'] !== false ? array(
             'media_id' => $live['media']['external_id'],
