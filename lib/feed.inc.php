@@ -189,6 +189,7 @@ function RADIO_parseFeedXml($xml,&$error)
             $url='';$mime='';$length=0;
             if(isset($item->enclosure)){ $a=$item->enclosure->attributes(); $url=isset($a['url'])?trim((string)$a['url']):''; $mime=isset($a['type'])?trim((string)$a['type']):''; $length=isset($a['length'])?(int)$a['length']:0; }
             $urlError=''; if($url===''||RADIO_externalUrlValidation($url,$urlError)===false)continue;
+            if($mime!=='' && strpos(strtolower($mime),'audio/')!==0 && strtolower($mime)!=='application/ogg')continue;
             $items[]=array('key'=>sha1($url),'title'=>trim((string)$item->title),'description'=>trim(strip_tags((string)$item->description)),'url'=>$url,'mime'=>$mime,'length'=>$length,'published'=>trim((string)$item->pubDate),'guid'=>trim((string)$item->guid));
             if(count($items)>=50)break;
         }
@@ -198,6 +199,7 @@ function RADIO_parseFeedXml($xml,&$error)
             $url='';$mime='';
             foreach($entry->link as $link){$a=$link->attributes();if(isset($a['rel'])&&(string)$a['rel']==='enclosure'&&isset($a['href'])){$url=trim((string)$a['href']);$mime=isset($a['type'])?trim((string)$a['type']):'';break;}}
             $urlError=''; if($url===''||RADIO_externalUrlValidation($url,$urlError)===false)continue;
+            if($mime!=='' && strpos(strtolower($mime),'audio/')!==0 && strtolower($mime)!=='application/ogg')continue;
             $summary=isset($entry->summary)?(string)$entry->summary:(isset($entry->content)?(string)$entry->content:'');
             $items[]=array('key'=>sha1($url),'title'=>trim((string)$entry->title),'description'=>trim(strip_tags($summary)),'url'=>$url,'mime'=>$mime,'length'=>0,'published'=>trim((string)(isset($entry->published)?$entry->published:$entry->updated)),'guid'=>trim((string)$entry->id));
             if(count($items)>=50)break;
@@ -206,15 +208,15 @@ function RADIO_parseFeedXml($xml,&$error)
     return array('title'=>$feedTitle,'items'=>$items);
 }
 
-function RADIO_fetchFeedSource($source,&$error)
+function RADIO_fetchFeedSource($source,&$error,$conditional=true)
 {
     global $_TABLES;
     $error='';
     if(!is_array($source)){ $error='source_not_found'; return false; }
 
     $headers=array('Accept: application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.1');
-    if(!empty($source['etag']))$headers[]='If-None-Match: '.$source['etag'];
-    if(!empty($source['last_modified']))$headers[]='If-Modified-Since: '.$source['last_modified'];
+    if($conditional && !empty($source['etag']))$headers[]='If-None-Match: '.$source['etag'];
+    if($conditional && !empty($source['last_modified']))$headers[]='If-Modified-Since: '.$source['last_modified'];
 
     $diag=array(); $body=RADIO_httpFetchBounded($source['source_url'],$headers,$diag); $now=date('Y-m-d H:i:s');
     $etag=isset($diag['headers']['etag'])?$diag['headers']['etag']:$source['etag'];
@@ -239,6 +241,11 @@ function RADIO_fetchFeedSource($source,&$error)
 
 function RADIO_importFeedEpisode($source,$episode,&$error)
 {
-    $data=array('source_kind'=>'external','source_url'=>$episode['url'],'title'=>$episode['title']!==''?$episode['title']:'Podcast episode','description'=>$episode['description'],'media_type'=>'podcast','duration'=>0,'source_provider'=>$source['provider']!==''?$source['provider']:$source['title'],'source_external_id'=>$episode['guid']!==''?$episode['guid']:$episode['key'],'source_attribution'=>$source['title'],'source_license'=>'','status'=>'draft','group_id'=>$source['group_id'],'perm_owner'=>$source['perm_owner'],'perm_group'=>$source['perm_group'],'perm_members'=>$source['perm_members'],'perm_anon'=>$source['perm_anon']);
+    global $_TABLES;
+    $externalId=$episode['guid']!==''?$episode['guid']:$episode['key'];
+    $provider=$source['provider']!==''?$source['provider']:$source['title'];
+    $existing=DB_query("SELECT media_id FROM {$_TABLES['radio_media']} WHERE source_kind='external' AND (source_url='".DB_escapeString($episode['url'])."' OR (source_provider='".DB_escapeString($provider)."' AND source_external_id='".DB_escapeString($externalId)."')) LIMIT 1");
+    if(DB_numRows($existing)>0){$error='feed_episode_exists';return false;}
+    $data=array('source_kind'=>'external','source_url'=>$episode['url'],'title'=>$episode['title']!==''?$episode['title']:'Podcast episode','description'=>$episode['description'],'media_type'=>'podcast','duration'=>0,'source_provider'=>$provider,'source_external_id'=>$externalId,'source_attribution'=>$source['title'],'source_license'=>'','status'=>'draft','group_id'=>$source['group_id'],'perm_owner'=>$source['perm_owner'],'perm_group'=>$source['perm_group'],'perm_members'=>$source['perm_members'],'perm_anon'=>$source['perm_anon']);
     return RADIO_saveExternalMedia($data,$error);
 }
