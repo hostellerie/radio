@@ -10,6 +10,10 @@ if ($row === false) {
     exit;
 }
 
+if ($download) {
+    RADIO_recordStatEvent($id, 0, 'download', 'download', 0);
+}
+
 if (!RADIO_sendMedia($row, $download)) {
     header($download ? 'HTTP/1.1 403 Forbidden' : 'HTTP/1.1 404 Not Found');
     exit;
