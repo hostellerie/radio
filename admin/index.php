@@ -94,7 +94,9 @@ $content .= '<p><a href="' . htmlspecialchars($configUrl, ENT_QUOTES, 'UTF-8') .
     . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
     . htmlspecialchars($LANG_RADIO['manage_schedule'], ENT_QUOTES, 'UTF-8') . '</a> · '
     . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/rotation.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+    . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8') . '</a> · '
+    . '<a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/stats.php', ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($LANG_RADIO['statistics'], ENT_QUOTES, 'UTF-8') . '</a></p>';
 
 if (SEC_hasRights('radio.upload')) {
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['upload_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
@@ -129,6 +131,10 @@ if (SEC_hasRights('radio.upload')) {
         . '</option></select></label> '
         . '<label><input type="checkbox" name="allow_download" value="1" checked> '
         . htmlspecialchars($LANG_RADIO['allow_download'], ENT_QUOTES, 'UTF-8') . '</label></p>'
+        . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown(RADIO_defaultGroupId(), 3) . '</label></p>'
+        . SEC_getPermissionsHTML(3, 2, 2, 2)
+        . '</fieldset>'
         . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
         . '<button type="submit" name="upload_media" value="1">' . htmlspecialchars($LANG_RADIO['upload'], ENT_QUOTES, 'UTF-8') . '</button>'
         . '</form>';
