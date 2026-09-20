@@ -1,11 +1,11 @@
-# Radio 0.2.1 pre-release validation
+# Radio 0.2.2 pre-release validation
 
 This checklist separates repository/CI validation from Geeklog runtime validation.
 
 ## Already enforced by CI
 
 - versioned Radio public CSS/JS and admin JavaScript are packaged and loaded through Geeklog plugin callbacks;
-- Radio 0.2.1 configuration upgrade includes `on_demand_enabled`;
+- Radio 0.2.2 configuration upgrade includes `on_demand_enabled`;
 
 - PHP syntax on PHP 5.6, 8.1 and 8.3.
 - plugin.json baseline: Geeklog 2.1.1 / PHP 5.6.
@@ -35,8 +35,8 @@ geeklog222-web  -> http://localhost:8081
 
 For each environment:
 
-1. Upload/install `dist/radio_0.2.1_2.1.1.zip`.
-2. Confirm the plugin manager records Data/Code 0.2.1.
+1. Upload/install `dist/radio_0.2.2_2.1.1.zip`.
+2. Confirm the plugin manager records Data/Code 0.2.2.
 3. Confirm the following tables exist with the active site prefix:
    - radio_media
    - radio_programs
@@ -50,7 +50,7 @@ For each environment:
 
 ## 2. Upgrade test
 
-Start with the previous Radio archive/database state, then replace code with 0.2.1.
+Start with the previous Radio archive/database state, then replace code with 0.2.2.
 
 Verify:
 
@@ -125,9 +125,9 @@ If `radio.schedule` is delegated without `radio.admin`, confirm inaccessible pro
 
 Verify:
 
-- public Radio pages load `/radio/radio.css?v=0.2.1-<mtime>`;
-- public Radio pages load `/radio/radio.js?v=0.2.1-<mtime>`;
-- Radio admin upload/edit pages load `radio-admin.js?v=0.2.1-<mtime>`;
+- public Radio pages load `/radio/radio.css?v=0.2.2-<mtime>`;
+- public Radio pages load `/radio/radio.js?v=0.2.2-<mtime>`;
+- Radio admin upload/edit pages load `radio-admin.js?v=0.2.2-<mtime>`;
 - no Radio inline player JavaScript remains in the generated page source;
 - disabling `on_demand_enabled` hides the catalogue/on-demand players while keeping live listening available;
 - enabling it restores on-demand playback;
