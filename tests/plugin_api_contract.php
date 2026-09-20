@@ -130,3 +130,17 @@ if (!empty($errors)) {
 }
 
 echo "Radio Plugin API contract check passed.\n";
+
+radio_contract_require(
+    preg_match('/function\s+RADIO_detectAudioDuration\s*\(/', $functions) === 1,
+    'Radio must provide server-side audio duration detection.'
+);
+radio_contract_require(
+    strpos($functions, 'RADIO_detectM4aDuration') !== false
+        && strpos($functions, 'RADIO_detectMp3Duration') !== false,
+    'Radio duration detection must cover M4A and MP3.'
+);
+radio_contract_require(
+    substr_count($functions, 'RADIO_detectAudioDuration(') >= 3,
+    'Radio must use duration detection for new and existing local media.'
+);
