@@ -50,7 +50,7 @@ if ($scheduleId > 0 && $start > 0) {
 
     $content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/replay.php', ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($LANG_RADIO['back_to_replays'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
-    COM_output(COM_createHTMLDocument($content, array('pagetitle' => $replay['title'], 'footercode' => RADIO_trackingScript())));
+    COM_output(COM_createHTMLDocument($content, array('pagetitle' => $replay['title'])));
     exit;
 }
 
