@@ -23,3 +23,17 @@
 .radio-admin__table-wrap{overflow-x:auto}
 .radio-admin table{width:100%}
 @media(max-width:720px){.radio-admin__header{display:block}.radio-admin__header-actions{justify-content:flex-start;margin-top:.75rem}}
+
+.radio-admin__content>form,.radio-admin__content>.radio-admin-form{margin:0 0 1rem;padding:1rem;border:1px solid rgba(127,127,127,.3);border-radius:.4rem}
+.radio-admin fieldset{margin:1rem 0;padding:.85rem;border:1px solid rgba(127,127,127,.3);border-radius:.35rem}
+.radio-admin legend{font-weight:700;padding:0 .35rem}
+.radio-admin label{line-height:1.45}
+.radio-admin input[type="text"],.radio-admin input[type="url"],.radio-admin input[type="number"],.radio-admin input[type="date"],.radio-admin input[type="time"],.radio-admin textarea,.radio-admin select{max-width:100%;padding:.4rem .5rem}
+.radio-admin textarea{min-height:5rem}
+.radio-admin button{min-height:2.35rem;padding:.4rem .75rem;cursor:pointer}
+.radio-admin ol,.radio-admin ul{padding-left:1.35rem}
+.radio-admin li{margin:.35rem 0}
+.radio-admin table{border-collapse:collapse}
+.radio-admin th,.radio-admin td{padding:.55rem .6rem;border-bottom:1px solid rgba(127,127,127,.25);text-align:left;vertical-align:top}
+.radio-admin th{font-weight:700}
+.radio-admin code{overflow-wrap:anywhere}
