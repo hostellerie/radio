@@ -198,7 +198,67 @@ function RADIO_adminQuickActions()
         'upload_label' => htmlspecialchars($LANG_RADIO['admin_add_audio'], ENT_QUOTES, 'UTF-8'),
         'external_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/external.php', ENT_QUOTES, 'UTF-8'),
         'external_label' => htmlspecialchars($LANG_RADIO['admin_add_external'], ENT_QUOTES, 'UTF-8'),
-        'quick_actions_help' => htmlspecialchars($LANG_RADIO['admin_quick_actions_help'], ENT_QUOTES, 'UTF-8')
     ));
     return $template->finish($template->parse('output', 'page'));
+}
+
+function RADIO_adminFormatDuration($seconds)
+{
+    $seconds = max(0, (int) $seconds);
+    $hours = (int) floor($seconds / 3600);
+    $minutes = (int) floor(($seconds % 3600) / 60);
+    $remaining = $seconds % 60;
+    return sprintf('%02d:%02d:%02d', $hours, $minutes, $remaining);
+}
+
+function RADIO_adminFormatSize($bytes)
+{
+    global $LANG_RADIO;
+    $mb = max(0, (int) $bytes) / 1048576;
+    return number_format($mb, 2) . ' ' . $LANG_RADIO['admin_mb_short'];
+}
+
+function RADIO_adminRenderMediaList($media)
+{
+    global $_CONF, $LANG_RADIO;
+
+    $wrapper = RADIO_adminTemplate('media-list.thtml');
+    $wrapper->set_var('library_title', htmlspecialchars($LANG_RADIO['library'], ENT_QUOTES, 'UTF-8'));
+
+    if (empty($media)) {
+        $wrapper->set_var('library_content', '<p>' . htmlspecialchars($LANG_RADIO['library_empty'], ENT_QUOTES, 'UTF-8') . '</p>');
+        return $wrapper->finish($wrapper->parse('output', 'page'));
+    }
+
+    $rows = '';
+    foreach ($media as $row) {
+        $rowTemplate = RADIO_adminTemplate('media-list-row.thtml');
+        $rowTemplate->set_var(array(
+            'title' => htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8'),
+            'filename' => htmlspecialchars($row['original_name'], ENT_QUOTES, 'UTF-8'),
+            'media_type' => htmlspecialchars(RADIO_adminMediaTypeLabel($row['media_type']), ENT_QUOTES, 'UTF-8'),
+            'status' => htmlspecialchars(RADIO_adminStatusLabel($row['status']), ENT_QUOTES, 'UTF-8'),
+            'source' => htmlspecialchars(RADIO_adminSourceKindLabel(RADIO_sourceKind($row)), ENT_QUOTES, 'UTF-8'),
+            'duration' => htmlspecialchars(RADIO_adminFormatDuration($row['duration']), ENT_QUOTES, 'UTF-8'),
+            'size' => htmlspecialchars(RADIO_adminFormatSize($row['file_size']), ENT_QUOTES, 'UTF-8'),
+            'edit_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/edit.php?media_id=' . (int) $row['media_id'], ENT_QUOTES, 'UTF-8'),
+            'edit_label' => htmlspecialchars($LANG_RADIO['admin_edit'], ENT_QUOTES, 'UTF-8')
+        ));
+        $rows .= $rowTemplate->finish($rowTemplate->parse('output', 'page'));
+    }
+
+    $table = RADIO_adminTemplate('media-list-table.thtml');
+    $table->set_var(array(
+        'title_label' => htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8'),
+        'type_label' => htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8'),
+        'status_label' => htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8'),
+        'source_label' => htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8'),
+        'duration_label' => htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8'),
+        'size_label' => htmlspecialchars($LANG_RADIO['admin_size'], ENT_QUOTES, 'UTF-8'),
+        'actions_label' => htmlspecialchars($LANG_RADIO['admin_actions'], ENT_QUOTES, 'UTF-8'),
+        'media_rows' => $rows
+    ));
+
+    $wrapper->set_var('library_content', $table->finish($table->parse('output', 'page')));
+    return $wrapper->finish($wrapper->parse('output', 'page'));
 }
