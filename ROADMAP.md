@@ -1,5 +1,27 @@
 # Radio for Geeklog — Roadmap
 
+
+## Google Drive external provider
+
+- [ ] Add first-class Google Drive support as an external Radio provider instead of relying on manually crafted download URLs.
+- [ ] Recognize common Google Drive sharing URLs such as `https://drive.google.com/file/d/FILE_ID/view` and extract the stable Drive file ID.
+- [ ] Store Drive-backed media using provider metadata such as:
+  - `source_kind = external`
+  - `source_provider = google-drive`
+  - `source_external_id = FILE_ID`
+- [ ] Retrieve and display useful Drive metadata when available, including filename, MIME type, size, ownership/download capability and modification information.
+- [ ] Check whether the Drive file can actually be downloaded/streamed before exposing it as playable Radio media.
+- [ ] Support public/shared Drive files in a limited mode without requiring administrator credentials when the file is genuinely accessible.
+- [ ] Support private Drive files through the Google Drive API using authenticated access and `files.get(..., alt=media)`.
+- [ ] Never store OAuth access tokens, refresh tokens or client secrets inside Radio media records.
+- [ ] Keep Google provider credentials/site authorization in site-specific configuration or secure persistent storage, with explicit multisite isolation.
+- [ ] Resolve Drive playback through a provider adapter/service layer rather than adding Google-specific conditionals directly to `RADIO_sendMedia()`.
+- [ ] Handle expired authorization, revoked sharing, download-disabled files, quota errors and unavailable files with administrator-visible diagnostics.
+- [ ] Preserve normal Radio ACL independently from Google Drive sharing permissions: a Drive file being public must not automatically make the Radio item public.
+- [ ] Expose provider/source health through Radio services so Eclipse, Agent and Hub can report unavailable Drive-backed media.
+- [ ] Document the limitations of using Google Drive as media hosting and recommend dedicated media hosting/CDN for high-volume public streaming.
+- [ ] Add compatibility/security tests for Drive URL parsing, provider isolation, ACL, redirect handling and authenticated media retrieval.
+
 ## Vision
 
 Radio is an independent Geeklog plugin for publishing, organizing, scheduling and playing audio content.
