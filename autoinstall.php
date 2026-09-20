@@ -3,6 +3,7 @@ if (!isset($GLOBALS['_CONF'])) {
     die('This file cannot be used on its own.');
 }
 require_once __DIR__ . '/version.php';
+require_once __DIR__ . '/functions.inc';
 
 function plugin_autoinstall_radio($pi_name)
 {
