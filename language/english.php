@@ -27,6 +27,7 @@ $LANG_RADIO = array(
     'admin_stats_help_title' => 'Reading these statistics',
     'admin_stats_help_text' => 'Playback starts, listening time and allowed downloads are aggregated over the selected period. Use them as operational indicators rather than unique-listener counts.',
     'admin_days' => 'days',
+    'admin_minutes_short' => 'min',
     'admin_empty_value' => 'No data',
     'admin_intro' => 'Manage the audio library, programmes and schedules.',
     'storage' => 'Persistent storage',
