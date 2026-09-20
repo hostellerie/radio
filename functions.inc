@@ -840,6 +840,209 @@ function RADIO_validateUpload($file, &$error)
     );
 }
 
+
+function RADIO_readUint32($data)
+{
+    if (!is_string($data) || strlen($data) !== 4) {
+        return 0;
+    }
+    $value = unpack('Nvalue', $data);
+    return isset($value['value']) ? (int) $value['value'] : 0;
+}
+
+function RADIO_detectM4aDuration($path)
+{
+    $handle = @fopen($path, 'rb');
+    if (!$handle) {
+        return 0;
+    }
+
+    $size = @filesize($path);
+    if (!$size || $size < 16) {
+        fclose($handle);
+        return 0;
+    }
+
+    $stack = array(array(0, (int) $size));
+    while (!empty($stack)) {
+        $range = array_pop($stack);
+        $offset = (int) $range[0];
+        $limit = (int) $range[1];
+
+        while (($offset + 8) <= $limit) {
+            if (fseek($handle, $offset) !== 0) {
+                break;
+            }
+
+            $header = fread($handle, 8);
+            if (!is_string($header) || strlen($header) !== 8) {
+                break;
+            }
+
+            $atomSize = RADIO_readUint32(substr($header, 0, 4));
+            $atomType = substr($header, 4, 4);
+            $headerSize = 8;
+
+            if ($atomSize === 1) {
+                $extended = fread($handle, 8);
+                if (!is_string($extended) || strlen($extended) !== 8) {
+                    break;
+                }
+                $parts = unpack('Nhigh/Nlow', $extended);
+                if (!isset($parts['high'], $parts['low']) || (int) $parts['high'] !== 0) {
+                    break;
+                }
+                $atomSize = (int) $parts['low'];
+                $headerSize = 16;
+            } elseif ($atomSize === 0) {
+                $atomSize = $limit - $offset;
+            }
+
+            if ($atomSize < $headerSize || ($offset + $atomSize) > $limit) {
+                break;
+            }
+
+            if ($atomType === 'moov') {
+                $stack[] = array(
+                    $offset + $headerSize,
+                    $offset + $atomSize
+                );
+            } elseif ($atomType === 'mvhd') {
+                if (fseek($handle, $offset + $headerSize) !== 0) {
+                    break;
+                }
+                $versionAndFlags = fread($handle, 4);
+                if (!is_string($versionAndFlags) || strlen($versionAndFlags) !== 4) {
+                    break;
+                }
+                $version = ord($versionAndFlags[0]);
+
+                if ($version === 0) {
+                    $payload = fread($handle, 16);
+                    if (!is_string($payload) || strlen($payload) !== 16) {
+                        break;
+                    }
+                    $timescale = RADIO_readUint32(substr($payload, 8, 4));
+                    $duration = RADIO_readUint32(substr($payload, 12, 4));
+                    fclose($handle);
+
+                    if ($timescale > 0 && $duration > 0) {
+                        return max(1, (int) round($duration / $timescale));
+                    }
+                    return 0;
+                }
+
+                // Version 1 uses 64-bit fields. Fail closed rather than
+                // depending on platform-specific 64-bit unpack behaviour.
+                fclose($handle);
+                return 0;
+            }
+
+            $offset += $atomSize;
+        }
+    }
+
+    fclose($handle);
+    return 0;
+}
+
+function RADIO_mp3BitrateKbps($versionBits, $layerBits, $bitrateIndex)
+{
+    if ($bitrateIndex < 1 || $bitrateIndex > 14 || $layerBits !== 1) {
+        return 0;
+    }
+
+    // Layer III tables. versionBits 3 = MPEG1, 2/0 = MPEG2/2.5.
+    $mpeg1 = array(0,32,40,48,56,64,80,96,112,128,160,192,224,256,320);
+    $mpeg2 = array(0,8,16,24,32,40,48,56,64,80,96,112,128,144,160);
+
+    return $versionBits === 3
+        ? (int) $mpeg1[$bitrateIndex]
+        : (int) $mpeg2[$bitrateIndex];
+}
+
+function RADIO_detectMp3Duration($path)
+{
+    $handle = @fopen($path, 'rb');
+    if (!$handle) {
+        return 0;
+    }
+
+    $size = @filesize($path);
+    if (!$size || $size < 4) {
+        fclose($handle);
+        return 0;
+    }
+
+    $start = 0;
+    $head = fread($handle, 10);
+    if (is_string($head) && strlen($head) === 10 && substr($head, 0, 3) === 'ID3') {
+        $tagSize = ((ord($head[6]) & 0x7f) << 21)
+            | ((ord($head[7]) & 0x7f) << 14)
+            | ((ord($head[8]) & 0x7f) << 7)
+            | (ord($head[9]) & 0x7f);
+        $start = 10 + $tagSize;
+    }
+
+    if (fseek($handle, $start) !== 0) {
+        fclose($handle);
+        return 0;
+    }
+
+    $scanLength = min(131072, max(0, $size - $start));
+    $data = fread($handle, $scanLength);
+    fclose($handle);
+
+    if (!is_string($data) || strlen($data) < 4) {
+        return 0;
+    }
+
+    $length = strlen($data);
+    for ($i = 0; $i <= ($length - 4); $i++) {
+        $b1 = ord($data[$i]);
+        $b2 = ord($data[$i + 1]);
+        $b3 = ord($data[$i + 2]);
+
+        if ($b1 !== 0xff || ($b2 & 0xe0) !== 0xe0) {
+            continue;
+        }
+
+        $versionBits = ($b2 >> 3) & 0x03;
+        $layerBits = ($b2 >> 1) & 0x03;
+        $bitrateIndex = ($b3 >> 4) & 0x0f;
+
+        if ($versionBits === 1 || $layerBits !== 1) {
+            continue;
+        }
+
+        $kbps = RADIO_mp3BitrateKbps($versionBits, $layerBits, $bitrateIndex);
+        if ($kbps < 1) {
+            continue;
+        }
+
+        $audioBytes = max(0, $size - $start);
+        $seconds = (int) round(($audioBytes * 8) / ($kbps * 1000));
+        return max(1, $seconds);
+    }
+
+    return 0;
+}
+
+function RADIO_detectAudioDuration($path, $extension)
+{
+    $extension = strtolower((string) $extension);
+
+    if ($extension === 'm4a' || $extension === 'mp4') {
+        return RADIO_detectM4aDuration($path);
+    }
+
+    if ($extension === 'mp3') {
+        return RADIO_detectMp3Duration($path);
+    }
+
+    return 0;
+}
+
 function RADIO_generateStorageName($extension)
 {
     $entropy = uniqid('', true) . mt_rand() . microtime(true);
@@ -886,6 +1089,9 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
+    if ($duration < 1) {
+        $duration = RADIO_detectAudioDuration($destination, $validated['extension']);
+    }
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
     $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
     list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, array());
@@ -986,6 +1192,11 @@ function RADIO_updateMedia($id, $metadata)
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
+    if ($duration < 1 && RADIO_sourceKind($row) === 'local' && !empty($row['storage_name'])) {
+        $storedPath = RADIO_storageDir() . basename($row['storage_name']);
+        $storedExtension = strtolower(pathinfo($row['storage_name'], PATHINFO_EXTENSION));
+        $duration = RADIO_detectAudioDuration($storedPath, $storedExtension);
+    }
     $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : (int) $row['group_id'];
     list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, $row);
     $now = date('Y-m-d H:i:s');
