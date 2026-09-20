@@ -151,6 +151,11 @@ radio_contract_require(
     'Radio public index must expose the native home live player and waveform.'
 );
 radio_contract_require(
+    strpos($publicIndex, '<progress') === false
+        && strpos($publicIndex, 'radio-on-air-progress') === false,
+    'Radio public home must use a single native audio timeline.'
+);
+radio_contract_require(
     strpos($publicJs, '15000') !== false
         && strpos($publicJs, 'data.current_media') !== false,
     'Radio public index player must resynchronize with now.php every 15 seconds.'
@@ -158,8 +163,9 @@ radio_contract_require(
 radio_contract_require(
     strpos($publicJs, 'AudioContext') !== false
         && strpos($publicJs, 'createAnalyser') !== false
-        && strpos($publicJs, 'getByteTimeDomainData') !== false,
-    'Radio public waveform must use Web Audio time-domain analysis where available.'
+        && strpos($publicJs, 'getByteTimeDomainData') !== false
+        && strpos($publicJs, 'visualGain') !== false,
+    'Radio public waveform must use normalized Web Audio time-domain analysis where available.'
 );
 radio_contract_require(
     strpos($publicIndex, 'radio-home-wave') !== false
