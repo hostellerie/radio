@@ -80,7 +80,7 @@ if (SEC_hasRights('radio.upload')) {
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['upload_title'], ENT_QUOTES, 'UTF-8') . '</h2>';
     $content .= '<form method="post" enctype="multipart/form-data" action="">'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['audio_file'], ENT_QUOTES, 'UTF-8')
-        . '<br><input type="file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required></label></p>'
+        . '<br><input type="file" id="radio-upload-file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
         . '<br><input type="text" name="title" maxlength="255" style="width:100%"></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
@@ -97,7 +97,7 @@ if (SEC_hasRights('radio.upload')) {
         . '<option value="promo">' . htmlspecialchars($LANG_RADIO['type_promo'], ENT_QUOTES, 'UTF-8') . '</option>'
         . '</select></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8')
-        . ' <input type="number" name="duration" min="0" step="1" value="0" style="width:8rem"></label></p>'
+        . ' <input type="number" id="radio-upload-duration" name="duration" min="0" step="1" value="0" style="width:8rem"></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8')
         . ' <select name="status"><option value="draft">' . htmlspecialchars($LANG_RADIO['draft'], ENT_QUOTES, 'UTF-8')
         . '</option><option value="published">' . htmlspecialchars($LANG_RADIO['published'], ENT_QUOTES, 'UTF-8')
@@ -117,7 +117,7 @@ if (count($media) === 0) {
     foreach ($media as $row) {
         $id = (int) $row['media_id'];
         $content .= '<div class="radio-admin-item"><form method="post" action="">'
-            . '<p><audio class="radio-admin-player" controls preload="metadata" src="'
+            . '<p><audio class="radio-admin-player radio-duration-source" data-duration-target="radio-duration-' . $id . '" controls preload="metadata" src="'
             . htmlspecialchars(RADIO_mediaUrl($id, false), ENT_QUOTES, 'UTF-8') . '"></audio></p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
             . '<br><input type="text" name="title" maxlength="255" style="width:100%" value="'
@@ -130,7 +130,7 @@ if (count($media) === 0) {
             . htmlspecialchars($row['mime_type'], ENT_QUOTES, 'UTF-8') . ' · '
             . number_format(((int) $row['file_size']) / 1048576, 2) . ' MB</p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8')
-            . ' <input type="number" name="duration" min="0" step="1" value="' . (int) $row['duration'] . '" style="width:8rem"></label></p>'
+            . ' <input type="number" id="radio-duration-' . $id . '" name="duration" min="0" step="1" value="' . (int) $row['duration'] . '" style="width:8rem"></label></p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8') . ' <select name="media_type">';
 
         $types = array('music','podcast','interview','show','chronicle','jingle','announcement','promo');
@@ -157,4 +157,18 @@ if (count($media) === 0) {
 }
 
 $content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['admin_title'])));
+$durationJs = '<script>(function(){'
+    . 'var file=document.getElementById("radio-upload-file");var target=document.getElementById("radio-upload-duration");'
+    . 'if(file&&target){file.addEventListener("change",function(){if(!file.files||!file.files[0])return;'
+    . 'var a=document.createElement("audio");var u=URL.createObjectURL(file.files[0]);a.preload="metadata";a.src=u;'
+    . 'a.addEventListener("loadedmetadata",function(){if(isFinite(a.duration)&&a.duration>0){target.value=Math.round(a.duration);}URL.revokeObjectURL(u);});});}'
+    . 'var sources=document.querySelectorAll(".radio-duration-source");'
+    . 'for(var i=0;i<sources.length;i++){(function(a){a.addEventListener("loadedmetadata",function(){'
+    . 'var id=a.getAttribute("data-duration-target");var input=document.getElementById(id);'
+    . 'if(input&&parseInt(input.value,10)<=0&&isFinite(a.duration)&&a.duration>0){input.value=Math.round(a.duration);}'
+    . '});})(sources[i]);}'
+    . '})();</script>';
+COM_output(COM_createHTMLDocument($content, array(
+    'pagetitle' => $LANG_RADIO['admin_title'],
+    'footercode' => $durationJs
+)));

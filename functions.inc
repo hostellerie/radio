@@ -1102,6 +1102,8 @@ function RADIO_itemInfoFromRow($row, $fields)
         'type' => 'radio',
         'subtype' => 'media',
         'media_type' => $row['media_type'],
+        'duration' => isset($row['duration']) ? (int) $row['duration'] : 0,
+        'stream_url' => RADIO_mediaUrl($id, false),
         'title' => $row['title'],
         'url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
         'canonical_url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,

@@ -102,7 +102,10 @@ if ($selected) {
 $content .= '</form>';
 
 if ($selected) {
+    $programDuration = RADIO_programDuration($selectedId);
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['program_items'], ENT_QUOTES, 'UTF-8') . '</h2>';
+    $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['program_duration'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+        . gmdate('H:i:s', $programDuration) . '</p>';
     if (count($items) === 0) {
         $content .= '<p>' . htmlspecialchars($LANG_RADIO['program_items_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
     } else {

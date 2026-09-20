@@ -105,6 +105,7 @@ $LANG_RADIO = array(
     'program_delete_failed' => 'L’émission n’a pas pu être supprimée.',
     'confirm_program_delete' => 'Supprimer cette émission, sa playlist et ses programmations ?',
     'program_items' => 'Playlist de l’émission',
+    'program_duration' => 'Durée de la playlist',
     'program_items_empty' => 'Cette émission ne contient encore aucun audio.',
     'program_not_found' => 'Cette émission n’est pas disponible.',
     'program_public_empty' => 'Cette émission ne contient encore aucun audio publié.',
