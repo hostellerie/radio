@@ -157,8 +157,14 @@ radio_contract_require(
 );
 radio_contract_require(
     strpos($publicJs, 'AudioContext') !== false
-        && strpos($publicJs, 'createAnalyser') !== false,
-    'Radio public live waveform must use Web Audio analysis where available.'
+        && strpos($publicJs, 'createAnalyser') !== false
+        && strpos($publicJs, 'getByteTimeDomainData') !== false,
+    'Radio public waveform must use Web Audio time-domain analysis where available.'
+);
+radio_contract_require(
+    strpos($publicIndex, 'radio-home-wave') !== false
+        && strpos(file_get_contents($root . '/public_html/live.php'), 'radio-live-wave') !== false,
+    'Radio waveform canvas must be present on both the public home and live pages.'
 );
 radio_contract_require(
     strpos($nowEndpoint, "'source_kind'") !== false,
