@@ -39,7 +39,7 @@ if (isset($_POST['preview_source']) || isset($_POST['import_episode'])) {
     $previewSource = RADIO_getFeedSource($sourceId, false);
     if ($previewSource !== false) {
         $error = '';
-        $preview = RADIO_fetchFeedSource($previewSource, $error);
+        $preview = RADIO_fetchFeedSource($previewSource, $error, !isset($_POST['import_episode']));
         if ($preview === false) {
             $key = isset($LANG_RADIO[$error]) ? $error : 'feed_fetch_failed';
             $message .= COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['feed_sources']);
