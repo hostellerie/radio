@@ -29,6 +29,7 @@ $LANG_RADIO = array(
     'public_schedule' => 'Programme de la radio',
     'duration_seconds' => 'Durée (secondes)',
     'listen_live' => 'Écouter en direct',
+    'podcast_feed' => 'Flux RSS podcast',
     'live_ready' => 'Cliquez sur Écouter pour rejoindre l’émission en cours.',
     'start_listening' => 'Écouter',
     'autoplay_notice' => 'Le navigateur peut exiger un clic explicite avant de démarrer la lecture audio.',

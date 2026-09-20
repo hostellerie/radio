@@ -908,6 +908,159 @@ function RADIO_getUpcoming($limit, $fromTs)
 
 
 
+
+function RADIO_getPodcastItems($limit, $since)
+{
+    global $_TABLES;
+
+    $limit = max(1, min(100, (int) $limit));
+    $sql = "SELECT * FROM {$_TABLES['radio_media']} "
+        . "WHERE status='published' AND media_type='podcast' AND storage_name<>''";
+
+    if ((int) $since > 0) {
+        $sql .= " AND modified >= '" . DB_escapeString(date('Y-m-d H:i:s', (int) $since)) . "'";
+    }
+
+    $sql .= " ORDER BY modified DESC, media_id DESC LIMIT " . $limit;
+
+    $result = DB_query($sql);
+    $items = array();
+    while ($row = DB_fetchArray($result)) {
+        $items[] = $row;
+    }
+    return $items;
+}
+
+function RADIO_podcastFeedUrl()
+{
+    global $_CONF;
+    return $_CONF['site_url'] . '/radio/podcast.php';
+}
+
+function RADIO_feedCollectionOptions($limit)
+{
+    $options = array('limit' => 20, 'since' => 0);
+    $limit = trim((string) $limit);
+
+    if ($limit === '') {
+        return $options;
+    }
+
+    if (substr($limit, -1) === 'h') {
+        $hours = (int) substr($limit, 0, -1);
+        if ($hours > 0) {
+            $options['since'] = time() - ($hours * 3600);
+            $options['limit'] = 100;
+        }
+        return $options;
+    }
+
+    if (ctype_digit($limit)) {
+        $options['limit'] = max(1, min(100, (int) $limit));
+    }
+
+    return $options;
+}
+
+function plugin_getfeednames_radio()
+{
+    return array(
+        array('id' => 'podcast', 'name' => 'Radio Podcasts')
+    );
+}
+
+function plugin_getfeedcontent_radio($feed, &$link, &$update, $feedType = '', $feedVersion = '')
+{
+    global $_TABLES;
+
+    $link = RADIO_podcastFeedUrl();
+    $update = '';
+
+    $feedId = (int) $feed;
+    if ($feedId <= 0) {
+        return array();
+    }
+
+    $result = DB_query(
+        "SELECT topic,limits,content_length FROM {$_TABLES['syndication']} WHERE fid=" . $feedId
+    );
+    $syndication = DB_fetchArray($result);
+    if (!is_array($syndication)) {
+        return array();
+    }
+
+    $source = isset($syndication['topic']) ? (string) $syndication['topic'] : 'podcast';
+    if ($source !== '' && $source !== 'podcast') {
+        return array();
+    }
+
+    $options = RADIO_feedCollectionOptions(isset($syndication['limits']) ? $syndication['limits'] : '');
+    $items = RADIO_getPodcastItems($options['limit'], $options['since']);
+    $contentLength = isset($syndication['content_length']) ? (int) $syndication['content_length'] : 0;
+    $entries = array();
+    $ids = array();
+
+    foreach ($items as $item) {
+        $summary = isset($item['description']) ? $item['description'] : '';
+        $summary = PLG_replaceTags($summary);
+        if ($contentLength > 1 && function_exists('COM_truncateHTML')) {
+            $summary = COM_truncateHTML($summary, $contentLength, ' ...');
+        }
+
+        $entry = array(
+            'title' => $item['title'],
+            'summary' => $summary,
+            'text' => $summary,
+            'link' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id'])),
+            'uid' => isset($item['owner_id']) ? (int) $item['owner_id'] : 0,
+            'author' => '',
+            'date' => strtotime($item['modified']),
+            'format' => 'html'
+        );
+
+        if (function_exists('PLG_getFeedElementExtensions')) {
+            $entry['extensions'] = PLG_getFeedElementExtensions(
+                'radio',
+                RADIO_externalId('media', (int) $item['media_id']),
+                (string) $feedType,
+                (string) $feedVersion,
+                'podcast',
+                $feedId
+            );
+        }
+
+        $entries[] = $entry;
+        $ids[] = RADIO_externalId('media', (int) $item['media_id']) . ':' . $item['modified'];
+    }
+
+    $update = implode(',', $ids);
+    return $entries;
+}
+
+function plugin_feedupdatecheck_radio(
+    $feed,
+    $topic,
+    $updateData,
+    $limit,
+    $updatedType = '',
+    $updatedTopic = '',
+    $updatedId = ''
+) {
+    if ($updatedType === 'radio' && $updatedId !== '') {
+        return false;
+    }
+
+    $options = RADIO_feedCollectionOptions($limit);
+    $items = RADIO_getPodcastItems($options['limit'], $options['since']);
+    $ids = array();
+
+    foreach ($items as $item) {
+        $ids[] = RADIO_externalId('media', (int) $item['media_id']) . ':' . $item['modified'];
+    }
+
+    return implode(',', $ids) === (string) $updateData;
+}
+
 function RADIO_replayRetentionDays()
 {
     global $_RADIO_CONF;
@@ -1407,6 +1560,7 @@ function plugin_getcapabilities_radio()
             'content.collection',
             'content.url.resolve',
             'content.lifecycle',
+            'content.syndication',
             'dashboard.summary',
             'radio.media.read',
             'radio.program.read',
@@ -1414,7 +1568,8 @@ function plugin_getcapabilities_radio()
             'radio.now-playing.read',
             'radio.current-media.read',
             'radio.rotation.read',
-            'radio.replay.read'
+            'radio.replay.read',
+            'radio.podcast.read'
         )
     );
 }

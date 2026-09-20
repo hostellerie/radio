@@ -65,7 +65,9 @@ if (count($upcomingPrograms) > 0) {
 $content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
     . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a> · '
     . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/live.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
+    . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a> · '
+    . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
 
 $content .= '<div class="radio-catalogue"><h1>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
 if (count($media) === 0) {

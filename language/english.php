@@ -29,6 +29,7 @@ $LANG_RADIO = array(
     'public_schedule' => 'Radio schedule',
     'duration_seconds' => 'Duration (seconds)',
     'listen_live' => 'Listen live',
+    'podcast_feed' => 'Podcast RSS feed',
     'live_ready' => 'Press Listen to join the current programme.',
     'start_listening' => 'Listen',
     'autoplay_notice' => 'Your browser may require an explicit click before audio playback can start.',

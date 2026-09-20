@@ -234,14 +234,11 @@ This mode must work on a standard Geeklog web server.
 
 # Phase 7 — Podcast support and content syndication
 
-- [ ] Treat podcast episodes as first-class Radio content, not as a separate storage silo.
+- [x] Treat podcast episodes as first-class Radio content, not as a separate storage silo.
 - [ ] Support series/show, season and episode metadata where appropriate.
-- [ ] Expose podcast-friendly descriptions, dates, duration, image and canonical URLs.
-- [ ] Evaluate Geeklog native Content Syndication callbacks:
-  - `plugin_getfeednames_radio()`;
-  - `plugin_getfeedcontent_radio()`;
-  - optional `plugin_feedupdatecheck_radio()`.
-- [ ] Evaluate podcast-specific RSS requirements without duplicating the underlying Radio content model.
+- [x] Expose podcast-friendly descriptions, dates, duration and canonical URLs; artwork remains to be added.
+- [x] Implement Geeklog native Content Syndication callbacks: `plugin_getfeednames_radio()`, `plugin_getfeedcontent_radio()` and `plugin_feedupdatecheck_radio()`.
+- [x] Provide a dedicated RSS 2.0 podcast feed with audio `enclosure` while keeping Radio media as the source of truth.
 - [ ] Keep feed generation permission-aware.
 - [ ] Preserve canonical source attribution and enclosure/download rules.
 

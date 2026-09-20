@@ -103,6 +103,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/now.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/live.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/replay.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/podcast.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/sql/mysql_install.php'
 
       - name: Upload workflow artifact
