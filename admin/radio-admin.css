@@ -1,0 +1,25 @@
+.radio-admin{max-width:1180px;margin:0 auto;padding:1rem 0 2rem}
+.radio-admin__header{display:flex;gap:1rem;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
+.radio-admin__heading h1{margin:0 0 .35rem;font-size:1.9rem}
+.radio-admin__heading p{margin:0;max-width:760px;line-height:1.55}
+.radio-admin__header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
+.radio-admin__config-form{margin:0}
+.radio-admin__button,.radio-admin__nav a{display:inline-flex;align-items:center;justify-content:center;min-height:2.4rem;padding:.45rem .8rem;border:1px solid rgba(127,127,127,.45);border-radius:.35rem;text-decoration:none;cursor:pointer}
+.radio-admin__button--secondary{background:transparent}
+.radio-admin__nav{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
+.radio-admin__nav a.is-active{font-weight:700;border-width:2px}
+.radio-admin__help{margin:0 0 1rem;padding:1rem;border-left:4px solid currentColor;background:rgba(127,127,127,.08)}
+.radio-admin__help h2{margin:0 0 .35rem;font-size:1.05rem}
+.radio-admin__help p{margin:0;line-height:1.55}
+.radio-admin__content>h2{margin-top:1.6rem}
+.radio-admin__panel{margin:0 0 1rem;padding:1rem;border:1px solid rgba(127,127,127,.3);border-radius:.4rem}
+.radio-admin__panel>h2:first-child{margin-top:0}
+.radio-admin__toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.75rem 0 1rem}
+.radio-admin__metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem}
+.radio-admin__metric{padding:.9rem;border:1px solid rgba(127,127,127,.3);border-radius:.35rem}
+.radio-admin__metric strong{display:block;font-size:1.5rem}
+.radio-admin__muted{opacity:.75}
+.radio-admin__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.radio-admin__table-wrap{overflow-x:auto}
+.radio-admin table{width:100%}
+@media(max-width:720px){.radio-admin__header{display:block}.radio-admin__header-actions{justify-content:flex-start;margin-top:.75rem}}
