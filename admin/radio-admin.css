@@ -37,3 +37,11 @@
 .radio-admin th,.radio-admin td{padding:.55rem .6rem;border-bottom:1px solid rgba(127,127,127,.25);text-align:left;vertical-align:top}
 .radio-admin th{font-weight:700}
 .radio-admin code{overflow-wrap:anywhere}
+
+.radio-admin-player{width:100%;max-width:760px}
+.radio-admin__media-preview{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:start;margin-bottom:1rem}
+.radio-admin__cover{max-width:180px;max-height:180px;border-radius:.35rem}
+.radio-admin__button--danger{margin-left:auto}
+.radio-admin__panel-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.radio-admin__panel-heading h2{margin:0}
+@media(max-width:720px){.radio-admin__media-preview{grid-template-columns:1fr}.radio-admin__button--danger{margin-left:0}}
