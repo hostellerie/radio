@@ -93,6 +93,17 @@ jobs:
         run: |
           find . -type f -name '*.php' -not -path './dist/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l
 
+      - name: Validate Radio admin UI architecture
+        shell: bash
+        run: |
+          ! grep -Rni "configuration.php?conf_group=radio" admin --include='*.php'
+          ! grep -Rni "COM_startBlock(" admin --include='*.php'
+          test -f admin/admin-ui.inc.php
+          test -f admin/radio-admin.css
+          test -f templates/admin/page.thtml
+          test -f templates/admin/navigation.thtml
+          test -f templates/admin/configuration-button.thtml
+
       - name: Validate security invariants
         shell: bash
         run: |
@@ -138,6 +149,11 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/docs/SERVICES.md'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/tests/plugin_api_contract.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/tests/bootstrap_runtime.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/admin-ui.inc.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/radio-admin.css'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/page.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/navigation.thtml'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/configuration-button.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
