@@ -24,6 +24,16 @@ echo "<channel>\n";
 echo '<title>' . RADIO_xml($title) . "</title>\n";
 echo '<link>' . RADIO_xml($link) . "</link>\n";
 echo '<description>' . RADIO_xml($title) . "</description>\n";
+$feedImage = '';
+foreach ($items as $candidate) {
+    if (!empty($candidate['cover_name'])) {
+        $feedImage = RADIO_coverUrl('media', (int)$candidate['media_id']);
+        break;
+    }
+}
+if ($feedImage !== '') {
+    echo '<itunes:image href="' . RADIO_xml($feedImage) . '" />' . "\n";
+}
 echo '<language>' . RADIO_xml(isset($_CONF['language']) ? $_CONF['language'] : 'en') . "</language>\n";
 echo '<atom:link href="' . RADIO_xml($self) . '" rel="self" type="application/rss+xml" />' . "\n";
 
@@ -43,6 +53,21 @@ foreach ($items as $item) {
     echo '<guid isPermaLink="false">' . RADIO_xml($guid) . "</guid>\n";
     echo '<pubDate>' . gmdate(DATE_RSS, $pubDate) . "</pubDate>\n";
     echo '<description>' . RADIO_xml($description) . "</description>\n";
+    if (!empty($item['author'])) {
+        echo '<itunes:author>' . RADIO_xml($item['author']) . "</itunes:author>\n";
+    }
+    if (!empty($item['series_title'])) {
+        echo '<itunes:subtitle>' . RADIO_xml($item['series_title']) . "</itunes:subtitle>\n";
+    }
+    if ((int)$item['season_number'] > 0) {
+        echo '<itunes:season>' . (int)$item['season_number'] . "</itunes:season>\n";
+    }
+    if ((int)$item['episode_number'] > 0) {
+        echo '<itunes:episode>' . (int)$item['episode_number'] . "</itunes:episode>\n";
+    }
+    if (!empty($item['cover_name'])) {
+        echo '<itunes:image href="' . RADIO_xml(RADIO_coverUrl('media', (int)$item['media_id'])) . '" />' . "\n";
+    }
     echo '<enclosure url="' . RADIO_xml($streamUrl) . '" length="' . $length . '" type="' . RADIO_xml($mime) . '" />' . "\n";
     if ($duration > 0) {
         echo '<itunes:duration>' . $duration . "</itunes:duration>\n";
