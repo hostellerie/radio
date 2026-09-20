@@ -544,6 +544,8 @@ function RADIO_saveProgram($id, $data)
         return false;
     }
     $description = trim(isset($data['program_description']) ? (string) $data['program_description'] : '');
+    $host = trim(isset($data['program_host']) ? (string) $data['program_host'] : '');
+    $coverName = isset($data['cover_name']) ? basename((string)$data['cover_name']) : '';
     $status = isset($data['program_status']) && $data['program_status'] === 'published' ? 'published' : 'draft';
     $now = date('Y-m-d H:i:s');
 
@@ -552,6 +554,8 @@ function RADIO_saveProgram($id, $data)
             "UPDATE {$_TABLES['radio_programs']} SET "
             . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
             . "description='" . DB_escapeString($description) . "',"
+            . "host='" . DB_escapeString(substr($host,0,255)) . "',"
+            . "cover_name='" . DB_escapeString($coverName !== '' ? $coverName : RADIO_getProgram((int)$id,false)['cover_name']) . "',"
             . "status='" . DB_escapeString($status) . "',"
             . "modified='" . DB_escapeString($now) . "' "
             . "WHERE program_id=" . (int) $id
@@ -564,9 +568,11 @@ function RADIO_saveProgram($id, $data)
         $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
         DB_query(
             "INSERT INTO {$_TABLES['radio_programs']} "
-            . "(title,description,status,owner_id,created,modified) VALUES ("
+            . "(title,description,host,cover_name,status,owner_id,created,modified) VALUES ("
             . "'" . DB_escapeString(substr($title, 0, 255)) . "',"
             . "'" . DB_escapeString($description) . "',"
+            . "'" . DB_escapeString(substr($host,0,255)) . "',"
+            . "'" . DB_escapeString($coverName) . "',"
             . "'" . DB_escapeString($status) . "',"
             . $owner . ","
             . "'" . DB_escapeString($now) . "',"
@@ -1799,6 +1805,8 @@ function RADIO_programInfoFromRow($row, $fields)
         'type' => 'radio',
         'subtype' => 'program',
         'title' => $row['title'],
+        'author' => isset($row['host']) ? $row['host'] : '',
+        'image' => !empty($row['cover_name']) ? RADIO_coverUrl('program',$id) : '',
         'url' => $_CONF['site_url'] . '/radio/program.php?id=' . $id,
         'canonical_url' => $_CONF['site_url'] . '/radio/program.php?id=' . $id,
         'description' => $row['description'],
