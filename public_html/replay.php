@@ -15,6 +15,13 @@ if ($scheduleId > 0 && $start > 0) {
     }
 
     $content = '<div class="radio-replay"><h1>' . htmlspecialchars($replay['title'], ENT_QUOTES, 'UTF-8') . '</h1>';
+    $replayProgram = RADIO_getProgram($replay['program_id'], true);
+    if ($replayProgram && !empty($replayProgram['cover_name'])) {
+        $content .= '<p><img src="' . htmlspecialchars(RADIO_coverUrl('program', $replay['program_id']), ENT_QUOTES, 'UTF-8') . '" alt="" style="max-width:360px;width:100%;height:auto"></p>';
+    }
+    if ($replayProgram && !empty($replayProgram['host'])) {
+        $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['host'], ENT_QUOTES, 'UTF-8') . ':</strong> ' . htmlspecialchars($replayProgram['host'], ENT_QUOTES, 'UTF-8') . '</p>';
+    }
     $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['broadcast_date'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . date('Y-m-d H:i', $replay['start']) . '–' . date('H:i', $replay['end']) . '<br>'
         . '<strong>' . htmlspecialchars($LANG_RADIO['available_until'], ENT_QUOTES, 'UTF-8') . ':</strong> '
