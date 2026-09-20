@@ -50,6 +50,14 @@ radio_contract_require(
     'Missing plugin_getcapabilities_radio().'
 );
 radio_contract_require(
+    preg_match('/function\s+RADIO_singleItemInfoResult\s*\(/', $functions) === 1,
+    'Radio must map single Item Info responses to Geeklog positional values.'
+);
+radio_contract_require(
+    strpos($functions, 'return RADIO_singleItemInfoResult(') !== false,
+    'Single Radio Item Info responses must use Geeklog positional mapping.'
+);
+radio_contract_require(
     preg_match('/function\s+plugin_getheadercode_radio\s*\(\s*\)/', $functions) === 1,
     'Missing plugin_getheadercode_radio().'
 );
