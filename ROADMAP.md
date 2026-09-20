@@ -627,6 +627,95 @@ Source: ...
 [ Stop live ]
 ```
 
+## Browser DJ console / live mixing
+
+After the manual live takeover and external streaming path are reliable, evaluate a browser-based DJ console for authorized Radio administrators.
+
+Architecture principle:
+
+```text
+Geeklog Radio admin
+        ↓
+browser DJ console (Web Audio)
+        ↓
+encoded live mix
+        ↓
+Icecast / Shoutcast / compatible streaming backend
+        ↓
+/radio/live.php listeners
+```
+
+Radio must remain the editorial/orchestration layer. Geeklog/PHP must not become the long-running audio transport process.
+
+### Stage 1 — External DJ / studio encoder
+
+Implement this before an integrated browser mixer.
+
+- [ ] Allow an authorized administrator to select a configured live streaming source and take over the current Radio output.
+- [ ] Support common external encoders such as Mixxx, BUTT, OBS or another Icecast/Shoutcast-capable client.
+- [ ] Expose a clear `Go live` / `Stop live` workflow in Radio administration.
+- [ ] Show source health, connection state, presenter/DJ name, current title and start time.
+- [ ] Keep encoder/server credentials site-scoped and server-side.
+- [ ] Automatically return to the scheduled programme or automatic rotation when the live takeover stops.
+- [ ] Keep listeners on one continuous live endpoint where practical so switching between automation and DJ mode does not require a page reload.
+- [ ] Expose the live takeover state consistently to `now.php`, `/radio/`, `/radio/live.php`, Agent, Eclipse and future Hub consumers.
+
+### Stage 2 — Integrated Web DJ console
+
+Once the external live workflow is proven stable:
+
+- [ ] Add an optional browser DJ console restricted to authorized Radio administrators.
+- [ ] Provide two independent decks (`Deck A` / `Deck B`) using Radio media as selectable sources.
+- [ ] Provide per-deck:
+  - play / pause;
+  - cue/start position;
+  - elapsed/remaining time;
+  - gain / volume;
+  - waveform/level feedback;
+  - current media metadata.
+- [ ] Add a crossfader between Deck A and Deck B.
+- [ ] Allow preloading the next media item without interrupting the on-air deck.
+- [ ] Allow optional microphone input through `getUserMedia()` with explicit browser permission.
+- [ ] Provide microphone gain/mute and clear on-air state.
+- [ ] Mix decks and microphone with the Web Audio API.
+- [ ] Keep local monitoring / preview separate from the public on-air mix where browser capabilities permit it.
+- [ ] Add a prominent `GO LIVE` / `STOP LIVE` control with confirmation and clear status feedback.
+- [ ] Publish current DJ/presenter and current/next track metadata through Radio services.
+- [ ] Record live start/stop and track-transition audit events without unnecessary listener identity data.
+- [ ] Protect against accidental double sessions: only one authorized DJ console may own the live mix for a site at a time.
+- [ ] Handle loss of browser/network connection with a deterministic timeout and fallback to schedule/automatic rotation.
+- [ ] Never store microphone audio in Geeklog unless an explicit future recording/replay feature is enabled.
+
+Possible console concept:
+
+```text
+DECK A                               DECK B
+BLACK COFFEE                         LOST TRUMPET
+▶  04:32 / 54:43                     ▶  00:00 / 06:10
+
+Gain A      ─────●──                 Gain B      ───●────
+Waveform    ~~~~~~~~~                Waveform    ~~~~~~~~~
+
+                 CROSSFADER
+             A ─────●───── B
+
+MICROPHONE
+[ ON / MUTE ]   Gain ───●────
+
+Current output: Deck A + Microphone
+[ GO LIVE ] / [ STOP LIVE ]
+```
+
+### Streaming/encoding constraints
+
+- [ ] Do not attempt to stream a continuous DJ mix through a long-running PHP request.
+- [ ] Evaluate browser-to-stream-server transport separately from Geeklog page delivery.
+- [ ] Prefer a provider/adapter boundary so Icecast, Shoutcast or another backend can be swapped without changing Radio programme logic.
+- [ ] Evaluate practical browser encoding/transport options before implementation, including latency, codec support, TLS, authentication and reconnect behaviour.
+- [ ] Document expected latency between DJ console and listeners.
+- [ ] Provide a fallback path when Web Audio, microphone access or browser encoding is unavailable.
+- [ ] Treat this as an advanced optional feature; normal scheduled/automatic Radio operation must remain usable without a broadcast backend.
+
 # Phase 15 — Optional dedicated broadcast backend
 
 After the synchronized web-radio mode is stable, evaluate integration with a dedicated streaming backend.
@@ -711,7 +800,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.2.0**.
+Current development version: **0.2.3**.
 
 Focus:
 
