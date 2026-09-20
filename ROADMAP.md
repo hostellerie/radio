@@ -648,6 +648,17 @@ Focus:
 - `plugin.json`;
 - automated `dist/` archive.
 
+## Plugin API callback contract audit
+
+- [x] `plugin_getadminoption_radio()` uses Geeklog's positional `array(label, url, count)` contract.
+- [x] `plugin_idtourl_radio()` accepts both legacy one-argument and subtype-aware two-argument calls.
+- [x] `plugin_chkVersion_radio()` reports the code version through autoinstall metadata.
+- [x] Syndication, Search, What's New, XML Sitemap, Related Items and Item Info signatures were compared with current Geeklog plugin implementations.
+- [x] Optional callbacks such as `plugin_getstats_radio()`, `plugin_cclabel_radio()` and `plugin_geticon_radio()` are not required unless Radio implements those features.
+- [x] CI regression test verifies the critical Plugin API contracts on PHP 5.6, 8.1 and 8.3 before building `dist`.
+
+---
+
 ## Pre-release runtime gate
 
 The executable smoke-test matrix is documented in `docs/PRE_RELEASE_TESTING.md`. CI validation does not replace the Geeklog runtime and multisite tests listed there.
