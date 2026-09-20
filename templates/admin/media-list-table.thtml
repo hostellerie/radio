@@ -1,0 +1,18 @@
+<div class="radio-admin__table-wrap">
+<table class="radio-admin__table">
+    <thead>
+        <tr>
+            <th>{title_label}</th>
+            <th>{type_label}</th>
+            <th>{status_label}</th>
+            <th>{source_label}</th>
+            <th>{duration_label}</th>
+            <th>{size_label}</th>
+            <th>{actions_label}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {media_rows}
+    </tbody>
+</table>
+</div>
