@@ -907,6 +907,117 @@ function RADIO_getUpcoming($limit, $fromTs)
 
 
 
+
+function RADIO_replayRetentionDays()
+{
+    global $_RADIO_CONF;
+    return isset($_RADIO_CONF['default_replay_days'])
+        ? max(0, (int) $_RADIO_CONF['default_replay_days'])
+        : 30;
+}
+
+function RADIO_getReplayOccurrences($limit, $timestamp)
+{
+    $limit = max(1, min(100, (int) $limit));
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $days = RADIO_replayRetentionDays();
+    if ($days < 1) {
+        return array();
+    }
+
+    $from = strtotime('-' . $days . ' days', $timestamp);
+    $occurrences = RADIO_getOccurrences($from, $timestamp + 1, true);
+    $replays = array();
+
+    foreach ($occurrences as $occurrence) {
+        if ($occurrence['end'] > $timestamp || $occurrence['program_status'] !== 'published') {
+            continue;
+        }
+
+        $program = RADIO_getProgram($occurrence['program_id'], true);
+        if ($program === false) {
+            continue;
+        }
+
+        $replays[] = array(
+            'replay_id' => 'replay:' . (int) $occurrence['schedule_id'] . ':' . (int) $occurrence['start'],
+            'schedule_id' => (int) $occurrence['schedule_id'],
+            'program_id' => (int) $occurrence['program_id'],
+            'program_external_id' => RADIO_externalId('program', (int) $occurrence['program_id']),
+            'title' => $occurrence['program_title'],
+            'description' => $program['description'],
+            'start' => (int) $occurrence['start'],
+            'end' => (int) $occurrence['end'],
+            'available_until' => strtotime('+' . $days . ' days', (int) $occurrence['end']),
+            'url' => RADIO_replayUrl((int) $occurrence['schedule_id'], (int) $occurrence['start'])
+        );
+    }
+
+    usort($replays, 'RADIO_compareReplayOccurrences');
+    if (count($replays) > $limit) {
+        $replays = array_slice($replays, 0, $limit);
+    }
+    return $replays;
+}
+
+function RADIO_compareReplayOccurrences($a, $b)
+{
+    if ($a['start'] === $b['start']) {
+        return 0;
+    }
+    return $a['start'] > $b['start'] ? -1 : 1;
+}
+
+function RADIO_replayUrl($scheduleId, $start)
+{
+    global $_CONF;
+    return $_CONF['site_url'] . '/radio/replay.php?schedule_id=' . (int) $scheduleId
+        . '&start=' . (int) $start;
+}
+
+function RADIO_getReplay($scheduleId, $start)
+{
+    $schedule = RADIO_getSchedule((int) $scheduleId);
+    if ($schedule === false || empty($schedule['enabled']) || $schedule['program_status'] !== 'published') {
+        return false;
+    }
+
+    $date = date('Y-m-d', (int) $start);
+    $occurrence = RADIO_scheduleOccurrence($schedule, $date);
+    if ($occurrence === false || (int) $occurrence['start'] !== (int) $start) {
+        return false;
+    }
+
+    $now = time();
+    if ($occurrence['end'] > $now) {
+        return false;
+    }
+
+    $days = RADIO_replayRetentionDays();
+    if ($days < 1 || strtotime('+' . $days . ' days', $occurrence['end']) < $now) {
+        return false;
+    }
+
+    $program = RADIO_getProgram($occurrence['program_id'], true);
+    if ($program === false) {
+        return false;
+    }
+
+    return array(
+        'replay_id' => 'replay:' . (int) $occurrence['schedule_id'] . ':' . (int) $occurrence['start'],
+        'schedule_id' => (int) $occurrence['schedule_id'],
+        'program_id' => (int) $occurrence['program_id'],
+        'program_external_id' => RADIO_externalId('program', (int) $occurrence['program_id']),
+        'title' => $occurrence['program_title'],
+        'description' => $program['description'],
+        'start' => (int) $occurrence['start'],
+        'end' => (int) $occurrence['end'],
+        'available_until' => strtotime('+' . $days . ' days', $occurrence['end']),
+        'items' => RADIO_getProgramItems((int) $occurrence['program_id']),
+        'url' => RADIO_replayUrl((int) $occurrence['schedule_id'], (int) $occurrence['start'])
+    );
+}
+
 function RADIO_getRotationMediaByTypes($types)
 {
     global $_TABLES;
@@ -1274,7 +1385,8 @@ function plugin_getcapabilities_radio()
             'radio.schedule.read',
             'radio.now-playing.read',
             'radio.current-media.read',
-            'radio.rotation.read'
+            'radio.rotation.read',
+            'radio.replay.read'
         )
     );
 }

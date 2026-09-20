@@ -222,14 +222,9 @@ This mode must work on a standard Geeklog web server.
 
 # Phase 6 — Replay and downloads
 
-- [ ] Make scheduled programmes optionally available as replay.
-- [ ] Configure replay availability:
-  - immediate;
-  - delayed;
-  - time-limited;
-  - permanent;
-  - disabled.
-- [ ] Keep replay as a reference to existing media/programme objects rather than duplicate files.
+- [x] Make completed scheduled programmes available as replay without duplicating media files.
+- [x] Provide immediate time-limited replay using `default_replay_days`; delayed/per-programme/permanent policies remain for a later iteration.
+- [x] Keep replay as a reference to existing media/programme objects rather than duplicate files.
 - [ ] Support per-item and per-programme download policy.
 - [ ] Enforce Geeklog permissions before controlled downloads.
 - [ ] Optionally record download counts.

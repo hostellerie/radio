@@ -53,6 +53,13 @@ $LANG_RADIO = array(
     'no' => 'Non',
     'up_next' => 'À suivre',
     'view_full_schedule' => 'Voir toute la programmation',
+    'replays' => 'Replays',
+    'replays_empty' => 'Aucun replay n’est actuellement disponible.',
+    'replay_not_available' => 'Ce replay n’est plus disponible.',
+    'replay_empty' => 'Ce replay ne contient aucun audio actuellement publié.',
+    'broadcast_date' => 'Diffusion',
+    'available_until' => 'Disponible jusqu’au',
+    'back_to_replays' => 'Retour aux replays',
 
     'media_not_found' => 'Ce contenu audio n’est pas disponible.',
     'upload_saved' => 'Le fichier audio a été ajouté.',
