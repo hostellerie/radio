@@ -77,9 +77,7 @@ if ($liveState['media'] !== false) {
     $radioOffset = max(0, min($radioDuration, (int) $liveState['media']['offset']));
     $content .= '<div class="radio-home-live" data-radio-home-live'
         . ' data-now-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/now.php', ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-event-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/event.php', ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-listen-label="' . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-pause-label="' . htmlspecialchars($LANG_RADIO['public_pause'], ENT_QUOTES, 'UTF-8') . '">'
+        . ' data-event-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/event.php', ENT_QUOTES, 'UTF-8') . '">
         . '<div><strong>' . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . '<a data-radio-home-title href="' . htmlspecialchars($liveState['media']['item_url'], ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a></div>';
