@@ -154,6 +154,22 @@ function RADIO_adminEditPageScript()
         . '})();</script>';
 }
 
+function RADIO_pathEndsWith($path, $suffix)
+{
+    $path = (string) $path;
+    $suffix = (string) $suffix;
+
+    if ($suffix === '') {
+        return true;
+    }
+
+    if (strlen($suffix) > strlen($path)) {
+        return false;
+    }
+
+    return substr($path, -strlen($suffix)) === $suffix;
+}
+
 function plugin_getfootercode_radio()
 {
     $path = '';
@@ -166,21 +182,21 @@ function plugin_getfootercode_radio()
     }
     $path = str_replace('\\', '/', $path);
 
-    if (substr($path, -15) === '/radio/live.php') {
+    if (RADIO_pathEndsWith($path, '/radio/live.php')) {
         return RADIO_livePageScript();
     }
 
-    if (substr($path, -24) === '/admin/plugins/radio/upload.php') {
+    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')) {
         return RADIO_adminUploadPageScript();
     }
 
-    if (substr($path, -22) === '/admin/plugins/radio/edit.php') {
+    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/edit.php')) {
         return RADIO_adminEditPageScript();
     }
 
-    if (substr($path, -16) === '/radio/index.php'
-        || substr($path, -18) === '/radio/program.php'
-        || substr($path, -17) === '/radio/replay.php') {
+    if (RADIO_pathEndsWith($path, '/radio/index.php')
+        || RADIO_pathEndsWith($path, '/radio/program.php')
+        || RADIO_pathEndsWith($path, '/radio/replay.php')) {
         return RADIO_trackingScript();
     }
 
