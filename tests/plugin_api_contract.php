@@ -50,6 +50,16 @@ radio_contract_require(
     'Missing plugin_getcapabilities_radio().'
 );
 radio_contract_require(
+    preg_match('/function\s+plugin_getheadercode_radio\s*\(\s*\)/', $functions) === 1,
+    'Missing plugin_getheadercode_radio().'
+);
+radio_contract_require(
+    strpos($functions, "RADIO_PLUGIN_VERSION") !== false
+        && strpos($functions, "filemtime") !== false
+        && strpos($functions, "radio-admin.css") !== false,
+    'Radio admin CSS must be versioned with plugin version and file modification time.'
+);
+radio_contract_require(
     preg_match('/function\s+plugin_autoinstall_radio\s*\(\s*\$pi_name\s*\)/', $autoinstall) === 1,
     'Missing plugin_autoinstall_radio($pi_name).'
 );
