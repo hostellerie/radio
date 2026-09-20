@@ -511,11 +511,24 @@ function RADIO_feedSyncSummary()
         );
     }
 
-    $enabled = (int) DB_getItem($_TABLES['radio_sources'], 'COUNT(*)', 'enabled=1');
-    $errors = (int) DB_getItem($_TABLES['radio_sources'], 'COUNT(*)', "enabled=1 AND last_error<>''");
+    $enabledResult = DB_query(
+        "SELECT COUNT(*) AS total FROM {$_TABLES['radio_sources']} WHERE enabled=1"
+        . RADIO_permissionSql('radio_sources', 0)
+    );
+    $enabledRow = DB_fetchArray($enabledResult);
+    $enabled = is_array($enabledRow) ? (int) $enabledRow['total'] : 0;
+
+    $errorResult = DB_query(
+        "SELECT COUNT(*) AS total FROM {$_TABLES['radio_sources']} WHERE enabled=1 AND last_error<>''"
+        . RADIO_permissionSql('radio_sources', 0)
+    );
+    $errorRow = DB_fetchArray($errorResult);
+    $errors = is_array($errorRow) ? (int) $errorRow['total'] : 0;
+
     $result = DB_query(
         "SELECT last_sync,last_sync_imported FROM {$_TABLES['radio_sources']} "
-        . "WHERE last_sync IS NOT NULL ORDER BY last_sync DESC LIMIT 1"
+        . "WHERE last_sync IS NOT NULL" . RADIO_permissionSql('radio_sources', 0)
+        . " ORDER BY last_sync DESC LIMIT 1"
     );
     $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : array();
 
