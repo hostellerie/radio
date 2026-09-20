@@ -4,5 +4,4 @@
         <a class="radio-admin__button radio-admin__button--primary" href="{upload_url}">{upload_label}</a>
         <a class="radio-admin__button radio-admin__button--secondary" href="{external_url}">{external_label}</a>
     </div>
-    <p class="radio-admin__muted">{quick_actions_help}</p>
 </section>
