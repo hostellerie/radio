@@ -53,7 +53,7 @@ Current state:
 - **Interoperability:** Item Info, lifecycle events, URL resolution, Search, What’s New, XML Sitemap, related items, capability declaration and bounded Geeklog services are implemented.
 - **Eclipse / Agent readiness:** structured dashboard, now-playing, upcoming, replay, source/sync and stats services are implemented. Agent/Eclipse integration still needs end-to-end testing against their current branches.
 - **Hub:** Radio exposes the contracts Hub can consume, but explicit Hub relationship workflows are not yet implemented/tested.
-- **Security / multisite / compatibility:** still a pre-stable priority. The code is designed for Geeklog 2.1.1–2.2.2 and PHP 5.6+, but the full compatibility matrix, two-site isolation test and security audit remain open.
+- **Security / multisite / compatibility:** pre-release hardening is in progress. CSRF on remote fetches, RSS/Atom SSRF DNS pinning, upload signatures, media/download ACLs and PHP 5.6/8.1/8.3 syntax are now CI/audit covered. Geeklog 2.1.1/2.2.2 runtime tests and two-site isolation still remain open.
 
 # Phase 0 — Architecture and plugin skeleton
 
@@ -619,14 +619,14 @@ Before stable release:
 
 Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-safety.md`.
 
-- [ ] Test two sites with different `path_data`, URLs and table mappings.
+- [ ] Test two sites with different `path_data`, URLs and table mappings. Static review confirms Radio derives storage from the active `path_data` and tables from the active `$_TABLES`; runtime isolation remains required.
 - [ ] Confirm site A cannot read/write site B Radio files, settings or database records.
-- [ ] Keep remote provider credentials and caches site-specific.
+- [x] Keep current feed synchronization state/database rows site-specific. Radio 0.2.0 stores no remote provider credentials yet; credential isolation must be re-audited if authenticated providers are added.
 - [x] Make schema/config migrations repeatable and idempotent.
 - [ ] Support staggered multisite upgrades when plugin files are shared.
 - [ ] New executable code must tolerate the previous supported persisted schema until the active site completes its upgrade.
 - [ ] Do not force every site sharing plugin code to run a database/files migration simultaneously.
-- [ ] Log enough context to identify the active site during migrations and remote-source failures.
+- [ ] Log enough context to identify the active site during migrations and remote-source failures; current diagnostics are site-scoped in DB but log messages do not yet include an explicit site namespace.
 
 ---
 
@@ -647,6 +647,12 @@ Focus:
 - initial ACL;
 - `plugin.json`;
 - automated `dist/` archive.
+
+## Pre-release runtime gate
+
+The executable smoke-test matrix is documented in `docs/PRE_RELEASE_TESTING.md`. CI validation does not replace the Geeklog runtime and multisite tests listed there.
+
+---
 
 ## 0.2.x — Pre-release hardening and programmes/playlists
 
