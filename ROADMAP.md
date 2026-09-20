@@ -309,7 +309,7 @@ Follow the principles in `geeklog-external-data-integration-vision-2030.md`.
 - [x] Limit feed responses to 1 MB; episode imports remain remote references and do not copy audio files.
 - [ ] Validate MIME and actual audio type.
 - [ ] Sanitize remote metadata.
-- [ ] Define cache TTL and stale-cache behaviour.
+- [x] Use conditional ETag/Last-Modified feed checks and preserve the previous source state on 304 responses; broader metadata cache TTL remains optional.
 - [ ] Record provenance:
   - provider;
   - source URL;
@@ -322,7 +322,7 @@ Follow the principles in `geeklog-external-data-integration-vision-2030.md`.
 - [x] Never assume that technical accessibility grants republication or download rights; remote references default to no Radio download.
 - [ ] Isolate credentials, caches, rate limits and synchronization state per Geeklog site.
 - [ ] Never expose provider credentials in public templates or client-side code.
-- [ ] Provide clear administrator diagnostics for remote-source failures.
+- [x] Provide administrator diagnostics, per-source sync counters and a bounded synchronization history for remote feeds.
 
 Provider-specific integrations should remain replaceable and must not become hard-coded Core requirements.
 
@@ -550,7 +550,7 @@ Potential data:
 - [ ] programme/replay popularity;
 - [ ] recent playback errors;
 - [ ] schedule execution diagnostics;
-- [ ] remote-source health;
+- [x] remote-source health and last synchronization summary;
 - [ ] last successful remote metadata refresh/import.
 
 If Radio persists a per-item popularity counter:
@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.7**.
+Current development version: **0.1.8**.
 
 Focus:
 
