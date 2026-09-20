@@ -1,4 +1,6 @@
 <?php
+global $LANG_RADIO, $LANG_configsections, $LANG_confignames, $LANG_configsubgroups, $LANG_tab, $LANG_fs, $LANG_configselects;
+
 $LANG_RADIO = array(
     'plugin_name' => 'Radio',
     'whatsnew_title' => 'Recently updated Radio content',
