@@ -17,7 +17,15 @@ if (isset($_POST['save_program'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
     } else {
-        $saved = RADIO_saveProgram($selectedId, $_POST);
+        $existingProgram = $selectedId > 0 ? RADIO_getProgram($selectedId, false) : false;
+        $coverError = '';
+        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
+        if ($coverName !== false) {
+            $_POST['cover_name'] = $coverName !== '' ? $coverName : ($existingProgram ? $existingProgram['cover_name'] : '');
+            $saved = RADIO_saveProgram($selectedId, $_POST);
+        } else {
+            $saved = false;
+        }
         if ($saved !== false) {
             $selectedId = (int) $saved;
             $message = COM_showMessageText($LANG_RADIO['program_saved'], $LANG_RADIO['programs']);
@@ -78,10 +86,13 @@ if (count($programs) === 0) {
 $content .= '</div>';
 
 $content .= '<div><h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_program'] : $LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</h2>'
-    . '<form method="post" action="">'
+    . '<form method="post" enctype="multipart/form-data" action="">'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
     . '<br><input type="text" name="program_title" maxlength="255" required style="width:100%" value="'
     . htmlspecialchars($selected ? $selected['title'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
+    . ($selected && !empty($selected['cover_name']) ? '<p><img src="' . htmlspecialchars(RADIO_coverUrl('program',$selectedId), ENT_QUOTES, 'UTF-8') . '" alt="" style="max-width:220px;max-height:220px"></p>' : '')
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['host'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="program_host" maxlength="255" style="width:100%" value="' . htmlspecialchars($selected ? $selected['host'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
     . '<br><textarea name="program_description" rows="5" style="width:100%">'
     . htmlspecialchars($selected ? $selected['description'] : '', ENT_QUOTES, 'UTF-8') . '</textarea></label></p>'
