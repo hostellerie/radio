@@ -2438,9 +2438,14 @@ function RADIO_programInfoFromRow($row, $fields)
     return RADIO_selectInfoFields($all, $fields);
 }
 
-function plugin_idtourl_radio($sub_type, $item_id)
+function plugin_idtourl_radio($sub_type = '', $item_id = null)
 {
     global $_CONF;
+
+    if ($item_id === null) {
+        $item_id = $sub_type;
+        $sub_type = '';
+    }
     $identity = RADIO_parseExternalId($item_id);
     if ($identity === false && ($sub_type === 'media' || $sub_type === 'program')) {
         $identity = array('type' => $sub_type, 'id' => (int) $item_id);
@@ -2452,6 +2457,16 @@ function plugin_idtourl_radio($sub_type, $item_id)
         return $_CONF['site_url'] . '/radio/program.php?id=' . $identity['id'];
     }
     return $_CONF['site_url'] . '/radio/index.php?id=' . $identity['id'];
+}
+
+function plugin_chkVersion_radio()
+{
+    global $_CONF;
+
+    require_once $_CONF['path'] . 'plugins/radio/autoinstall.php';
+    $inst = plugin_autoinstall_radio('radio');
+
+    return isset($inst['info']['pi_version']) ? $inst['info']['pi_version'] : RADIO_PLUGIN_VERSION;
 }
 
 function plugin_getadminoption_radio()
