@@ -1,6 +1,8 @@
 <?php
 $LANG_RADIO = array(
     'plugin_name' => 'Radio',
+    'whatsnew_title' => 'Recently updated Radio content',
+    'whatsnew_none' => 'No Radio content was updated recently.',
     'admin_title' => 'Radio',
     'admin_intro' => 'Manage the audio library, programmes and schedules.',
     'storage' => 'Persistent storage',
@@ -169,6 +171,9 @@ $LANG_confignames['radio'] = array(
     'fallback_jingle_interval' => 'Insert a jingle every N rotation items (0 = never)',
     'fallback_announcement_interval' => 'Insert an announcement/promo every N regular items (0 = never)',
     'fallback_type_weights' => 'Rotation type weights (example: music=5,podcast=2)',
-    'fallback_min_repeat_minutes' => 'Target minimum repeat interval (minutes)'
+    'fallback_min_repeat_minutes' => 'Target minimum repeat interval (minutes)',
+    'whatsnew_enabled' => 'Show Radio content in What’s New?',
+    'whatsnew_interval' => 'What’s New period (seconds)',
+    'whatsnew_limit' => 'Maximum Radio items in What’s New'
 );
 $LANG_configselects['radio'] = array(0 => array('Enabled' => 1, 'Disabled' => 0));
