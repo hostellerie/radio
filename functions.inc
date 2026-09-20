@@ -23,6 +23,41 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
 
 
 
+
+function RADIO_trackingScript()
+{
+    global $_CONF;
+
+    $endpoint = $_CONF['site_url'] . '/radio/event.php';
+
+    return '<script>(function(){'
+        . 'var endpoint=' . json_encode($endpoint) . ';'
+        . 'function send(mediaId,programId,eventType,source,seconds){'
+        . 'if(!mediaId)return;'
+        . 'var body=new URLSearchParams();'
+        . 'body.set("media_id",mediaId);'
+        . 'body.set("program_id",programId||0);'
+        . 'body.set("event_type",eventType);'
+        . 'body.set("source",source);'
+        . 'body.set("seconds",Math.max(0,Math.round(seconds||0)));'
+        . 'if(navigator.sendBeacon){navigator.sendBeacon(endpoint,body);return;}'
+        . 'fetch(endpoint,{method:"POST",body:body,credentials:"same-origin",keepalive:true}).catch(function(){});'
+        . '}'
+        . 'function bind(a){'
+        . 'var mediaId=parseInt(a.getAttribute("data-radio-media-id")||"0",10);'
+        . 'var programId=parseInt(a.getAttribute("data-radio-program-id")||"0",10);'
+        . 'var source=a.getAttribute("data-radio-source")||"catalogue";'
+        . 'var started=false,total=0,last=0;'
+        . 'a.addEventListener("play",function(){if(!started){started=true;send(mediaId,programId,"play",source,0);}last=Date.now();});'
+        . 'a.addEventListener("pause",function(){if(last){total+=(Date.now()-last)/1000;last=0;}});'
+        . 'a.addEventListener("ended",function(){if(last){total+=(Date.now()-last)/1000;last=0;}if(total>0){send(mediaId,programId,"listen",source,total);total=0;}});'
+        . 'window.addEventListener("pagehide",function(){if(last){total+=(Date.now()-last)/1000;last=0;}if(total>0){send(mediaId,programId,"listen",source,total);total=0;}});'
+        . '}'
+        . 'var audios=document.querySelectorAll("audio[data-radio-media-id]");'
+        . 'for(var i=0;i<audios.length;i++)bind(audios[i]);'
+        . '})();</script>';
+}
+
 function RADIO_statsEnabled()
 {
     global $_RADIO_CONF;
