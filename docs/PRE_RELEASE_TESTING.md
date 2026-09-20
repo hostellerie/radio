@@ -1,8 +1,11 @@
-# Radio 0.2.0 pre-release validation
+# Radio 0.2.1 pre-release validation
 
 This checklist separates repository/CI validation from Geeklog runtime validation.
 
 ## Already enforced by CI
+
+- versioned Radio public CSS/JS and admin JavaScript are packaged and loaded through Geeklog plugin callbacks;
+- Radio 0.2.1 configuration upgrade includes `on_demand_enabled`;
 
 - PHP syntax on PHP 5.6, 8.1 and 8.3.
 - plugin.json baseline: Geeklog 2.1.1 / PHP 5.6.
@@ -32,8 +35,8 @@ geeklog222-web  -> http://localhost:8081
 
 For each environment:
 
-1. Upload/install `dist/radio_0.2.0_2.1.1.zip`.
-2. Confirm the plugin manager records Data/Code 0.2.0.
+1. Upload/install `dist/radio_0.2.1_2.1.1.zip`.
+2. Confirm the plugin manager records Data/Code 0.2.1.
 3. Confirm the following tables exist with the active site prefix:
    - radio_media
    - radio_programs
@@ -47,7 +50,7 @@ For each environment:
 
 ## 2. Upgrade test
 
-Start with the previous Radio archive/database state, then replace code with 0.2.0.
+Start with the previous Radio archive/database state, then replace code with 0.2.1.
 
 Verify:
 
@@ -118,7 +121,19 @@ Verify:
 
 If `radio.schedule` is delegated without `radio.admin`, confirm inaccessible programmes/media are not listed or mutable.
 
-## 6. Synchronized player
+## 6. Public assets and listening modes
+
+Verify:
+
+- public Radio pages load `/radio/radio.css?v=0.2.1-<mtime>`;
+- public Radio pages load `/radio/radio.js?v=0.2.1-<mtime>`;
+- Radio admin upload/edit pages load `radio-admin.js?v=0.2.1-<mtime>`;
+- no Radio inline player JavaScript remains in the generated page source;
+- disabling `on_demand_enabled` hides the catalogue/on-demand players while keeping live listening available;
+- enabling it restores on-demand playback;
+- the home live player resynchronizes against `now.php` every 15 seconds.
+
+## 7. Synchronized player
 
 Verify:
 
@@ -128,7 +143,7 @@ Verify:
 - transition from scheduled programme back to fallback rotation;
 - no long-running PHP request remains open.
 
-## 7. Replay, podcast and statistics
+## 8. Replay, podcast and statistics
 
 Verify:
 
@@ -141,7 +156,7 @@ Verify:
 - rejected downloads do not;
 - stats contain no IP, uid or persistent visitor identifier.
 
-## 8. External sources / SSRF
+## 9. External sources / SSRF
 
 Create a public HTTPS podcast feed.
 
@@ -159,7 +174,7 @@ Verify:
 
 Server-side feed retrieval deliberately requires cURL + CURLOPT_RESOLVE. It must fail closed if DNS pinning cannot be provided.
 
-## 9. Geeklog services
+## 10. Geeklog services
 
 From a Geeklog test context invoke:
 
