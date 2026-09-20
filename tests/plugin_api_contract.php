@@ -64,9 +64,7 @@ radio_contract_require(
     'autoinstall.php must not create a circular functions.inc dependency.'
 );
 radio_contract_require(
-    strpos($functions, "/language/' . $radioLanguage . '.php'") !== false
-        || strpos($functions, "/language/" . $radioLanguage") !== false
-        || strpos($functions, "language/' . $radioLanguage") !== false,
+    strpos($functions, "\$radioLanguageFile = __DIR__ . '/language/' . \$radioLanguage . '.php';") !== false,
     'functions.inc must bootstrap the Radio language file.'
 );
 radio_contract_require(
