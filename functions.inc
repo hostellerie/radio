@@ -1421,3 +1421,25 @@ function plugin_getadminoption_radio()
         'count' => 0
     );
 }
+
+
+function plugin_upgrade_radio()
+{
+    global $_CONF, $_TABLES;
+
+    require_once $_CONF['path_system'] . 'classes/config.class.php';
+    require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
+
+    if (!RADIO_ensureConfig()) {
+        return false;
+    }
+
+    DB_query(
+        "UPDATE {$_TABLES['plugins']} SET "
+        . "pi_version='" . DB_escapeString(RADIO_PLUGIN_VERSION) . "',"
+        . "pi_gl_version='" . DB_escapeString(RADIO_MIN_GEEKLOG_VERSION) . "' "
+        . "WHERE pi_name='radio'"
+    );
+
+    return !DB_error();
+}

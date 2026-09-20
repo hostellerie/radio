@@ -2,6 +2,7 @@
 if (stripos($_SERVER['PHP_SELF'], basename(__FILE__)) !== false) {
     die('This file cannot be used on its own.');
 }
+
 global $_RADIO_DEFAULT;
 $_RADIO_DEFAULT = array(
     'enabled' => 1,
@@ -16,24 +17,70 @@ $_RADIO_DEFAULT = array(
     'fallback_min_repeat_minutes' => 120
 );
 
-function plugin_initconfig_radio()
+function RADIO_configSortOrder()
+{
+    return array(
+        'enabled' => 10,
+        'public_title' => 20,
+        'default_replay_days' => 30,
+        'allow_downloads' => 40,
+        'max_upload_mb' => 50,
+        'fallback_enabled' => 60,
+        'fallback_jingle_interval' => 70,
+        'fallback_announcement_interval' => 80,
+        'fallback_type_weights' => 90,
+        'fallback_min_repeat_minutes' => 100
+    );
+}
+
+function RADIO_addConfigSetting($c, $name, $default, $sort)
+{
+    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled'), true)
+        ? 'select'
+        : 'text';
+
+    $c->add($name, $default, $type, 0, 0, 0, $sort, true, 'radio', 0);
+}
+
+function RADIO_addFullConfig($c)
 {
     global $_RADIO_DEFAULT;
-    $c = config::get_instance();
-    if (!$c->group_exists('radio')) {
-        $c->add('sg_main', NULL, 'subgroup', 0, 0, NULL, 0, true, 'radio', 0);
-        $c->add('tab_main', NULL, 'tab', 0, 0, NULL, 0, true, 'radio', 0);
-        $c->add('fs_main', NULL, 'fieldset', 0, 0, NULL, 0, true, 'radio', 0);
-        $c->add('enabled', $_RADIO_DEFAULT['enabled'], 'select', 0, 0, 0, 10, true, 'radio', 0);
-        $c->add('public_title', $_RADIO_DEFAULT['public_title'], 'text', 0, 0, 0, 20, true, 'radio', 0);
-        $c->add('default_replay_days', $_RADIO_DEFAULT['default_replay_days'], 'text', 0, 0, 0, 30, true, 'radio', 0);
-        $c->add('allow_downloads', $_RADIO_DEFAULT['allow_downloads'], 'select', 0, 0, 0, 40, true, 'radio', 0);
-        $c->add('max_upload_mb', $_RADIO_DEFAULT['max_upload_mb'], 'text', 0, 0, 0, 50, true, 'radio', 0);
-        $c->add('fallback_enabled', $_RADIO_DEFAULT['fallback_enabled'], 'select', 0, 0, 0, 60, true, 'radio', 0);
-        $c->add('fallback_jingle_interval', $_RADIO_DEFAULT['fallback_jingle_interval'], 'text', 0, 0, 0, 70, true, 'radio', 0);
-        $c->add('fallback_announcement_interval', $_RADIO_DEFAULT['fallback_announcement_interval'], 'text', 0, 0, 0, 80, true, 'radio', 0);
-        $c->add('fallback_type_weights', $_RADIO_DEFAULT['fallback_type_weights'], 'text', 0, 0, 0, 90, true, 'radio', 0);
-        $c->add('fallback_min_repeat_minutes', $_RADIO_DEFAULT['fallback_min_repeat_minutes'], 'text', 0, 0, 0, 100, true, 'radio', 0);
+
+    $c->add('sg_main', NULL, 'subgroup', 0, 0, NULL, 0, true, 'radio', 0);
+    $c->add('tab_main', NULL, 'tab', 0, 0, NULL, 0, true, 'radio', 0);
+    $c->add('fs_main', NULL, 'fieldset', 0, 0, NULL, 0, true, 'radio', 0);
+
+    foreach (RADIO_configSortOrder() as $name => $sort) {
+        RADIO_addConfigSetting($c, $name, $_RADIO_DEFAULT[$name], $sort);
     }
+}
+
+function RADIO_ensureConfig()
+{
+    global $_RADIO_DEFAULT;
+
+    $c = config::get_instance();
+
+    if (!$c->group_exists('radio')) {
+        RADIO_addFullConfig($c);
+        return true;
+    }
+
+    $current = $c->get_config('radio');
+    if (!is_array($current)) {
+        $current = array();
+    }
+
+    foreach (RADIO_configSortOrder() as $name => $sort) {
+        if (!array_key_exists($name, $current)) {
+            RADIO_addConfigSetting($c, $name, $_RADIO_DEFAULT[$name], $sort);
+        }
+    }
+
     return true;
+}
+
+function plugin_initconfig_radio()
+{
+    return RADIO_ensureConfig();
 }
