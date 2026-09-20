@@ -213,35 +213,15 @@ function RADIO_pathEndsWith($path, $suffix)
 
 function plugin_getfootercode_radio()
 {
-    $path = '';
-    if (!empty($_SERVER['REQUEST_URI'])) {
-        $parsedPath = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = is_string($parsedPath) ? $parsedPath : '';
-    }
-    if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
-        $path = (string) $_SERVER['SCRIPT_NAME'];
-    }
-    $path = str_replace('\\', '/', $path);
+    $path = RADIO_requestPath();
 
-    if (RADIO_pathEndsWith($path, '/radio/live.php')) {
-        return RADIO_livePageScript();
+    if (RADIO_isPublicHtmlPage($path)) {
+        return RADIO_publicScriptTag();
     }
 
-    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')) {
-        return RADIO_adminUploadPageScript();
-    }
-
-    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/edit.php')) {
-        return RADIO_adminEditPageScript();
-    }
-
-    if (RADIO_pathEndsWith($path, '/radio/index.php')) {
-        return RADIO_trackingScript() . RADIO_publicIndexPlayerScript();
-    }
-
-    if (RADIO_pathEndsWith($path, '/radio/program.php')
-        || RADIO_pathEndsWith($path, '/radio/replay.php')) {
-        return RADIO_trackingScript();
+    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')
+        || RADIO_pathEndsWith($path, '/admin/plugins/radio/edit.php')) {
+        return RADIO_adminScriptTag();
     }
 
     return '';
@@ -2969,38 +2949,115 @@ function plugin_chkVersion_radio()
 }
 
 
-function RADIO_adminStylesheetLink()
+function RADIO_assetVersion($path)
 {
-    global $_CONF;
-
     $version = RADIO_PLUGIN_VERSION;
-    $cssPath = '';
 
-    if (!empty($_CONF['path_admin'])) {
-        $cssPath = rtrim($_CONF['path_admin'], '/\\')
-            . '/plugins/radio/radio-admin.css';
-    }
-
-    if ($cssPath === '' || !is_file($cssPath)) {
-        $cssPath = rtrim($_CONF['path'], '/\\')
-            . '/plugins/radio/admin/radio-admin.css';
-    }
-
-    if (is_file($cssPath)) {
-        clearstatcache(true, $cssPath);
-        $modified = @filemtime($cssPath);
+    if (is_file($path)) {
+        clearstatcache(true, $path);
+        $modified = @filemtime($path);
         if ($modified !== false && $modified > 0) {
             $version .= '-' . (int) $modified;
         }
     }
 
+    return $version;
+}
+
+function RADIO_adminStylesheetLink()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_admin'])
+        ? rtrim($_CONF['path_admin'], '/\\') . '/plugins/radio/radio-admin.css'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/admin/radio-admin.css';
+    }
+
     return '<link rel="stylesheet" type="text/css" href="'
-        . htmlspecialchars(
-            rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-admin.css',
-            ENT_QUOTES,
-            'UTF-8'
-        )
-        . '?v=' . rawurlencode($version) . '">' . "\n";
+        . htmlspecialchars(rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-admin.css', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '">' . "\n";
+}
+
+function RADIO_publicStylesheetLink()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_html'])
+        ? rtrim($_CONF['path_html'], '/\\') . '/radio/radio.css'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/public_html/radio.css';
+    }
+
+    return '<link rel="stylesheet" type="text/css" href="'
+        . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/radio.css', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '">' . "\n";
+}
+
+function RADIO_publicScriptTag()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_html'])
+        ? rtrim($_CONF['path_html'], '/\\') . '/radio/radio.js'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/public_html/radio.js';
+    }
+
+    return '<script id="radio-public-js" src="'
+        . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/radio.js', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '"'
+        . ' data-event-endpoint="'
+        . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/event.php', ENT_QUOTES, 'UTF-8')
+        . '"></script>' . "\n";
+}
+
+function RADIO_adminScriptTag()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_admin'])
+        ? rtrim($_CONF['path_admin'], '/\\') . '/plugins/radio/radio-admin.js'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/admin/radio-admin.js';
+    }
+
+    return '<script src="'
+        . htmlspecialchars(rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-admin.js', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '"></script>' . "\n";
+}
+
+function RADIO_requestPath()
+{
+    $path = '';
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $parsedPath = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = is_string($parsedPath) ? $parsedPath : '';
+    }
+    if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+        $path = (string) $_SERVER['SCRIPT_NAME'];
+    }
+    return str_replace('\\', '/', $path);
+}
+
+function RADIO_isPublicHtmlPage($path)
+{
+    foreach (array(
+        '/radio/index.php',
+        '/radio/live.php',
+        '/radio/program.php',
+        '/radio/schedule.php',
+        '/radio/replay.php'
+    ) as $suffix) {
+        if (RADIO_pathEndsWith($path, $suffix)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function plugin_getheadercode_radio()
@@ -3011,16 +3068,7 @@ function plugin_getheadercode_radio()
         return '';
     }
 
-    $path = '';
-    if (!empty($_SERVER['REQUEST_URI'])) {
-        $parsedPath = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = is_string($parsedPath) ? $parsedPath : '';
-    }
-    if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
-        $path = (string) $_SERVER['SCRIPT_NAME'];
-    }
-    $path = str_replace('\\', '/', $path);
-
+    $path = RADIO_requestPath();
     $isAdmin = strpos($path, '/admin/plugins/radio/') !== false;
     $configGroup = '';
     if (isset($_POST['conf_group'])) {
@@ -3033,6 +3081,10 @@ function plugin_getheadercode_radio()
 
     if ($isAdmin || $isRadioConfig) {
         return RADIO_adminStylesheetLink();
+    }
+
+    if (RADIO_isPublicHtmlPage($path)) {
+        return RADIO_publicStylesheetLink();
     }
 
     return '';
