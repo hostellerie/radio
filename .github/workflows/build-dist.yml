@@ -219,6 +219,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          git fetch origin "${GITHUB_REF_NAME}"
+          LATEST_SHA="$(git rev-parse "origin/${GITHUB_REF_NAME}")"
+
+          if [ "$LATEST_SHA" != "$GITHUB_SHA" ]; then
+            echo "A newer branch commit exists; skip publishing this stale archive."
+            exit 0
+          fi
+
           find dist -maxdepth 1 -type f -name 'radio_*.zip' ! -name "$ARCHIVE" -delete
           git add -A dist
 
