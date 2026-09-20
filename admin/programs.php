@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!SEC_hasRights('radio.schedule')) {
     COM_accessLog('User tried to access Radio programme administration without permission.');
@@ -78,10 +79,7 @@ $media = array_values(array_filter(RADIO_getMediaList(200, false), function ($ro
 }));
 $token = SEC_createToken();
 
-$content = COM_startBlock($LANG_RADIO['programs'], '', COM_getBlockTemplate('_admin_block', 'header'));
-$content .= $message;
-$content .= '<p><a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['back_to_library_admin'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+$content = '';
 
 $content .= '<div style="display:grid;grid-template-columns:minmax(220px,30%) 1fr;gap:1.5rem;align-items:start">';
 $content .= '<div><h2>' . htmlspecialchars($LANG_RADIO['program_list'], ENT_QUOTES, 'UTF-8') . '</h2>';
@@ -169,5 +167,16 @@ if ($selected) {
 }
 
 $content .= '</div></div>';
-$content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['programs'])));
+$content = RADIO_adminRenderPage(
+    'programs',
+    $LANG_RADIO['programs'],
+    $LANG_RADIO['admin_programs_intro'],
+    $LANG_RADIO['admin_programs_help_title'],
+    $LANG_RADIO['admin_programs_help_text'],
+    $content,
+    $message
+);
+COM_output(COM_createHTMLDocument($content, array(
+    'pagetitle' => $LANG_RADIO['programs'],
+    'headercode' => RADIO_adminHeaderCode()
+)));
