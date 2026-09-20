@@ -34,6 +34,7 @@ if ($state['media'] !== false) {
         'media_id' => $media['external_id'],
         'title' => $media['title'],
         'media_type' => $media['media_type'],
+        'source_kind' => isset($media['source_kind']) ? $media['source_kind'] : 'local',
         'duration' => (int) $media['duration'],
         'offset' => (int) $media['offset'],
         'stream_url' => $media['stream_url'],
