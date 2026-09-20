@@ -16,6 +16,19 @@ if ($id > 0) {
     DB_query("UPDATE {$_TABLES['radio_media']} SET hits=hits+1 WHERE media_id=" . $id);
 
     $content = '<div class="radio-item"><h1>' . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . '</h1>';
+    if (!empty($row['cover_name'])) {
+        $content .= '<p><img src="' . htmlspecialchars(RADIO_coverUrl('media', $id), ENT_QUOTES, 'UTF-8') . '" alt="" style="max-width:320px;width:100%;height:auto"></p>';
+    }
+    if (!empty($row['author'])) {
+        $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8') . ':</strong> ' . htmlspecialchars($row['author'], ENT_QUOTES, 'UTF-8') . '</p>';
+    }
+    if (!empty($row['series_title'])) {
+        $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['series_title'], ENT_QUOTES, 'UTF-8') . ':</strong> ' . htmlspecialchars($row['series_title'], ENT_QUOTES, 'UTF-8');
+        if ((int)$row['season_number'] > 0 || (int)$row['episode_number'] > 0) {
+            $content .= ' — S' . (int)$row['season_number'] . ' E' . (int)$row['episode_number'];
+        }
+        $content .= '</p>';
+    }
     if ($row['description'] !== '') {
         $content .= '<p>' . nl2br(htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
     }
