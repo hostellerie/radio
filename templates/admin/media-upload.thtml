@@ -1,0 +1,55 @@
+<form class="radio-admin-form" method="post" enctype="multipart/form-data" action="">
+    <p><label>{audio_file_label}<br>
+        <input type="file" id="radio-upload-file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required>
+    </label></p>
+
+    <p><label>{title_label}<br>
+        <input type="text" name="title" maxlength="255">
+    </label></p>
+
+    <p><label>{author_label}<br>
+        <input type="text" name="author" maxlength="255">
+    </label></p>
+
+    <p><label>{series_title_label}<br>
+        <input type="text" name="series_title" maxlength="255">
+    </label></p>
+
+    <p>
+        <label>{season_number_label} <input type="number" name="season_number" min="0" value="0"></label>
+        <label>{episode_number_label} <input type="number" name="episode_number" min="0" value="0"></label>
+    </p>
+
+    <p><label>{cover_label}<br>
+        <input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*">
+    </label></p>
+
+    <p><label>{description_label}<br>
+        <textarea name="description" rows="4"></textarea>
+    </label></p>
+
+    <p><label>{type_label}<br>
+        <select name="media_type">{media_type_options}</select>
+    </label></p>
+
+    <p><label>{duration_label}
+        <input type="number" id="radio-upload-duration" name="duration" min="0" step="1" value="0">
+    </label></p>
+
+    <p>
+        <label>{status_label} <select name="status">{status_options}</select></label>
+        <label><input type="checkbox" name="allow_download" value="1" checked> {allow_download_label}</label>
+    </p>
+
+    <fieldset>
+        <legend>{permissions_label}</legend>
+        <p><label>{group_label} {group_dropdown}</label></p>
+        {permissions_html}
+    </fieldset>
+
+    <input type="hidden" name="{csrf_name}" value="{csrf_token}">
+    <div class="radio-admin__toolbar">
+        <button class="radio-admin__button radio-admin__button--primary" type="submit" name="upload_media" value="1">{submit_label}</button>
+        <a class="radio-admin__button" href="{cancel_url}">{cancel_label}</a>
+    </div>
+</form>
