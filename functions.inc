@@ -41,6 +41,22 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
 
 
 
+function RADIO_publicIndexProgressScript()
+{
+    return '<script>(function(){'
+        . 'var box=document.querySelector("[data-radio-progress]");'
+        . 'if(!box){return;}'
+        . 'var progress=box.querySelector("progress");'
+        . 'var elapsedNode=box.querySelector("[data-radio-elapsed]");'
+        . 'var duration=parseInt(box.getAttribute("data-duration")||"0",10);'
+        . 'var offset=parseInt(box.getAttribute("data-offset")||"0",10);'
+        . 'if(!progress||duration<1){return;}'
+        . 'function fmt(s){s=Math.max(0,Math.round(s));var m=Math.floor(s/60);var sec=s%60;return m+":"+(sec<10?"0":"")+sec;}'
+        . 'function tick(){if(offset<duration){offset++;progress.value=offset;if(elapsedNode){elapsedNode.textContent=fmt(offset);}}}'
+        . 'setInterval(tick,1000);'
+        . '})();</script>';
+}
+
 function RADIO_trackingScript()
 {
     global $_CONF;
@@ -99,7 +115,7 @@ function RADIO_livePageScript()
         . 'function sync(play){'
         . 'fetch(endpoint,{cache:"no-store",credentials:"same-origin"}).then(function(r){if(!r.ok){throw new Error("HTTP "+r.status);}return r.json();}).then(function(data){'
         . 'if(!data.now_playing&&!data.current_media){program.textContent="";media.textContent="";status.textContent=' . json_encode($LANG_RADIO['nothing_scheduled_now']) . ';player.removeAttribute("src");player.load();return;}'
-        . 'program.textContent=data.now_playing?data.now_playing.title:' . json_encode($LANG_RADIO['automatic_rotation']) . ';'
+        . 'program.textContent=data.now_playing?data.now_playing.title:' . json_encode($LANG_RADIO['public_on_air']) . ';'
         . 'if(!data.current_media){media.textContent=' . json_encode($LANG_RADIO['duration_required_live']) . ';status.textContent="";player.removeAttribute("src");player.load();return;}'
         . 'media.textContent=data.current_media.title;status.textContent="";'
         . 'if(activeMedia!==data.current_media.media_id){flush();activeMedia=data.current_media.media_id;activeMediaId=parseInt(String(data.current_media.media_id).replace("media:",""),10)||0;activeProgramId=data.now_playing?parseInt(String(data.now_playing.program_id).replace("program:",""),10)||0:0;'
@@ -194,8 +210,11 @@ function plugin_getfootercode_radio()
         return RADIO_adminEditPageScript();
     }
 
-    if (RADIO_pathEndsWith($path, '/radio/index.php')
-        || RADIO_pathEndsWith($path, '/radio/program.php')
+    if (RADIO_pathEndsWith($path, '/radio/index.php')) {
+        return RADIO_trackingScript() . RADIO_publicIndexProgressScript();
+    }
+
+    if (RADIO_pathEndsWith($path, '/radio/program.php')
         || RADIO_pathEndsWith($path, '/radio/replay.php')) {
         return RADIO_trackingScript();
     }
