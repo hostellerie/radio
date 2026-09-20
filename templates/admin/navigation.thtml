@@ -1,0 +1,8 @@
+<nav class="radio-admin__nav" aria-label="{nav_aria_label}">
+    {nav_library}
+    {nav_programs}
+    {nav_schedule}
+    {nav_rotation}
+    {nav_sources}
+    {nav_stats}
+</nav>
