@@ -205,3 +205,15 @@ if (!empty($errors)) {
 }
 
 echo "Radio Plugin API contract check passed.\n";
+
+radio_contract_require(
+    strpos(file_get_contents($root . '/public_html/schedule.php'), 'radio-schedule-grid') !== false
+        && strpos(file_get_contents($root . '/public_html/schedule.php'), 'radio-day-card') !== false,
+    'Radio public schedule must use the responsive card layout.'
+);
+radio_contract_require(
+    strpos($publicCss, '.radio-week-nav') !== false
+        && strpos($publicCss, '.radio-schedule-grid') !== false
+        && strpos($publicCss, '.radio-day-card--today') !== false,
+    'Radio public stylesheet must include modern schedule navigation and day-card styles.'
+);
