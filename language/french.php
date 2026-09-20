@@ -1,6 +1,8 @@
 <?php
 $LANG_RADIO = array(
     'plugin_name' => 'Radio',
+    'whatsnew_title' => 'Contenus Radio récemment mis à jour',
+    'whatsnew_none' => 'Aucun contenu Radio n’a été mis à jour récemment.',
     'admin_title' => 'Radio',
     'admin_intro' => 'Gérez la médiathèque audio, les émissions et la programmation.',
     'storage' => 'Stockage persistant',
@@ -169,6 +171,9 @@ $LANG_confignames['radio'] = array(
     'fallback_jingle_interval' => 'Insérer un jingle tous les N éléments (0 = jamais)',
     'fallback_announcement_interval' => 'Insérer une annonce/promotion tous les N éléments (0 = jamais)',
     'fallback_type_weights' => 'Poids des types (exemple : music=5,podcast=2)',
-    'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)'
+    'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)',
+    'whatsnew_enabled' => 'Afficher Radio dans Quoi de neuf ?',
+    'whatsnew_interval' => 'Période Quoi de neuf (secondes)',
+    'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf'
 );
 $LANG_configselects['radio'] = array(0 => array('Activé' => 1, 'Désactivé' => 0));
