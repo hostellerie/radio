@@ -1,0 +1,24 @@
+<div class="radio-admin">
+    <header class="radio-admin__header">
+        <div class="radio-admin__heading">
+            <h1>{page_title}</h1>
+            <p>{page_intro}</p>
+        </div>
+        <div class="radio-admin__header-actions">{configuration_button}</div>
+    </header>
+
+    {navigation}
+
+    {message}
+
+    <section class="radio-admin__help" aria-labelledby="radio-admin-help-title">
+        <div>
+            <h2 id="radio-admin-help-title">{help_title}</h2>
+            <p>{help_text}</p>
+        </div>
+    </section>
+
+    <main class="radio-admin__content">
+        {page_content}
+    </main>
+</div>
