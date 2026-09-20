@@ -146,9 +146,9 @@ radio_contract_require(
     'Radio must provide an enabled-by-default on_demand_enabled configuration.'
 );
 radio_contract_require(
-    strpos($publicIndex, 'radio-home-listen') !== false
+    strpos($publicIndex, 'radio-home-audio') !== false
         && strpos($publicIndex, 'radio-home-wave') !== false,
-    'Radio public index must expose the home live player and waveform.'
+    'Radio public index must expose the native home live player and waveform.'
 );
 radio_contract_require(
     strpos($publicJs, '15000') !== false
