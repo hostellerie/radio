@@ -62,7 +62,7 @@
 .radio-now-title,
 .radio-live-heading {
     margin: 0;
-    font-size: clamp(1.35rem, 2.6vw, 2rem);
+    font-size: clamp(1.25rem, 1.8vw, 1.55rem);
     line-height: 1.2;
 }
 
