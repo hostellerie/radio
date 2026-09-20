@@ -4,6 +4,9 @@ $functions = file_get_contents($root . '/functions.inc');
 $autoinstall = file_get_contents($root . '/autoinstall.php');
 $english = file_get_contents($root . '/language/english.php');
 $french = file_get_contents($root . '/language/french.php');
+$defaults = file_get_contents($root . '/install_defaults.php');
+$publicIndex = file_get_contents($root . '/public_html/index.php');
+$nowEndpoint = file_get_contents($root . '/public_html/now.php');
 
 $errors = array();
 
@@ -121,16 +124,6 @@ foreach (array(
     );
 }
 
-if (!empty($errors)) {
-    fwrite(STDERR, "Radio Plugin API contract check failed:\n");
-    foreach ($errors as $error) {
-        fwrite(STDERR, " - " . $error . "\n");
-    }
-    exit(1);
-}
-
-echo "Radio Plugin API contract check passed.\n";
-
 radio_contract_require(
     preg_match('/function\s+RADIO_detectAudioDuration\s*\(/', $functions) === 1,
     'Radio must provide server-side audio duration detection.'
@@ -144,3 +137,37 @@ radio_contract_require(
     substr_count($functions, 'RADIO_detectAudioDuration(') >= 3,
     'Radio must use duration detection for new and existing local media.'
 );
+
+radio_contract_require(
+    strpos($defaults, "'on_demand_enabled' => 1") !== false,
+    'Radio must provide an enabled-by-default on_demand_enabled configuration.'
+);
+radio_contract_require(
+    strpos($publicIndex, 'radio-home-listen') !== false
+        && strpos($publicIndex, 'radio-home-wave') !== false,
+    'Radio public index must expose the home live player and waveform.'
+);
+radio_contract_require(
+    strpos($functions, 'RADIO_publicIndexPlayerScript') !== false
+        && strpos($functions, '},15000);') !== false,
+    'Radio public index player must resynchronize with now.php every 15 seconds.'
+);
+radio_contract_require(
+    strpos($functions, 'AudioContext') !== false
+        && strpos($functions, 'createAnalyser') !== false,
+    'Radio public live waveform must use Web Audio analysis where available.'
+);
+radio_contract_require(
+    strpos($nowEndpoint, "'source_kind'") !== false,
+    'Radio now endpoint must expose source_kind for safe waveform handling.'
+);
+
+if (!empty($errors)) {
+    fwrite(STDERR, "Radio Plugin API contract check failed:\n");
+    foreach ($errors as $error) {
+        fwrite(STDERR, " - " . $error . "\n");
+    }
+    exit(1);
+}
+
+echo "Radio Plugin API contract check passed.\n";
