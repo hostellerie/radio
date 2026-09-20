@@ -33,7 +33,7 @@ if ($scheduleId > 0 && $start > 0) {
 
     $published = 0;
     foreach ($replay['items'] as $item) {
-        if ($item['status'] !== 'published') {
+        if ($item['status'] !== 'published' || !RADIO_hasReadAccess($item)) {
             continue;
         }
         $published++;
