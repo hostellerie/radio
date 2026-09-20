@@ -906,6 +906,136 @@ function RADIO_getUpcoming($limit, $fromTs)
 
 
 
+
+function RADIO_getRotationMedia($jingles)
+{
+    global $_TABLES;
+
+    if ($jingles) {
+        $where = "status='published' AND media_type='jingle' AND duration>0";
+    } else {
+        $where = "status='published' AND media_type IN ('music','podcast','interview','chronicle','announcement','promo') AND duration>0";
+    }
+
+    $result = DB_query("SELECT * FROM {$_TABLES['radio_media']} WHERE " . $where . " ORDER BY media_id ASC");
+    $items = array();
+    while ($row = DB_fetchArray($result)) {
+        $items[] = $row;
+    }
+    return $items;
+}
+
+function RADIO_rotationCompare($a, $b)
+{
+    if ($a['_rotation_key'] === $b['_rotation_key']) {
+        return (int) $a['media_id'] - (int) $b['media_id'];
+    }
+    return strcmp($a['_rotation_key'], $b['_rotation_key']);
+}
+
+function RADIO_buildRotationSequence($date)
+{
+    global $_RADIO_CONF;
+
+    $items = RADIO_getRotationMedia(false);
+    if (count($items) === 0) {
+        return array();
+    }
+
+    foreach ($items as $index => $item) {
+        $items[$index]['_rotation_key'] = sha1($date . ':media:' . (int) $item['media_id']);
+    }
+    usort($items, 'RADIO_rotationCompare');
+
+    $jingles = RADIO_getRotationMedia(true);
+    foreach ($jingles as $index => $item) {
+        $jingles[$index]['_rotation_key'] = sha1($date . ':jingle:' . (int) $item['media_id']);
+    }
+    if (count($jingles) > 1) {
+        usort($jingles, 'RADIO_rotationCompare');
+    }
+
+    $interval = isset($_RADIO_CONF['fallback_jingle_interval'])
+        ? max(0, (int) $_RADIO_CONF['fallback_jingle_interval'])
+        : 4;
+
+    $sequence = array();
+    $regularCount = 0;
+    $jingleIndex = 0;
+
+    foreach ($items as $item) {
+        unset($item['_rotation_key']);
+        $sequence[] = $item;
+        $regularCount++;
+
+        if ($interval > 0 && count($jingles) > 0 && ($regularCount % $interval) === 0) {
+            $jingle = $jingles[$jingleIndex % count($jingles)];
+            unset($jingle['_rotation_key']);
+            $sequence[] = $jingle;
+            $jingleIndex++;
+        }
+    }
+
+    return $sequence;
+}
+
+function RADIO_rotationDuration($sequence)
+{
+    $duration = 0;
+    foreach ($sequence as $item) {
+        $duration += max(0, (int) $item['duration']);
+    }
+    return $duration;
+}
+
+function RADIO_getRotationState($timestamp)
+{
+    global $_RADIO_CONF;
+
+    if (isset($_RADIO_CONF['fallback_enabled']) && empty($_RADIO_CONF['fallback_enabled'])) {
+        return false;
+    }
+
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $date = date('Y-m-d', $timestamp);
+    $sequence = RADIO_buildRotationSequence($date);
+    $cycleDuration = RADIO_rotationDuration($sequence);
+    if ($cycleDuration < 1) {
+        return false;
+    }
+
+    $dayStart = strtotime($date . ' 00:00:00');
+    $elapsedDay = max(0, $timestamp - $dayStart);
+    $cycleOffset = $elapsedDay % $cycleDuration;
+    $cursor = 0;
+
+    foreach ($sequence as $item) {
+        $duration = (int) $item['duration'];
+        if ($duration < 1) {
+            continue;
+        }
+        if ($cycleOffset < ($cursor + $duration)) {
+            return array(
+                'source' => 'rotation',
+                'date' => $date,
+                'cycle_duration' => $cycleDuration,
+                'cycle_offset' => $cycleOffset,
+                'media_id' => (int) $item['media_id'],
+                'external_id' => RADIO_externalId('media', (int) $item['media_id']),
+                'title' => $item['title'],
+                'media_type' => $item['media_type'],
+                'duration' => $duration,
+                'offset' => $cycleOffset - $cursor,
+                'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
+                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id']))
+            );
+        }
+        $cursor += $duration;
+    }
+
+    return false;
+}
+
 function RADIO_programDuration($programId)
 {
     $items = RADIO_getProgramItems($programId);
@@ -955,19 +1085,23 @@ function RADIO_getLiveState($timestamp)
 {
     $timestamp = $timestamp ? (int) $timestamp : time();
     $program = RADIO_getNowPlaying($timestamp);
-    if ($program === false) {
+
+    if ($program !== false) {
+        $media = RADIO_resolveProgramPlayback($program['program_id'], $program['elapsed']);
         return array(
             'timestamp' => $timestamp,
-            'program' => false,
-            'media' => false
+            'source' => 'schedule',
+            'program' => $program,
+            'media' => $media
         );
     }
 
-    $media = RADIO_resolveProgramPlayback($program['program_id'], $program['elapsed']);
+    $rotation = RADIO_getRotationState($timestamp);
     return array(
         'timestamp' => $timestamp,
-        'program' => $program,
-        'media' => $media
+        'source' => $rotation !== false ? 'rotation' : 'idle',
+        'program' => false,
+        'media' => $rotation
     );
 }
 
@@ -977,7 +1111,8 @@ function RADIO_dashboardSummary()
 
     $mediaCount = (int) DB_getItem($_TABLES['radio_media'], 'COUNT(*)', "status='published'");
     $programCount = (int) DB_getItem($_TABLES['radio_programs'], 'COUNT(*)', "status='published'");
-    $now = RADIO_getNowPlaying(time());
+    $live = RADIO_getLiveState(time());
+    $now = $live['program'];
     $upcoming = RADIO_getUpcoming(50, time());
     $weekLimit = strtotime('+7 days');
     $scheduledWeek = 0;
@@ -991,6 +1126,12 @@ function RADIO_dashboardSummary()
         'media_count' => $mediaCount,
         'program_count' => $programCount,
         'scheduled_next_7_days' => $scheduledWeek,
+        'live_source' => $live['source'],
+        'current_media' => $live['media'] !== false ? array(
+            'media_id' => $live['media']['external_id'],
+            'title' => $live['media']['title'],
+            'media_type' => $live['media']['media_type']
+        ) : false,
         'now_playing' => $now !== false ? array(
             'program_id' => RADIO_externalId('program', $now['program_id']),
             'title' => $now['program_title'],
@@ -1016,7 +1157,8 @@ function plugin_getcapabilities_radio()
             'radio.program.read',
             'radio.schedule.read',
             'radio.now-playing.read',
-            'radio.current-media.read'
+            'radio.current-media.read',
+            'radio.rotation.read'
         )
     );
 }

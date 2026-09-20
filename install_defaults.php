@@ -8,7 +8,9 @@ $_RADIO_DEFAULT = array(
     'public_title' => 'Radio',
     'default_replay_days' => 30,
     'allow_downloads' => 1,
-    'max_upload_mb' => 100
+    'max_upload_mb' => 100,
+    'fallback_enabled' => 1,
+    'fallback_jingle_interval' => 4
 );
 
 function plugin_initconfig_radio()
@@ -24,6 +26,8 @@ function plugin_initconfig_radio()
         $c->add('default_replay_days', $_RADIO_DEFAULT['default_replay_days'], 'text', 0, 0, 0, 30, true, 'radio', 0);
         $c->add('allow_downloads', $_RADIO_DEFAULT['allow_downloads'], 'select', 0, 0, 0, 40, true, 'radio', 0);
         $c->add('max_upload_mb', $_RADIO_DEFAULT['max_upload_mb'], 'text', 0, 0, 0, 50, true, 'radio', 0);
+        $c->add('fallback_enabled', $_RADIO_DEFAULT['fallback_enabled'], 'select', 0, 0, 0, 60, true, 'radio', 0);
+        $c->add('fallback_jingle_interval', $_RADIO_DEFAULT['fallback_jingle_interval'], 'text', 0, 0, 0, 70, true, 'radio', 0);
     }
     return true;
 }

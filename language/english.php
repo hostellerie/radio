@@ -36,7 +36,8 @@ $LANG_RADIO = array(
     'live_unavailable' => 'The live state could not be loaded.',
 
     'now_playing' => 'Now playing',
-    'nothing_scheduled_now' => 'No programme is scheduled right now.',
+    'nothing_scheduled_now' => 'No programme or automatic rotation is available right now.',
+    'automatic_rotation' => 'Automatic radio',
     'up_next' => 'Up next',
     'view_full_schedule' => 'View full schedule',
 
@@ -131,6 +132,8 @@ $LANG_confignames['radio'] = array(
     'public_title' => 'Public title',
     'default_replay_days' => 'Default replay duration (days)',
     'allow_downloads' => 'Allow downloads globally?',
-    'max_upload_mb' => 'Maximum audio upload size (MB)'
+    'max_upload_mb' => 'Maximum audio upload size (MB)',
+    'fallback_enabled' => 'Enable automatic fallback radio?',
+    'fallback_jingle_interval' => 'Insert a jingle every N rotation items (0 = never)'
 );
 $LANG_configselects['radio'] = array(0 => array('Enabled' => 1, 'Disabled' => 0));

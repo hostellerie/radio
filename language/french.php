@@ -36,7 +36,8 @@ $LANG_RADIO = array(
     'live_unavailable' => 'L’état de la radio en direct n’a pas pu être chargé.',
 
     'now_playing' => 'À l’antenne',
-    'nothing_scheduled_now' => 'Aucune émission n’est programmée actuellement.',
+    'nothing_scheduled_now' => 'Aucune émission ni rotation automatique n’est disponible actuellement.',
+    'automatic_rotation' => 'Radio automatique',
     'up_next' => 'À suivre',
     'view_full_schedule' => 'Voir toute la programmation',
 
@@ -131,6 +132,8 @@ $LANG_confignames['radio'] = array(
     'public_title' => 'Titre public',
     'default_replay_days' => 'Durée de replay par défaut (jours)',
     'allow_downloads' => 'Autoriser globalement les téléchargements ?',
-    'max_upload_mb' => 'Taille maximale d’un fichier audio (Mo)'
+    'max_upload_mb' => 'Taille maximale d’un fichier audio (Mo)',
+    'fallback_enabled' => 'Activer la radio automatique hors programmation ?',
+    'fallback_jingle_interval' => 'Insérer un jingle tous les N éléments (0 = jamais)'
 );
 $LANG_configselects['radio'] = array(0 => array('Activé' => 1, 'Désactivé' => 0));

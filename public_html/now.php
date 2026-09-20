@@ -9,6 +9,7 @@ $upcoming = RADIO_getUpcoming(5, time());
 
 $payload = array(
     'generated_at' => date('c'),
+    'source' => $state['source'],
     'now_playing' => false,
     'current_media' => false,
     'upcoming' => array()
