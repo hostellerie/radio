@@ -27,6 +27,7 @@ $LANG_RADIO = array(
     'admin_stats_help_title' => 'Lire ces statistiques',
     'admin_stats_help_text' => 'Les démarrages de lecture, le temps d’écoute et les téléchargements autorisés sont agrégés sur la période choisie. Utilisez-les comme indicateurs opérationnels, pas comme nombre d’auditeurs uniques.',
     'admin_days' => 'jours',
+    'admin_minutes_short' => 'min',
     'admin_empty_value' => 'Aucune donnée',
     'admin_intro' => 'Gérez la médiathèque audio, les émissions et la programmation.',
     'storage' => 'Stockage persistant',
