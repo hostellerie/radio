@@ -118,7 +118,7 @@ Follow `plugin-persistent-storage-guide.md` and `multisite-development-principle
 # Phase 2 — Public audio player
 
 - [ ] Provide an HTML5-based player.
-- [ ] Display title, author/artist, programme and cover where available.
+- [x] Display title, author/artist, programme and cover where available.
 - [ ] Expose play/pause, seek and volume controls where the playback mode permits them.
 - [ ] Provide a controlled download action when enabled.
 - [ ] Provide canonical public pages for addressable media.
@@ -235,8 +235,8 @@ This mode must work on a standard Geeklog web server.
 # Phase 7 — Podcast support and content syndication
 
 - [x] Treat podcast episodes as first-class Radio content, not as a separate storage silo.
-- [ ] Support series/show, season and episode metadata where appropriate.
-- [x] Expose podcast-friendly descriptions, dates, duration and canonical URLs; artwork remains to be added.
+- [x] Support series/show, season, episode and author metadata where appropriate.
+- [x] Expose podcast-friendly descriptions, dates, duration, artwork and canonical URLs.
 - [x] Implement Geeklog native Content Syndication callbacks: `plugin_getfeednames_radio()`, `plugin_getfeedcontent_radio()` and `plugin_feedupdatecheck_radio()`.
 - [x] Provide a dedicated RSS 2.0 podcast feed with audio `enclosure` while keeping Radio media as the source of truth.
 - [ ] Keep feed generation permission-aware.
@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.1**.
+Current development version: **0.1.2**.
 
 Focus:
 
