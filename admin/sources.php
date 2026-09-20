@@ -203,7 +203,7 @@ if (!empty($syncLog)) {
         $logSource = RADIO_getFeedSource((int) $log['source_id'], false);
         $content .= '<tr><td>' . htmlspecialchars($log['created'], ENT_QUOTES, 'UTF-8') . '</td>'
             . '<td>' . htmlspecialchars($logSource ? $logSource['title'] : ('#' . (int) $log['source_id']), ENT_QUOTES, 'UTF-8') . '</td>'
-            . '<td>' . htmlspecialchars($log['sync_mode'], ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . htmlspecialchars(RADIO_adminSyncModeLabel($log['sync_mode']), ENT_QUOTES, 'UTF-8') . '</td>'
             . '<td>' . (int) $log['new_count'] . '</td>'
             . '<td>' . (int) $log['imported_count'] . '</td>'
             . '<td>' . (int) $log['error_count'] . '</td></tr>';
