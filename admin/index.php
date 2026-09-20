@@ -21,11 +21,16 @@ if (isset($_POST['upload_media'])) {
         $message = COM_showMessageText($LANG_RADIO['access_denied'], $LANG_RADIO['admin_title']);
     } else {
         $error = '';
-        $id = RADIO_saveUpload(
-            isset($_FILES['audio_file']) ? $_FILES['audio_file'] : array(),
-            $_POST,
-            $error
-        );
+        $coverError = '';
+        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
+        if ($coverName === false) {
+            $error = $coverError;
+            $id = false;
+        } else {
+            $_POST['cover_name'] = $coverName;
+            $id = RADIO_saveUpload(isset($_FILES['audio_file']) ? $_FILES['audio_file'] : array(), $_POST, $error);
+            if ($id === false && $coverName !== '') RADIO_deleteCover($coverName);
+        }
         if ($id !== false) {
             $message = COM_showMessageText($LANG_RADIO['upload_saved'], $LANG_RADIO['admin_title']);
         } else {
@@ -40,8 +45,14 @@ if (isset($_POST['save_media'])) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
     } else {
         $id = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
+        $existing = RADIO_getMedia($id, false);
+        $coverError = '';
+        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
+        if ($coverName !== false) {
+            $_POST['cover_name'] = $coverName !== '' ? $coverName : ($existing ? $existing['cover_name'] : '');
+        }
         $message = COM_showMessageText(
-            RADIO_updateMedia($id, $_POST) ? $LANG_RADIO['media_saved'] : $LANG_RADIO['media_save_failed'],
+            $coverName !== false && RADIO_updateMedia($id, $_POST) ? $LANG_RADIO['media_saved'] : $LANG_RADIO['media_save_failed'],
             $LANG_RADIO['admin_title']
         );
     }
@@ -85,6 +96,11 @@ if (SEC_hasRights('radio.upload')) {
         . '<br><input type="file" id="radio-upload-file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
         . '<br><input type="text" name="title" maxlength="255" style="width:100%"></label></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="author" maxlength="255" style="width:100%"></label></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['series_title'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="series_title" maxlength="255" style="width:100%"></label></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['season_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="season_number" min="0" value="0" style="width:6rem"></label> '
+        . '<label>' . htmlspecialchars($LANG_RADIO['episode_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="episode_number" min="0" value="0" style="width:6rem"></label></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
         . '<br><textarea name="description" rows="4" style="width:100%"></textarea></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8')
@@ -124,6 +140,12 @@ if (count($media) === 0) {
             . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
             . '<br><input type="text" name="title" maxlength="255" style="width:100%" value="'
             . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . '"></label></p>'
+            . (!empty($row['cover_name']) ? '<p><img src="' . htmlspecialchars(RADIO_coverUrl('media',$id), ENT_QUOTES, 'UTF-8') . '" alt="" style="max-width:180px;max-height:180px"></p>' : '')
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="author" maxlength="255" style="width:100%" value="' . htmlspecialchars($row['author'], ENT_QUOTES, 'UTF-8') . '"></label></p>'
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['series_title'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="series_title" maxlength="255" style="width:100%" value="' . htmlspecialchars($row['series_title'], ENT_QUOTES, 'UTF-8') . '"></label></p>'
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['season_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="season_number" min="0" value="' . (int)$row['season_number'] . '" style="width:6rem"></label> '
+            . '<label>' . htmlspecialchars($LANG_RADIO['episode_number'], ENT_QUOTES, 'UTF-8') . ' <input type="number" name="episode_number" min="0" value="' . (int)$row['episode_number'] . '" style="width:6rem"></label></p>'
+            . '<p><label>' . htmlspecialchars($LANG_RADIO['replace_cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
             . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
             . '<br><textarea name="description" rows="3" style="width:100%">'
             . htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8') . '</textarea></label></p>'
