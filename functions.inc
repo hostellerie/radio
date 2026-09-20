@@ -63,6 +63,110 @@ function RADIO_ensureStorage()
     return is_writable($dir);
 }
 
+function RADIO_coverDir()
+{
+    $base = RADIO_storageDir();
+    return $base === '' ? '' : $base . 'covers' . DIRECTORY_SEPARATOR;
+}
+
+function RADIO_ensureCoverStorage()
+{
+    if (!RADIO_ensureStorage()) {
+        return false;
+    }
+    $dir = RADIO_coverDir();
+    if ($dir === '') {
+        return false;
+    }
+    if (is_dir($dir)) {
+        return is_writable($dir);
+    }
+    if (!@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        COM_errorLog('Radio: cannot create cover storage directory ' . $dir, 1);
+        return false;
+    }
+    return is_writable($dir);
+}
+
+function RADIO_allowedImages()
+{
+    return array('jpg'=>array('image/jpeg'),'jpeg'=>array('image/jpeg'),'png'=>array('image/png'),'webp'=>array('image/webp'));
+}
+
+function RADIO_saveCoverUpload($file, &$error)
+{
+    $error = '';
+    if (!is_array($file) || !isset($file['error']) || (int)$file['error'] === UPLOAD_ERR_NO_FILE) {
+        return '';
+    }
+    if ((int)$file['error'] !== UPLOAD_ERR_OK) {
+        $error = 'cover_upload_error';
+        return false;
+    }
+    if (!isset($file['size']) || (int)$file['size'] < 1 || (int)$file['size'] > 5242880) {
+        $error = 'cover_upload_size';
+        return false;
+    }
+    $name = isset($file['name']) ? basename((string)$file['name']) : '';
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    $allowed = RADIO_allowedImages();
+    if (!isset($allowed[$ext])) {
+        $error = 'cover_upload_type';
+        return false;
+    }
+    $tmp = isset($file['tmp_name']) ? $file['tmp_name'] : '';
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        $error = 'cover_upload_error';
+        return false;
+    }
+    $mime = RADIO_detectMime($tmp);
+    if ($mime !== '' && !in_array($mime, $allowed[$ext], true)) {
+        $error = 'cover_upload_type';
+        return false;
+    }
+    if (!RADIO_ensureCoverStorage()) {
+        $error = 'storage_unavailable';
+        return false;
+    }
+    $storageName = gmdate('YmdHis') . '-' . sha1(uniqid('', true) . mt_rand()) . '.' . $ext;
+    if (!@move_uploaded_file($tmp, RADIO_coverDir() . $storageName)) {
+        $error = 'cover_upload_move';
+        return false;
+    }
+    return $storageName;
+}
+
+function RADIO_deleteCover($name)
+{
+    $name = basename((string)$name);
+    if ($name === '') return true;
+    $path = RADIO_coverDir() . $name;
+    return !is_file($path) || @unlink($path);
+}
+
+function RADIO_coverUrl($type, $id)
+{
+    global $_CONF;
+    $type = $type === 'program' ? 'program' : 'media';
+    return $_CONF['site_url'] . '/radio/cover.php?type=' . $type . '&id=' . (int)$id;
+}
+
+function RADIO_sendCover($type, $id)
+{
+    $row = $type === 'program' ? RADIO_getProgram((int)$id, true) : RADIO_getMedia((int)$id, true);
+    if ($row === false || empty($row['cover_name'])) return false;
+    $path = RADIO_coverDir() . basename($row['cover_name']);
+    if (!is_file($path) || !is_readable($path)) return false;
+    $mime = RADIO_detectMime($path);
+    if ($mime === '' || strpos($mime, 'image/') !== 0) $mime = 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: public, max-age=86400');
+    header('X-Content-Type-Options: nosniff');
+    readfile($path);
+    exit;
+}
+
 function RADIO_allowedAudio()
 {
     return array(
@@ -167,6 +271,11 @@ function RADIO_saveUpload($file, $metadata, &$error)
     }
     $title = DB_escapeString(substr($title, 0, 255));
     $description = DB_escapeString(isset($metadata['description']) ? trim((string) $metadata['description']) : '');
+    $author = DB_escapeString(substr(trim(isset($metadata['author']) ? (string)$metadata['author'] : ''),0,255));
+    $seriesTitle = DB_escapeString(substr(trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : ''),0,255));
+    $seasonNumber = isset($metadata['season_number']) ? max(0,(int)$metadata['season_number']) : 0;
+    $episodeNumber = isset($metadata['episode_number']) ? max(0,(int)$metadata['episode_number']) : 0;
+    $coverName = isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : '';
     $mediaType = isset($metadata['media_type']) ? $metadata['media_type'] : 'music';
     $allowedTypes = array('music', 'podcast', 'interview', 'show', 'chronicle', 'jingle', 'announcement', 'promo');
     if (!in_array($mediaType, $allowedTypes, true)) {
@@ -179,10 +288,11 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
+        . "'" . $author . "','" . $seriesTitle . "'," . $seasonNumber . "," . $episodeNumber . ",'" . DB_escapeString($coverName) . "',"
         . "'" . DB_escapeString($storageName) . "',"
         . "'" . DB_escapeString($validated['original_name']) . "',"
         . "'" . DB_escapeString($validated['mime']) . "',"
@@ -251,7 +361,12 @@ function RADIO_updateMedia($id, $metadata)
     if ($title === '') {
         return false;
     }
-    $description = isset($metadata['description']) ? trim((string) $metadata['description']) : '';
+    $description = isset($metadata['description']) ? trim((string)$metadata['description']) : '';
+    $author = trim(isset($metadata['author']) ? (string)$metadata['author'] : '');
+    $seriesTitle = trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : '');
+    $seasonNumber = isset($metadata['season_number']) ? max(0,(int)$metadata['season_number']) : (int)$row['season_number'];
+    $episodeNumber = isset($metadata['episode_number']) ? max(0,(int)$metadata['episode_number']) : (int)$row['episode_number'];
+    $coverName = isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : $row['cover_name'];
     $mediaType = isset($metadata['media_type']) ? $metadata['media_type'] : 'music';
     $allowedTypes = array('music', 'podcast', 'interview', 'show', 'chronicle', 'jingle', 'announcement', 'promo');
     if (!in_array($mediaType, $allowedTypes, true)) {
@@ -267,6 +382,7 @@ function RADIO_updateMedia($id, $metadata)
         . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
         . "description='" . DB_escapeString($description) . "',"
         . "media_type='" . DB_escapeString($mediaType) . "',"
+        . "author='" . DB_escapeString(substr($author,0,255)) . "',series_title='" . DB_escapeString(substr($seriesTitle,0,255)) . "',season_number=" . $seasonNumber . ",episode_number=" . $episodeNumber . ",cover_name='" . DB_escapeString($coverName) . "',"
         . "status='" . DB_escapeString($status) . "',"
         . "allow_download=" . $allowDownload . ","
         . "duration=" . $duration . ","
@@ -1655,6 +1771,11 @@ function RADIO_itemInfoFromRow($row, $fields)
         'type' => 'radio',
         'subtype' => 'media',
         'media_type' => $row['media_type'],
+        'author' => isset($row['author']) ? $row['author'] : '',
+        'series' => isset($row['series_title']) ? $row['series_title'] : '',
+        'season' => isset($row['season_number']) ? (int)$row['season_number'] : 0,
+        'episode' => isset($row['episode_number']) ? (int)$row['episode_number'] : 0,
+        'image' => !empty($row['cover_name']) ? RADIO_coverUrl('media',$id) : '',
         'duration' => isset($row['duration']) ? (int) $row['duration'] : 0,
         'stream_url' => RADIO_mediaUrl($id, false),
         'title' => $row['title'],
@@ -1718,6 +1839,14 @@ function plugin_getadminoption_radio()
 }
 
 
+function RADIO_ensureSchemaColumn($table, $column, $definition)
+{
+    $result = DB_query("SHOW COLUMNS FROM " . $table . " LIKE '" . DB_escapeString($column) . "'");
+    if (DB_numRows($result) > 0) return true;
+    DB_query("ALTER TABLE " . $table . " ADD " . $column . " " . $definition);
+    return !DB_error();
+}
+
 function plugin_upgrade_radio()
 {
     global $_CONF, $_TABLES;
@@ -1725,9 +1854,16 @@ function plugin_upgrade_radio()
     require_once $_CONF['path_system'] . 'classes/config.class.php';
     require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
 
-    if (!RADIO_ensureConfig()) {
-        return false;
-    }
+    if (!RADIO_ensureConfig()) return false;
+    $ok = true;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'author',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'series_title',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'season_number',"int(10) unsigned NOT NULL default '0'") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'episode_number',"int(10) unsigned NOT NULL default '0'") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'host',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
+    if (!$ok) return false;
 
     DB_query(
         "UPDATE {$_TABLES['plugins']} SET "
