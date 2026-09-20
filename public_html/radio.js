@@ -138,19 +138,23 @@
         function drawFallback(ctx, width, height) {
             var points = 48;
             var t = Date.now() / 180;
-            ctx.beginPath();
+            var samples = [];
             for (var i = 0; i < points; i++) {
                 var x = i * width / (points - 1);
-                var envelope = 0.3 + 0.7 * Math.sin(Math.PI * i / (points - 1));
+                var envelope = 0.25 + 0.75 * Math.sin(Math.PI * i / (points - 1));
                 var y = height / 2
-                    + Math.sin(t + i * 0.72) * envelope * height * 0.28
-                    + Math.sin(t * 0.63 + i * 0.27) * height * 0.08;
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
+                    + Math.sin(t + i * 0.48) * envelope * height * 0.18
+                    + Math.sin(t * 0.52 + i * 0.19) * height * 0.045;
+                samples.push({x:x,y:y});
             }
+            ctx.beginPath();
+            ctx.moveTo(samples[0].x, samples[0].y);
+            for (var s = 1; s < samples.length - 1; s++) {
+                var midX = (samples[s].x + samples[s + 1].x) / 2;
+                var midY = (samples[s].y + samples[s + 1].y) / 2;
+                ctx.quadraticCurveTo(samples[s].x, samples[s].y, midX, midY);
+            }
+            ctx.lineTo(samples[samples.length - 1].x, samples[samples.length - 1].y);
             ctx.stroke();
         }
 
@@ -164,7 +168,7 @@
             var height = canvas.height;
             ctx.clearRect(0, 0, width, height);
             ctx.strokeStyle = window.getComputedStyle(canvas).color || '#000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
 
             if (audio.paused) {
                 ctx.beginPath();
@@ -190,17 +194,24 @@
                 }
 
                 if (quietFrames < 10) {
-                    ctx.beginPath();
-                    for (var i = 0; i < data.length; i++) {
-                        var x = i * width / (data.length - 1);
-                        var normalized = (data[i] - 128) / 128;
-                        var y = height / 2 + normalized * height * 0.44;
-                        if (i === 0) {
-                            ctx.moveTo(x, y);
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
+                    var points = 64;
+                    var samples = [];
+                    for (var i = 0; i < points; i++) {
+                        var sampleIndex = Math.floor(i * (data.length - 1) / (points - 1));
+                        samples.push({
+                            x: i * width / (points - 1),
+                            y: height / 2 + ((data[sampleIndex] - 128) / 128) * height * 0.34
+                        });
                     }
+
+                    ctx.beginPath();
+                    ctx.moveTo(samples[0].x, samples[0].y);
+                    for (var s = 1; s < samples.length - 1; s++) {
+                        var midX = (samples[s].x + samples[s + 1].x) / 2;
+                        var midY = (samples[s].y + samples[s + 1].y) / 2;
+                        ctx.quadraticCurveTo(samples[s].x, samples[s].y, midX, midY);
+                    }
+                    ctx.lineTo(samples[samples.length - 1].x, samples[samples.length - 1].y);
                     ctx.stroke();
                 } else {
                     drawFallback(ctx, width, height);
@@ -236,10 +247,7 @@
 
         var endpoint = root.getAttribute('data-now-endpoint');
         var eventEndpoint = root.getAttribute('data-event-endpoint');
-        var listenLabel = root.getAttribute('data-listen-label') || 'Listen';
-        var pauseLabel = root.getAttribute('data-pause-label') || 'Pause';
         var audio = q('#radio-home-audio', root);
-        var button = q('#radio-home-listen', root);
         var title = q('[data-radio-home-title]', root);
         var progressBox = q('[data-radio-progress]', root);
         var progress = q('progress', progressBox);
@@ -247,7 +255,7 @@
         var durationNode = q('[data-radio-duration]', root);
         var canvas = q('#radio-home-wave', root);
 
-        if (!endpoint || !audio || !button || !progress || !progressBox) {
+        if (!endpoint || !audio || !progress || !progressBox) {
             return;
         }
 
@@ -284,7 +292,6 @@
                 audio.pause();
                 audio.removeAttribute('src');
                 audio.load();
-                button.textContent = listenLabel;
                 return;
             }
 
@@ -352,28 +359,17 @@
                 .catch(function () {});
         }
 
-        button.addEventListener('click', function () {
+        audio.addEventListener('play', function () {
             if (!userStarted) {
                 userStarted = true;
+                audio.pause();
                 sync(true);
                 return;
             }
-            if (audio.paused) {
-                sync(true);
-            } else {
-                audio.pause();
-            }
-        });
-
-        audio.addEventListener('play', function () {
-            button.textContent = pauseLabel;
             postEvent(eventEndpoint, mediaId, programId, 'play', 'live-home', 0);
             listenStart = Date.now();
         });
-        audio.addEventListener('pause', function () {
-            button.textContent = listenLabel;
-            flush();
-        });
+        audio.addEventListener('pause', flush);
         audio.addEventListener('ended', function () {
             flush();
             sync(true);
