@@ -39,7 +39,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.1.9
+## Implementation status snapshot — 0.2.0
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
@@ -605,10 +605,10 @@ Before stable release:
 - [ ] Audit controlled download paths.
 - [ ] Audit ACL for draft/private media.
 - [ ] Audit schedule administration permissions.
-- [ ] Audit CSRF protection for administration actions.
+- [x] Audit CSRF protection for administration actions; remote feed preview/import is token-gated before any network request.
 - [ ] Audit stored and reflected metadata output.
 - [ ] Audit path traversal protections.
-- [ ] Audit remote-source SSRF protections if external sources are enabled.
+- [x] Audit remote-source SSRF protections for the current RSS/Atom fetch path: redirects are revalidated and cURL DNS resolution is pinned to the validated public IP.
 - [ ] Audit credentials and logs.
 - [ ] Audit cache vs persistent storage separation.
 - [ ] Ensure uninstall never silently removes user audio without an explicit administrator choice.
@@ -634,7 +634,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.9**.
+Current development version: **0.2.0**.
 
 Focus:
 
@@ -648,7 +648,7 @@ Focus:
 - `plugin.json`;
 - automated `dist/` archive.
 
-## 0.2.x — Programmes and playlists
+## 0.2.x — Pre-release hardening and programmes/playlists
 
 Focus:
 

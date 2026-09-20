@@ -94,21 +94,25 @@ if (isset($_POST['delete_source'])) {
 }
 
 if (isset($_POST['preview_source']) || isset($_POST['import_episode'])) {
-    $sourceId = isset($_POST['source_id']) ? (int)$_POST['source_id'] : 0;
-    $previewSource = RADIO_getFeedSource($sourceId, false);
-    if ($previewSource !== false) {
-        $error = '';
-        $preview = RADIO_fetchFeedSource($previewSource, $error, !isset($_POST['import_episode']));
+    if (!SEC_checkToken()) {
+        $message .= COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['feed_sources']);
+    } else {
+        $sourceId = isset($_POST['source_id']) ? (int)$_POST['source_id'] : 0;
+        $previewSource = RADIO_getFeedSource($sourceId, false);
+        if ($previewSource !== false) {
+            $error = '';
+            $preview = RADIO_fetchFeedSource($previewSource, $error, !isset($_POST['import_episode']));
         if ($preview === false) {
             $key = isset($LANG_RADIO[$error]) ? $error : 'feed_fetch_failed';
             $message .= COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['feed_sources']);
-        } elseif (!empty($preview['not_modified'])) {
-            $message .= COM_showMessageText($LANG_RADIO['feed_not_modified'], $LANG_RADIO['feed_sources']);
+            } elseif (!empty($preview['not_modified'])) {
+                $message .= COM_showMessageText($LANG_RADIO['feed_not_modified'], $LANG_RADIO['feed_sources']);
+            }
         }
     }
 }
 
-if (isset($_POST['import_episode']) && SEC_checkToken() && is_array($preview) && $previewSource !== false) {
+if (isset($_POST['import_episode']) && is_array($preview) && $previewSource !== false) {
     $episodeKey = isset($_POST['episode_key']) ? (string)$_POST['episode_key'] : '';
     $found = false;
     foreach ($preview['items'] as $episode) {

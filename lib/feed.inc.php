@@ -117,6 +117,43 @@ function RADIO_resolveRedirectUrl($base,$location)
     return $root.preg_replace('#/[^/]*$#','/',$path).$location;
 }
 
+function RADIO_resolvePublicFetchTarget($url, &$error)
+{
+    $error = '';
+    $parts = @parse_url($url);
+    if (!is_array($parts) || empty($parts['host']) || empty($parts['scheme'])) {
+        $error = 'external_url_invalid';
+        return false;
+    }
+
+    $host = strtolower(rtrim((string) $parts['host'], '.'));
+    $scheme = strtolower((string) $parts['scheme']);
+    $port = isset($parts['port']) ? (int) $parts['port'] : ($scheme === 'https' ? 443 : 80);
+
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        if (!filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $error = 'external_url_private';
+            return false;
+        }
+        return array('host' => $host, 'port' => $port, 'ip' => $host);
+    }
+
+    $addresses = @gethostbynamel($host);
+    if (!is_array($addresses) || count($addresses) === 0) {
+        $error = 'external_url_unresolved';
+        return false;
+    }
+
+    foreach ($addresses as $address) {
+        if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $error = 'external_url_private';
+            return false;
+        }
+    }
+
+    return array('host' => $host, 'port' => $port, 'ip' => $addresses[0]);
+}
+
 function RADIO_httpFetchBounded($url,$requestHeaders,&$diagnostic)
 {
     $diagnostic=array('status'=>0,'headers'=>array(),'error'=>'','url'=>$url);
@@ -129,10 +166,17 @@ function RADIO_httpFetchBounded($url,$requestHeaders,&$diagnostic)
             $diagnostic['error']=$validationError; return false;
         }
         $body=false; $status=0; $headers=array(); $error='';
+        $targetError='';
+        $target=RADIO_resolvePublicFetchTarget($current,$targetError);
+        if($target===false){
+            $diagnostic['error']=$targetError;
+            return false;
+        }
 
-        if (function_exists('curl_init')) {
+        if (function_exists('curl_init') && defined('CURLOPT_RESOLVE')) {
             $buffer='';
             $ch=curl_init($current);
+            curl_setopt($ch,CURLOPT_RESOLVE,array($target['host'].':'.$target['port'].':'.$target['ip']));
             curl_setopt($ch,CURLOPT_RETURNTRANSFER,false);
             curl_setopt($ch,CURLOPT_FOLLOWLOCATION,false);
             curl_setopt($ch,CURLOPT_CONNECTTIMEOUT,4);
@@ -145,15 +189,11 @@ function RADIO_httpFetchBounded($url,$requestHeaders,&$diagnostic)
             curl_setopt($ch,CURLOPT_WRITEFUNCTION,function($h,$chunk) use (&$buffer,$maxBytes){if(strlen($buffer)+strlen($chunk)>$maxBytes)return 0;$buffer.=$chunk;return strlen($chunk);});
             $ok=curl_exec($ch);
             $status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
-            if($ok===false)$error=curl_error($ch);else $body=$buffer;
+            if($ok===false){$error=curl_error($ch);if(strlen($buffer)>=$maxBytes)$error='response_too_large';}else $body=$buffer;
             curl_close($ch);
-        } elseif ((bool)ini_get('allow_url_fopen')) {
-            $ctx=stream_context_create(array('http'=>array('method'=>'GET','timeout'=>10,'ignore_errors'=>true,'follow_location'=>0,'max_redirects'=>0,'header'=>"User-Agent: Geeklog-Radio/".RADIO_PLUGIN_VERSION."\r\n".implode("\r\n",$requestHeaders)."\r\n"),'ssl'=>array('verify_peer'=>true,'verify_peer_name'=>true)));
-            $body=@file_get_contents($current,false,$ctx,0,$maxBytes+1);
-            if(is_string($body)&&strlen($body)>$maxBytes){$body=false;$error='response_too_large';}
-            if(isset($http_response_header)&&is_array($http_response_header)){foreach($http_response_header as $line){if(preg_match('#^HTTP/\S+\s+([0-9]{3})#i',$line,$m))$status=(int)$m[1];elseif(strpos($line,':')!==false)$headers[]=$line;}}
-            if($body===false&&$error==='')$error='fetch_failed';
-        } else $error='http_transport_unavailable';
+        } else {
+            $error='http_transport_unavailable';
+        }
 
         $parsed=array();
         foreach($headers as $line){list($name,$value)=explode(':',$line,2);$parsed[strtolower(trim($name))]=trim($value);}

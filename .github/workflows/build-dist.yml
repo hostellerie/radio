@@ -16,7 +16,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  compatibility-lint:
+    name: PHP ${{ matrix.php }} syntax
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - '5.6'
+          - '8.1'
+          - '8.3'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, simplexml
+          coverage: none
+
+      - name: Show PHP runtime
+        run: php -v
+
+      - name: Validate plugin PHP syntax
+        run: |
+          find . -type f -name '*.php' -not -path './dist/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l
+
   build-dist:
+    needs: compatibility-lint
     runs-on: ubuntu-latest
 
     steps:
@@ -56,6 +86,15 @@ jobs:
       - name: Validate PHP syntax
         run: |
           find . -type f -name '*.php' -not -path './dist/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Validate security invariants
+        shell: bash
+        run: |
+          grep -q "function plugin_wsEnabled_radio" functions.inc
+          grep -q "function service_dashboard_summary_radio" services.inc.php
+          grep -q "CURLOPT_RESOLVE" lib/feed.inc.php
+          grep -q "SEC_checkToken()" admin/sources.php
+          ! grep -RniE "DB_(query|getItem).*gl_" --include='*.php' . --exclude-dir=dist --exclude-dir=build
 
       - name: Build installable ZIP
         run: |
