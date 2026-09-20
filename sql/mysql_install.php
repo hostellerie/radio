@@ -112,6 +112,12 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_sources']} (
   last_checked datetime default NULL,
   last_status int(10) unsigned NOT NULL default '0',
   last_error text,
+  sync_mode varchar(16) NOT NULL default 'preview',
+  last_sync datetime default NULL,
+  last_sync_new int(10) unsigned NOT NULL default '0',
+  last_sync_existing int(10) unsigned NOT NULL default '0',
+  last_sync_imported int(10) unsigned NOT NULL default '0',
+  last_sync_errors int(10) unsigned NOT NULL default '0',
   owner_id int(10) unsigned NOT NULL default '2',
   group_id mediumint(8) unsigned NOT NULL default '1',
   perm_owner tinyint(1) unsigned NOT NULL default '3',
@@ -123,4 +129,20 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_sources']} (
   PRIMARY KEY (source_id),
   KEY enabled (enabled),
   KEY source_type (source_type)
+) ENGINE=MyISAM;";
+
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_source_sync_log']} (
+  log_id bigint(20) unsigned NOT NULL auto_increment,
+  source_id int(10) unsigned NOT NULL default '0',
+  sync_mode varchar(16) NOT NULL default 'preview',
+  status varchar(24) NOT NULL default 'ok',
+  new_count int(10) unsigned NOT NULL default '0',
+  existing_count int(10) unsigned NOT NULL default '0',
+  imported_count int(10) unsigned NOT NULL default '0',
+  error_count int(10) unsigned NOT NULL default '0',
+  message varchar(255) NOT NULL default '',
+  created datetime NOT NULL,
+  PRIMARY KEY (log_id),
+  KEY source_created (source_id,created)
 ) ENGINE=MyISAM;";

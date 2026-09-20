@@ -12,6 +12,7 @@ $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
 $_TABLES['radio_events'] = $_DB_table_prefix . 'radio_events';
 $_TABLES['radio_sources'] = $_DB_table_prefix . 'radio_sources';
+$_TABLES['radio_source_sync_log'] = $_DB_table_prefix . 'radio_source_sync_log';
 
 if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     $_RADIO_CONF = array();
@@ -2154,6 +2155,7 @@ function RADIO_dashboardSummary()
         'replay_count' => $replayCount,
         'stats' => RADIO_getStatsSummary(30),
         'sources' => RADIO_sourceSummary(),
+        'feed_sync' => RADIO_feedSyncSummary(),
         'live_source' => $live['source'],
         'current_media' => $live['media'] !== false ? array(
             'media_id' => $live['media']['external_id'],
@@ -2195,7 +2197,8 @@ function plugin_getcapabilities_radio()
             'radio.stats.read',
             'radio.source.read',
             'radio.source.summary',
-            'radio.source.feed.read'
+            'radio.source.feed.read',
+            'radio.source.sync.read'
         )
     );
 }
@@ -2397,7 +2400,7 @@ function plugin_upgrade_radio()
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_members',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_anon',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
     }
-    if (!$ok || !RADIO_ensureStatsTable() || !RADIO_ensureSourcesTable()) return false;
+    if (!$ok || !RADIO_ensureStatsTable() || !RADIO_ensureSourcesTable() || !RADIO_ensureFeedSyncSchema()) return false;
 
     DB_query(
         "UPDATE {$_TABLES['plugins']} SET "
