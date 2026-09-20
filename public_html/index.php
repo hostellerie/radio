@@ -34,7 +34,32 @@ if ($id > 0) {
 }
 
 $media = RADIO_getMediaList(50, true);
-$content = '<div class="radio-catalogue"><h1>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
+$nowPlaying = RADIO_getNowPlaying(time());
+$upcomingPrograms = RADIO_getUpcoming(5, time());
+
+$content = '<div class="radio-status" style="margin:0 0 1.5rem;padding:1rem;border:1px solid rgba(127,127,127,.3);border-radius:.4rem">';
+if ($nowPlaying !== false) {
+    $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+        . '<a href="' . htmlspecialchars($nowPlaying['url'], ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($nowPlaying['program_title'], ENT_QUOTES, 'UTF-8') . '</a> '
+        . '<small>(' . date('H:i', $nowPlaying['start']) . '–' . date('H:i', $nowPlaying['end']) . ')</small>';
+} else {
+    $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+        . htmlspecialchars($LANG_RADIO['nothing_scheduled_now'], ENT_QUOTES, 'UTF-8');
+}
+if (count($upcomingPrograms) > 0) {
+    $content .= '<h2 style="font-size:1rem">' . htmlspecialchars($LANG_RADIO['up_next'], ENT_QUOTES, 'UTF-8') . '</h2><ul>';
+    foreach ($upcomingPrograms as $program) {
+        $content .= '<li>' . date('Y-m-d H:i', $program['start']) . ' — <a href="'
+            . htmlspecialchars($program['url'], ENT_QUOTES, 'UTF-8') . '">'
+            . htmlspecialchars($program['program_title'], ENT_QUOTES, 'UTF-8') . '</a></li>';
+    }
+    $content .= '</ul>';
+}
+$content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
+
+$content .= '<div class="radio-catalogue"><h1>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
 if (count($media) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['public_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
 } else {

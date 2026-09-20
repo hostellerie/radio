@@ -901,6 +901,37 @@ function RADIO_getUpcoming($limit, $fromTs)
     return $items;
 }
 
+
+function RADIO_dashboardSummary()
+{
+    global $_TABLES;
+
+    $mediaCount = (int) DB_getItem($_TABLES['radio_media'], 'COUNT(*)', "status='published'");
+    $programCount = (int) DB_getItem($_TABLES['radio_programs'], 'COUNT(*)', "status='published'");
+    $now = RADIO_getNowPlaying(time());
+    $upcoming = RADIO_getUpcoming(50, time());
+    $weekLimit = strtotime('+7 days');
+    $scheduledWeek = 0;
+    foreach ($upcoming as $item) {
+        if ($item['start'] < $weekLimit) {
+            $scheduledWeek++;
+        }
+    }
+
+    return array(
+        'media_count' => $mediaCount,
+        'program_count' => $programCount,
+        'scheduled_next_7_days' => $scheduledWeek,
+        'now_playing' => $now !== false ? array(
+            'program_id' => RADIO_externalId('program', $now['program_id']),
+            'title' => $now['program_title'],
+            'url' => $now['url'],
+            'start' => date('c', $now['start']),
+            'end' => date('c', $now['end'])
+        ) : false
+    );
+}
+
 function plugin_getcapabilities_radio()
 {
     return array(

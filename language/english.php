@@ -26,6 +26,12 @@ $LANG_RADIO = array(
     'download' => 'Download',
     'back_to_library' => 'Back to Radio',
     'public_empty' => 'No published audio is available yet.',
+    'public_schedule' => 'Radio schedule',
+    'now_playing' => 'Now playing',
+    'nothing_scheduled_now' => 'No programme is scheduled right now.',
+    'up_next' => 'Up next',
+    'view_full_schedule' => 'View full schedule',
+
     'media_not_found' => 'This audio item is not available.',
     'upload_saved' => 'The audio file was added.',
     'upload_failed' => 'The audio file could not be added.',
