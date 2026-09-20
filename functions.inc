@@ -412,6 +412,10 @@ function RADIO_deleteMedia($id)
         return false;
     }
 
+    if (!empty($row['cover_name'])) {
+        RADIO_deleteCover($row['cover_name']);
+    }
+
     $path = RADIO_storageDir() . basename($row['storage_name']);
     if (is_file($path) && !@unlink($path)) {
         COM_errorLog('Radio: database row deleted but media file could not be removed: ' . $path, 1);
@@ -596,6 +600,10 @@ function RADIO_deleteProgram($id)
     $id = (int) $id;
     if ($id < 1 || RADIO_getProgram($id, false) === false) {
         return false;
+    }
+    $program = RADIO_getProgram($id, false);
+    if ($program !== false && !empty($program['cover_name'])) {
+        RADIO_deleteCover($program['cover_name']);
     }
     DB_query("DELETE FROM {$_TABLES['radio_schedule']} WHERE program_id=" . $id);
     DB_query("DELETE FROM {$_TABLES['radio_program_items']} WHERE program_id=" . $id);
