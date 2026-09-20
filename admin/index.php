@@ -102,8 +102,6 @@ if (isset($_POST['delete_media'])) {
 
 $media = RADIO_getMediaList(100, false);
 $token = SEC_createToken();
-$configUrl = $_CONF['site_admin_url'] . '/configuration.php?conf_group=radio';
-
 $content = '<section class="radio-admin__panel"><h2>'
     . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . '</h2><p><strong>'
     . htmlspecialchars($ready ? $LANG_RADIO['storage_ready'] : $LANG_RADIO['storage_unavailable'], ENT_QUOTES, 'UTF-8')
@@ -191,7 +189,7 @@ if (count($media) === 0) {
             . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
             . '<br><textarea name="description" rows="3" style="width:100%">'
             . htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8') . '</textarea></label></p>'
-            . (RADIO_sourceKind($row) !== 'local' ? '<p><strong>' . htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8') . ':</strong> ' . htmlspecialchars($row['source_kind'], ENT_QUOTES, 'UTF-8') . '<br><strong>' . htmlspecialchars($LANG_RADIO['source_url'], ENT_QUOTES, 'UTF-8') . ':</strong> <code>' . htmlspecialchars($row['source_url'], ENT_QUOTES, 'UTF-8') . '</code></p>' : '')
+            . (RADIO_sourceKind($row) !== 'local' ? '<p><strong>' . htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8') . ':</strong> ' . htmlspecialchars(RADIO_adminSourceKindLabel($row['source_kind']), ENT_QUOTES, 'UTF-8') . '<br><strong>' . htmlspecialchars($LANG_RADIO['source_url'], ENT_QUOTES, 'UTF-8') . ':</strong> <code>' . htmlspecialchars($row['source_url'], ENT_QUOTES, 'UTF-8') . '</code></p>' : '')
             . '<p>' . htmlspecialchars($LANG_RADIO['file'], ENT_QUOTES, 'UTF-8') . ': <code>'
             . htmlspecialchars($row['original_name'], ENT_QUOTES, 'UTF-8') . '</code> · '
             . htmlspecialchars($row['mime_type'], ENT_QUOTES, 'UTF-8') . ' · '
