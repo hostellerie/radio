@@ -91,7 +91,7 @@ if (count($programs) === 0) {
     foreach ($programs as $program) {
         $content .= '<li><a href="?program_id=' . (int) $program['program_id'] . '">'
             . htmlspecialchars($program['title'], ENT_QUOTES, 'UTF-8') . '</a> <small>('
-            . htmlspecialchars($program['status'], ENT_QUOTES, 'UTF-8') . ')</small></li>';
+            . htmlspecialchars(RADIO_adminStatusLabel($program['status']), ENT_QUOTES, 'UTF-8') . ')</small></li>';
     }
     $content .= '</ul>';
 }
@@ -139,7 +139,7 @@ if ($selected) {
         $content .= '<ol>';
         foreach ($items as $item) {
             $content .= '<li style="margin:.5rem 0"><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
-                . '<small>(' . htmlspecialchars($item['media_type'], ENT_QUOTES, 'UTF-8') . ')</small>'
+                . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ')</small>'
                 . '<form method="post" action="" style="display:inline;margin-left:.5rem">'
                 . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
                 . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
@@ -157,7 +157,7 @@ if ($selected) {
             . ' <select name="media_id">';
         foreach ($media as $row) {
             $content .= '<option value="' . (int) $row['media_id'] . '">'
-                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . ' [' . htmlspecialchars($row['status'], ENT_QUOTES, 'UTF-8') . ']</option>';
+                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . ' [' . htmlspecialchars(RADIO_adminStatusLabel($row['status']), ENT_QUOTES, 'UTF-8') . ']</option>';
         }
         $content .= '</select></label> '
             . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
