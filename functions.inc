@@ -20,6 +20,23 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     }
 }
 
+function RADIO_externalId($type, $id)
+{
+    $type = $type === 'program' ? 'program' : 'media';
+    return $type . ':' . (int) $id;
+}
+
+function RADIO_parseExternalId($id)
+{
+    if (is_string($id) && preg_match('/^(media|program):(\\d+)$/', $id, $m)) {
+        return array('type' => $m[1], 'id' => (int) $m[2]);
+    }
+    if (is_numeric($id)) {
+        return array('type' => 'media', 'id' => (int) $id);
+    }
+    return false;
+}
+
 function RADIO_storageDir()
 {
     global $_CONF;
@@ -185,7 +202,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
 
     $id = (int) DB_insertId();
     if (function_exists('PLG_itemSaved')) {
-        PLG_itemSaved($id, 'radio');
+        PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
     }
     return $id;
 }
@@ -257,7 +274,7 @@ function RADIO_updateMedia($id, $metadata)
         return false;
     }
     if (function_exists('PLG_itemSaved')) {
-        PLG_itemSaved((int) $id, 'radio');
+        PLG_itemSaved(RADIO_externalId('media', (int) $id), 'radio');
     }
     return true;
 }
@@ -282,7 +299,7 @@ function RADIO_deleteMedia($id)
     }
 
     if (function_exists('PLG_itemDeleted')) {
-        PLG_itemDeleted((int) $id, 'radio');
+        PLG_itemDeleted(RADIO_externalId('media', (int) $id), 'radio');
     }
     return true;
 }
@@ -443,7 +460,7 @@ function RADIO_saveProgram($id, $data)
     }
 
     if (function_exists('PLG_itemSaved')) {
-        PLG_itemSaved($programId, 'radio');
+        PLG_itemSaved(RADIO_externalId('program', $programId), 'radio');
     }
     return $programId;
 }
@@ -462,7 +479,7 @@ function RADIO_deleteProgram($id)
         return false;
     }
     if (function_exists('PLG_itemDeleted')) {
-        PLG_itemDeleted($id, 'radio');
+        PLG_itemDeleted(RADIO_externalId('program', $id), 'radio');
     }
     return true;
 }
@@ -560,10 +577,28 @@ function plugin_getcapabilities_radio()
 
 function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
 {
-    global $_TABLES;
+    global $_TABLES, $_CONF;
     $fields = array_map('trim', explode(',', $what));
+
     if ($id === '*') {
+        $type = isset($options['type']) ? $options['type'] : 'media';
         $limit = isset($options['limit']) ? max(1, min(100, (int) $options['limit'])) : 20;
+        $items = array();
+
+        if ($type === 'program') {
+            $sql = "SELECT * FROM {$_TABLES['radio_programs']} WHERE status='published'";
+            if (!empty($options['since'])) {
+                $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
+                $sql .= " AND modified >= '" . $since . "'";
+            }
+            $sql .= ' ORDER BY modified DESC LIMIT ' . $limit;
+            $result = DB_query($sql);
+            while ($row = DB_fetchArray($result)) {
+                $items[] = RADIO_programInfoFromRow($row, $fields);
+            }
+            return $items;
+        }
+
         $sql = "SELECT media_id,title,description,media_type,created,modified,hits FROM {$_TABLES['radio_media']} WHERE status='published'";
         if (!empty($options['since'])) {
             $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
@@ -578,38 +613,28 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
             $sql .= ' ORDER BY modified DESC';
         }
         $sql .= ' LIMIT ' . $limit;
-
         $result = DB_query($sql);
-        $items = array();
         while ($row = DB_fetchArray($result)) {
             $items[] = RADIO_itemInfoFromRow($row, $fields);
         }
         return $items;
     }
 
-    $row = RADIO_getMedia((int) $id, true);
-    if ($row === false) {
+    $identity = RADIO_parseExternalId($id);
+    if ($identity === false || $identity['id'] < 1) {
         return array();
     }
-    return RADIO_itemInfoFromRow($row, $fields);
+    if ($identity['type'] === 'program') {
+        $row = RADIO_getProgram($identity['id'], true);
+        return $row === false ? array() : RADIO_programInfoFromRow($row, $fields);
+    }
+
+    $row = RADIO_getMedia($identity['id'], true);
+    return $row === false ? array() : RADIO_itemInfoFromRow($row, $fields);
 }
 
-function RADIO_itemInfoFromRow($row, $fields)
+function RADIO_selectInfoFields($all, $fields)
 {
-    global $_CONF;
-    $all = array(
-        'id' => (int) $row['media_id'],
-        'type' => 'radio',
-        'subtype' => $row['media_type'],
-        'title' => $row['title'],
-        'url' => $_CONF['site_url'] . '/radio/index.php?id=' . (int) $row['media_id'],
-        'canonical_url' => $_CONF['site_url'] . '/radio/index.php?id=' . (int) $row['media_id'],
-        'description' => $row['description'],
-        'excerpt' => $row['description'],
-        'date-created' => $row['created'],
-        'date-modified' => $row['modified'],
-        'hits' => (int) $row['hits']
-    );
     if (empty($fields) || in_array('*', $fields)) {
         return $all;
     }
@@ -622,11 +647,60 @@ function RADIO_itemInfoFromRow($row, $fields)
     return $out;
 }
 
+function RADIO_itemInfoFromRow($row, $fields)
+{
+    global $_CONF;
+    $id = (int) $row['media_id'];
+    $all = array(
+        'id' => RADIO_externalId('media', $id),
+        'type' => 'radio',
+        'subtype' => 'media',
+        'media_type' => $row['media_type'],
+        'title' => $row['title'],
+        'url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
+        'canonical_url' => $_CONF['site_url'] . '/radio/index.php?id=' . $id,
+        'description' => $row['description'],
+        'excerpt' => $row['description'],
+        'date-created' => $row['created'],
+        'date-modified' => $row['modified'],
+        'hits' => (int) $row['hits']
+    );
+    return RADIO_selectInfoFields($all, $fields);
+}
+
+function RADIO_programInfoFromRow($row, $fields)
+{
+    global $_CONF;
+    $id = (int) $row['program_id'];
+    $all = array(
+        'id' => RADIO_externalId('program', $id),
+        'type' => 'radio',
+        'subtype' => 'program',
+        'title' => $row['title'],
+        'url' => $_CONF['site_url'] . '/radio/program.php?id=' . $id,
+        'canonical_url' => $_CONF['site_url'] . '/radio/program.php?id=' . $id,
+        'description' => $row['description'],
+        'excerpt' => $row['description'],
+        'date-created' => $row['created'],
+        'date-modified' => $row['modified']
+    );
+    return RADIO_selectInfoFields($all, $fields);
+}
+
 function plugin_idtourl_radio($sub_type, $item_id)
 {
     global $_CONF;
-    $item_id = (int) $item_id;
-    return $item_id > 0 ? $_CONF['site_url'] . '/radio/index.php?id=' . $item_id : '';
+    $identity = RADIO_parseExternalId($item_id);
+    if ($identity === false && ($sub_type === 'media' || $sub_type === 'program')) {
+        $identity = array('type' => $sub_type, 'id' => (int) $item_id);
+    }
+    if ($identity === false || $identity['id'] < 1) {
+        return '';
+    }
+    if ($identity['type'] === 'program') {
+        return $_CONF['site_url'] . '/radio/program.php?id=' . $identity['id'];
+    }
+    return $_CONF['site_url'] . '/radio/index.php?id=' . $identity['id'];
 }
 
 function plugin_getadminoption_radio()
