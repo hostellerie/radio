@@ -73,13 +73,17 @@ radio_contract_require(
     strpos($functions, "language/english.php") !== false,
     'Radio language bootstrap must provide an English fallback.'
 );
+radio_contract_require(
+    strpos($functions, 'global $_CONF, $_TABLES, $_DB_table_prefix, $_RADIO_CONF, $LANG_RADIO;') !== false,
+    'functions.inc must declare Geeklog globals before language bootstrap.'
+);
 foreach (array('english' => $english, 'french' => $french) as $languageName => $languageFile) {
     radio_contract_require(
         strpos($languageFile, 'global $LANG_RADIO, $LANG_configsections, $LANG_confignames, $LANG_configsubgroups, $LANG_tab, $LANG_fs, $LANG_configselects;') !== false,
         'Radio language files must declare Geeklog configuration language arrays as globals: ' . $languageName
     );
     radio_contract_require(
-        strpos($languageFile, "$LANG_confignames['radio']") !== false,
+        strpos($languageFile, "\$LANG_confignames['radio']") !== false,
         'Radio language file must define LANG_confignames[radio]: ' . $languageName
     );
 }
