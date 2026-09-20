@@ -14,6 +14,65 @@ $message = '';
 $preview = false;
 $previewSource = false;
 
+if (isset($_POST['set_sync_mode'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['feed_sources']);
+    } else {
+        $sourceId = isset($_POST['source_id']) ? (int) $_POST['source_id'] : 0;
+        $mode = isset($_POST['sync_mode']) ? (string) $_POST['sync_mode'] : 'preview';
+        $message = COM_showMessageText(
+            RADIO_setFeedSourceSyncMode($sourceId, $mode)
+                ? $LANG_RADIO['feed_sync_mode_saved']
+                : $LANG_RADIO['feed_sync_mode_failed'],
+            $LANG_RADIO['feed_sources']
+        );
+    }
+}
+
+if (isset($_POST['sync_source'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['feed_sources']);
+    } else {
+        $sourceId = isset($_POST['source_id']) ? (int) $_POST['source_id'] : 0;
+        $error = '';
+        $summary = RADIO_syncFeedSource($sourceId, 20, $error);
+        if ($summary === false) {
+            $key = isset($LANG_RADIO[$error]) ? $error : 'feed_sync_failed';
+            $message = COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['feed_sources']);
+        } else {
+            $message = COM_showMessageText(
+                sprintf(
+                    $LANG_RADIO['feed_sync_result'],
+                    (int) $summary['new'],
+                    (int) $summary['existing'],
+                    (int) $summary['imported'],
+                    (int) $summary['errors']
+                ),
+                $LANG_RADIO['feed_sources']
+            );
+        }
+    }
+}
+
+if (isset($_POST['sync_all'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['feed_sources']);
+    } else {
+        $all = RADIO_syncEnabledFeeds(20);
+        $message = COM_showMessageText(
+            sprintf(
+                $LANG_RADIO['feed_sync_all_result'],
+                (int) $all['sources'],
+                (int) $all['new'],
+                (int) $all['existing'],
+                (int) $all['imported'],
+                (int) $all['errors']
+            ),
+            $LANG_RADIO['feed_sources']
+        );
+    }
+}
+
 if (isset($_POST['save_source'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['feed_sources']);
@@ -75,11 +134,17 @@ $content .= '<h2>' . htmlspecialchars($LANG_RADIO['feed_source_new'], ENT_QUOTES
     . '<p><label>' . htmlspecialchars($LANG_RADIO['source_url'], ENT_QUOTES, 'UTF-8') . '<br><input type="url" name="source_url" maxlength="2048" required style="width:100%"></label></p>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['source_provider'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="source_provider" maxlength="255" style="width:100%"></label></p>'
     . '<p><label><input type="checkbox" name="source_enabled" value="1" checked> ' . htmlspecialchars($LANG_RADIO['enabled'], ENT_QUOTES, 'UTF-8') . '</label></p>'
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['feed_sync_mode'], ENT_QUOTES, 'UTF-8') . ' <select name="sync_mode"><option value="preview">' . htmlspecialchars($LANG_RADIO['feed_sync_preview'], ENT_QUOTES, 'UTF-8') . '</option><option value="drafts">' . htmlspecialchars($LANG_RADIO['feed_sync_drafts'], ENT_QUOTES, 'UTF-8') . '</option></select></label></p>'
     . '<fieldset><legend>' . htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8') . '</legend>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8') . ' ' . SEC_getGroupDropdown(RADIO_defaultGroupId(), 3) . '</label></p>'
     . SEC_getPermissionsHTML(3, 2, 2, 0) . '</fieldset>'
     . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
     . '<p><button type="submit" name="save_source" value="1">' . htmlspecialchars($LANG_RADIO['save'], ENT_QUOTES, 'UTF-8') . '</button></p></form>';
+
+$content .= '<form method="post" action="" style="margin:1rem 0">'
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
+    . '<button type="submit" name="sync_all" value="1">' . htmlspecialchars($LANG_RADIO['feed_sync_all'], ENT_QUOTES, 'UTF-8') . '</button>'
+    . '</form>';
 
 foreach ($sources as $source) {
     $content .= '<hr><form method="post" action=""><p><strong>' . htmlspecialchars($source['title'], ENT_QUOTES, 'UTF-8') . '</strong><br><code>'
@@ -88,6 +153,19 @@ foreach ($sources as $source) {
         . htmlspecialchars($LANG_RADIO['feed_last_status'], ENT_QUOTES, 'UTF-8') . ': ' . (int)$source['last_status']
         . (!empty($source['last_error']) ? ' · ' . htmlspecialchars($LANG_RADIO['feed_last_error'], ENT_QUOTES, 'UTF-8') . ': ' . htmlspecialchars($source['last_error'], ENT_QUOTES, 'UTF-8') : '')
         . '</small></p><input type="hidden" name="source_id" value="' . (int)$source['source_id'] . '"><input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
+        . '<p><strong>' . htmlspecialchars($LANG_RADIO['feed_sync_mode'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+        . htmlspecialchars(isset($source['sync_mode']) && $source['sync_mode'] === 'drafts' ? $LANG_RADIO['feed_sync_drafts'] : $LANG_RADIO['feed_sync_preview'], ENT_QUOTES, 'UTF-8') . '<br>'
+        . '<strong>' . htmlspecialchars($LANG_RADIO['feed_last_sync'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+        . htmlspecialchars((string) $source['last_sync'], ENT_QUOTES, 'UTF-8') . '<br>'
+        . '<small>' . htmlspecialchars($LANG_RADIO['feed_sync_new'], ENT_QUOTES, 'UTF-8') . ': ' . (int) $source['last_sync_new'] . ' · '
+        . htmlspecialchars($LANG_RADIO['feed_sync_existing'], ENT_QUOTES, 'UTF-8') . ': ' . (int) $source['last_sync_existing'] . ' · '
+        . htmlspecialchars($LANG_RADIO['feed_sync_imported'], ENT_QUOTES, 'UTF-8') . ': ' . (int) $source['last_sync_imported'] . ' · '
+        . htmlspecialchars($LANG_RADIO['feed_sync_errors'], ENT_QUOTES, 'UTF-8') . ': ' . (int) $source['last_sync_errors'] . '</small></p>'
+        . '<p><label>' . htmlspecialchars($LANG_RADIO['feed_sync_mode'], ENT_QUOTES, 'UTF-8') . ' <select name="sync_mode">'
+        . '<option value="preview"' . (!isset($source['sync_mode']) || $source['sync_mode'] !== 'drafts' ? ' selected' : '') . '>' . htmlspecialchars($LANG_RADIO['feed_sync_preview'], ENT_QUOTES, 'UTF-8') . '</option>'
+        . '<option value="drafts"' . (isset($source['sync_mode']) && $source['sync_mode'] === 'drafts' ? ' selected' : '') . '>' . htmlspecialchars($LANG_RADIO['feed_sync_drafts'], ENT_QUOTES, 'UTF-8') . '</option>'
+        . '</select></label> <button type="submit" name="set_sync_mode" value="1">' . htmlspecialchars($LANG_RADIO['save'], ENT_QUOTES, 'UTF-8') . '</button></p>'
+        . '<button type="submit" name="sync_source" value="1">' . htmlspecialchars($LANG_RADIO['feed_sync_now'], ENT_QUOTES, 'UTF-8') . '</button> '
         . '<button type="submit" name="preview_source" value="1">' . htmlspecialchars($LANG_RADIO['feed_preview'], ENT_QUOTES, 'UTF-8') . '</button> '
         . '<button type="submit" name="delete_source" value="1">' . htmlspecialchars($LANG_RADIO['delete'], ENT_QUOTES, 'UTF-8') . '</button></form>';
 }
@@ -109,5 +187,26 @@ if (is_array($preview) && $previewSource !== false && empty($preview['not_modifi
         }
     }
 }
+$syncLog = RADIO_getFeedSyncLog(0, 15);
+if (!empty($syncLog)) {
+    $content .= '<h2>' . htmlspecialchars($LANG_RADIO['feed_sync_history'], ENT_QUOTES, 'UTF-8') . '</h2><table class="admin-list"><thead><tr>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_last_sync'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_source_title'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_sync_mode'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_sync_new'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_sync_imported'], ENT_QUOTES, 'UTF-8') . '</th>'
+        . '<th>' . htmlspecialchars($LANG_RADIO['feed_sync_errors'], ENT_QUOTES, 'UTF-8') . '</th></tr></thead><tbody>';
+    foreach ($syncLog as $log) {
+        $logSource = RADIO_getFeedSource((int) $log['source_id'], false);
+        $content .= '<tr><td>' . htmlspecialchars($log['created'], ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . htmlspecialchars($logSource ? $logSource['title'] : ('#' . (int) $log['source_id']), ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . htmlspecialchars($log['sync_mode'], ENT_QUOTES, 'UTF-8') . '</td>'
+            . '<td>' . (int) $log['new_count'] . '</td>'
+            . '<td>' . (int) $log['imported_count'] . '</td>'
+            . '<td>' . (int) $log['error_count'] . '</td></tr>';
+    }
+    $content .= '</tbody></table>';
+}
+
 $content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
 COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['feed_sources'])));
