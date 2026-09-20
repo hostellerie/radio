@@ -375,13 +375,13 @@ Follow `plugin-content-interoperability-contract.md`.
 
 Evaluate according to usefulness:
 
-- [ ] Geeklog search integration;
-- [ ] What's New integration;
-- [ ] XML Sitemap native collector;
+- [x] Geeklog search integration for published media and programmes;
+- [x] What's New integration with configurable interval and limit;
+- [x] XML Sitemap native collector for published media and programmes;
 - [ ] native statistics callbacks;
 - [ ] autotags/embedding;
 - [ ] dynamic blocks;
-- [ ] related-content integration.
+- [x] Related-items callback using real Geeklog topic assignments when they exist.
 
 ---
 
@@ -431,7 +431,7 @@ radio.schedule.update
 radio.source.import
 ```
 
-- [ ] Add `plugin_getcapabilities_radio()` once the capability set is stable enough.
+- [x] Add `plugin_getcapabilities_radio()` and expose shared content/service capabilities.
 - [ ] Use bounded Geeklog services for specialized data that does not naturally fit Item Info.
 - [ ] Do not create Agent-specific, Hub-specific or Eclipse-specific parallel APIs.
 - [ ] Never treat a declared capability as write authorization.
@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.2**.
+Current development version: **0.1.3**.
 
 Focus:
 
