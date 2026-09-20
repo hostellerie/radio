@@ -572,6 +572,61 @@ Rules:
 
 ---
 
+
+## Manual live takeover / on-air override
+
+Radio should eventually support an explicit manual live mode that temporarily overrides the normal schedule without turning Geeklog into a streaming server.
+
+Target priority:
+
+```text
+1. Manual live takeover
+2. Scheduled programme
+3. Automatic fallback rotation
+```
+
+- [ ] Add a manual `live_override` / on-air state owned by Radio.
+- [ ] Keep the live source external to Geeklog: Icecast/Shoutcast-compatible stream, studio encoder or another supported streaming backend.
+- [ ] Allow an authorized administrator to start and stop a live takeover from Radio administration.
+- [ ] Store only the operational state and editorial metadata needed by Radio, for example:
+  - enabled;
+  - source id / provider reference;
+  - title;
+  - host / presenter;
+  - started at;
+  - started by;
+  - optional expected end;
+  - optional public description / artwork.
+- [ ] Make the manual live state take priority in `now playing`, `live.php`, Agent-facing services and Eclipse dashboard data.
+- [ ] When the live takeover ends, automatically return to the currently scheduled programme if one exists, otherwise to automatic rotation.
+- [ ] Never require a long-running PHP request for live audio transport.
+- [ ] Keep stream credentials and encoder secrets outside public Radio media records and templates.
+- [ ] Distinguish editorial "on air" state from the actual stream health state.
+- [ ] Expose clear administrator diagnostics when the declared live stream is unavailable.
+- [ ] Add lifecycle/audit information for live start/stop events without collecting unnecessary listener identity data.
+- [ ] Ensure ACL and multisite isolation for live controls, provider credentials and site-specific on-air state.
+- [ ] Keep this feature compatible with later dedicated broadcast backends and provider adapters.
+
+Possible administration concept:
+
+```text
+LIVE
+
+Status: Off air
+Source: Main studio
+Title: Special broadcast
+Host: ...
+
+[ Start live ]
+
+When active:
+
+LIVE — ON AIR
+Started: ...
+Source: ...
+[ Stop live ]
+```
+
 # Phase 15 — Optional dedicated broadcast backend
 
 After the synchronized web-radio mode is stable, evaluate integration with a dedicated streaming backend.
