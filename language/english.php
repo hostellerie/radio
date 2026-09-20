@@ -185,6 +185,7 @@ $LANG_RADIO = array(
     'feed_import' => 'Import as remote reference',
     'feed_imported' => 'The episode was imported as a draft remote Radio reference.',
     'feed_import_failed' => 'The episode could not be imported.',
+    'feed_episode_exists' => 'This feed episode is already present in Radio.',
     'feed_last_checked' => 'Last checked',
     'feed_last_status' => 'HTTP status',
     'feed_last_error' => 'Last error',
