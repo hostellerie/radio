@@ -371,6 +371,174 @@ function RADIO_sendMedia($row, $download)
     exit;
 }
 
+
+function RADIO_getPrograms($limit, $publishedOnly)
+{
+    global $_TABLES;
+    $limit = max(1, min(200, (int) $limit));
+    $where = $publishedOnly ? " WHERE status='published'" : '';
+    $result = DB_query("SELECT * FROM {$_TABLES['radio_programs']}" . $where . " ORDER BY modified DESC, program_id DESC LIMIT " . $limit);
+    $items = array();
+    while ($row = DB_fetchArray($result)) {
+        $items[] = $row;
+    }
+    return $items;
+}
+
+function RADIO_getProgram($id, $publishedOnly)
+{
+    global $_TABLES;
+    $id = (int) $id;
+    if ($id < 1) {
+        return false;
+    }
+    $where = "program_id=" . $id;
+    if ($publishedOnly) {
+        $where .= " AND status='published'";
+    }
+    $result = DB_query("SELECT * FROM {$_TABLES['radio_programs']} WHERE " . $where);
+    return DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
+}
+
+function RADIO_saveProgram($id, $data)
+{
+    global $_TABLES, $_USER;
+    $title = trim(isset($data['program_title']) ? (string) $data['program_title'] : '');
+    if ($title === '') {
+        return false;
+    }
+    $description = trim(isset($data['program_description']) ? (string) $data['program_description'] : '');
+    $status = isset($data['program_status']) && $data['program_status'] === 'published' ? 'published' : 'draft';
+    $now = date('Y-m-d H:i:s');
+
+    if ((int) $id > 0) {
+        DB_query(
+            "UPDATE {$_TABLES['radio_programs']} SET "
+            . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
+            . "description='" . DB_escapeString($description) . "',"
+            . "status='" . DB_escapeString($status) . "',"
+            . "modified='" . DB_escapeString($now) . "' "
+            . "WHERE program_id=" . (int) $id
+        );
+        if (DB_error()) {
+            return false;
+        }
+        $programId = (int) $id;
+    } else {
+        $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
+        DB_query(
+            "INSERT INTO {$_TABLES['radio_programs']} "
+            . "(title,description,status,owner_id,created,modified) VALUES ("
+            . "'" . DB_escapeString(substr($title, 0, 255)) . "',"
+            . "'" . DB_escapeString($description) . "',"
+            . "'" . DB_escapeString($status) . "',"
+            . $owner . ","
+            . "'" . DB_escapeString($now) . "',"
+            . "'" . DB_escapeString($now) . "')"
+        );
+        if (DB_error()) {
+            return false;
+        }
+        $programId = (int) DB_insertId();
+    }
+
+    if (function_exists('PLG_itemSaved')) {
+        PLG_itemSaved($programId, 'radio');
+    }
+    return $programId;
+}
+
+function RADIO_deleteProgram($id)
+{
+    global $_TABLES;
+    $id = (int) $id;
+    if ($id < 1 || RADIO_getProgram($id, false) === false) {
+        return false;
+    }
+    DB_query("DELETE FROM {$_TABLES['radio_schedule']} WHERE program_id=" . $id);
+    DB_query("DELETE FROM {$_TABLES['radio_program_items']} WHERE program_id=" . $id);
+    DB_query("DELETE FROM {$_TABLES['radio_programs']} WHERE program_id=" . $id);
+    if (DB_error()) {
+        return false;
+    }
+    if (function_exists('PLG_itemDeleted')) {
+        PLG_itemDeleted($id, 'radio');
+    }
+    return true;
+}
+
+function RADIO_getProgramItems($programId)
+{
+    global $_TABLES;
+    $programId = (int) $programId;
+    $sql = "SELECT pi.item_id,pi.sort_order,m.* "
+        . "FROM {$_TABLES['radio_program_items']} pi "
+        . "INNER JOIN {$_TABLES['radio_media']} m ON m.media_id=pi.media_id "
+        . "WHERE pi.program_id=" . $programId . " "
+        . "ORDER BY pi.sort_order ASC, pi.item_id ASC";
+    $result = DB_query($sql);
+    $items = array();
+    while ($row = DB_fetchArray($result)) {
+        $items[] = $row;
+    }
+    return $items;
+}
+
+function RADIO_addProgramItem($programId, $mediaId)
+{
+    global $_TABLES;
+    $programId = (int) $programId;
+    $mediaId = (int) $mediaId;
+    if (RADIO_getProgram($programId, false) === false || RADIO_getMedia($mediaId, false) === false) {
+        return false;
+    }
+    $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
+    $sort = ((int) $max) + 10;
+    DB_query(
+        "INSERT INTO {$_TABLES['radio_program_items']} (program_id,media_id,sort_order) VALUES ("
+        . $programId . "," . $mediaId . "," . $sort . ")"
+    );
+    return !DB_error();
+}
+
+function RADIO_removeProgramItem($itemId, $programId)
+{
+    global $_TABLES;
+    DB_query(
+        "DELETE FROM {$_TABLES['radio_program_items']} WHERE item_id=" . (int) $itemId
+        . " AND program_id=" . (int) $programId
+    );
+    return !DB_error();
+}
+
+function RADIO_moveProgramItem($itemId, $programId, $direction)
+{
+    global $_TABLES;
+    $items = RADIO_getProgramItems($programId);
+    $index = -1;
+    for ($i = 0; $i < count($items); $i++) {
+        if ((int) $items[$i]['item_id'] === (int) $itemId) {
+            $index = $i;
+            break;
+        }
+    }
+    if ($index < 0) {
+        return false;
+    }
+    $other = $direction === 'up' ? $index - 1 : $index + 1;
+    if ($other < 0 || $other >= count($items)) {
+        return true;
+    }
+
+    $aId = (int) $items[$index]['item_id'];
+    $bId = (int) $items[$other]['item_id'];
+    $aSort = (int) $items[$index]['sort_order'];
+    $bSort = (int) $items[$other]['sort_order'];
+    DB_query("UPDATE {$_TABLES['radio_program_items']} SET sort_order=" . $bSort . " WHERE item_id=" . $aId);
+    DB_query("UPDATE {$_TABLES['radio_program_items']} SET sort_order=" . $aSort . " WHERE item_id=" . $bId);
+    return !DB_error();
+}
+
 function plugin_getcapabilities_radio()
 {
     return array(

@@ -93,7 +93,9 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/programs.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/media.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/sql/mysql_install.php'
 
       - name: Upload workflow artifact
