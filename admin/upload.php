@@ -69,11 +69,6 @@ $template->set_var(array(
 ));
 $content = $template->finish($template->parse('output', 'page'));
 
-$durationJs = '<script>(function(){var file=document.getElementById("radio-upload-file");var target=document.getElementById("radio-upload-duration");'
-    . 'if(file&&target){file.addEventListener("change",function(){if(!file.files||!file.files[0])return;'
-    . 'var a=document.createElement("audio");var u=URL.createObjectURL(file.files[0]);a.preload="metadata";a.src=u;'
-    . 'a.addEventListener("loadedmetadata",function(){if(isFinite(a.duration)&&a.duration>0){target.value=Math.round(a.duration);}URL.revokeObjectURL(u);});});}})();</script>';
-
 $content = RADIO_adminRenderPage(
     'library',
     $LANG_RADIO['upload_title'],
@@ -86,6 +81,5 @@ $content = RADIO_adminRenderPage(
 
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['upload_title'],
-    'headercode' => RADIO_adminHeaderCode(),
-    'footercode' => $durationJs
+    'headercode' => RADIO_adminHeaderCode()
 )));
