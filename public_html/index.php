@@ -71,72 +71,89 @@ $liveState = RADIO_getLiveState(time());
 $nowPlaying = $liveState['program'];
 $upcomingPrograms = RADIO_getUpcoming(5, time());
 
-$content = '<div class="radio-status">';
+$content = '<div class="radio-public">';
+
 if ($liveState['media'] !== false) {
-    $radioDuration = max(1, (int) $liveState['media']['duration']);
-    $radioOffset = max(0, min($radioDuration, (int) $liveState['media']['offset']));
-    $content .= '<div class="radio-home-live" data-radio-home-live'
+    $content .= '<section class="radio-player-card radio-player-card--live" data-radio-home-live'
         . ' data-now-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/now.php', ENT_QUOTES, 'UTF-8') . '"'
         . ' data-event-endpoint="' . htmlspecialchars($_CONF['site_url'] . '/radio/event.php', ENT_QUOTES, 'UTF-8') . '">'
-        . '<div><strong>' . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-        . '<a data-radio-home-title href="' . htmlspecialchars($liveState['media']['item_url'], ENT_QUOTES, 'UTF-8') . '">'
-        . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a></div>';
+        . '<div class="radio-player-card__header">'
+        . '<span class="radio-live-badge"><span class="radio-live-dot" aria-hidden="true"></span>'
+        . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . '</span>'
+        . '</div>'
+        . '<div class="radio-player-card__body">'
+        . '<h1 class="radio-now-title"><a data-radio-home-title href="'
+        . htmlspecialchars($liveState['media']['item_url'], ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($liveState['media']['title'], ENT_QUOTES, 'UTF-8') . '</a></h1>';
+
     if ($nowPlaying !== false) {
-        $content .= '<div><small>' . htmlspecialchars($nowPlaying['program_title'], ENT_QUOTES, 'UTF-8')
-            . ' · ' . date('H:i', $nowPlaying['start']) . '–' . date('H:i', $nowPlaying['end']) . '</small></div>';
+        $content .= '<p class="radio-now-meta">'
+            . htmlspecialchars($nowPlaying['program_title'], ENT_QUOTES, 'UTF-8')
+            . ' · ' . date('H:i', $nowPlaying['start']) . '–' . date('H:i', $nowPlaying['end'])
+            . '</p>';
     }
-    $content .= '<div class="radio-on-air-progress" data-radio-progress data-offset="' . $radioOffset . '" data-duration="' . $radioDuration . '">'
-        . '<progress value="' . $radioOffset . '" max="' . $radioDuration . '"></progress> '
-        . '<small><span data-radio-elapsed>' . gmdate('i:s', $radioOffset) . '</span> / '
-        . '<span data-radio-duration>' . gmdate('i:s', $radioDuration) . '</span></small>'
+
+    $content .= '<audio id="radio-home-audio" controls preload="metadata" src="'
+        . htmlspecialchars($liveState['media']['stream_url'], ENT_QUOTES, 'UTF-8') . '"></audio>'
+        . '<div class="radio-wave-wrap">'
+        . '<canvas class="radio-wave" id="radio-home-wave" width="720" height="84" aria-hidden="true"></canvas>'
         . '</div>'
-        . '<div class="radio-home-controls">'
-        . '<audio id="radio-home-audio" controls preload="metadata" src="' . htmlspecialchars($liveState['media']['stream_url'], ENT_QUOTES, 'UTF-8') . '"></audio>'
-        . '<canvas class="radio-wave" id="radio-home-wave" width="360" height="56" aria-hidden="true"></canvas>'
         . '</div>'
-        . '</div>';
+        . '<nav class="radio-player-links" aria-label="' . htmlspecialchars($LANG_RADIO['plugin_name'], ENT_QUOTES, 'UTF-8') . '">'
+        . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/live.php', ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '</nav>'
+        . '</section>';
 } else {
-    $content .= '<strong>' . htmlspecialchars($LANG_RADIO['now_playing'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-        . htmlspecialchars($LANG_RADIO['nothing_scheduled_now'], ENT_QUOTES, 'UTF-8');
+    $content .= '<section class="radio-player-card radio-player-card--idle">'
+        . '<span class="radio-live-badge">' . htmlspecialchars($LANG_RADIO['public_on_air'], ENT_QUOTES, 'UTF-8') . '</span>'
+        . '<p>' . htmlspecialchars($LANG_RADIO['nothing_scheduled_now'], ENT_QUOTES, 'UTF-8') . '</p>'
+        . '</section>';
 }
+
 if (count($upcomingPrograms) > 0) {
-    $content .= '<h2 style="font-size:1rem">' . htmlspecialchars($LANG_RADIO['up_next'], ENT_QUOTES, 'UTF-8') . '</h2><ul>';
+    $content .= '<section class="radio-up-next"><h2>' . htmlspecialchars($LANG_RADIO['up_next'], ENT_QUOTES, 'UTF-8') . '</h2><ul>';
     foreach ($upcomingPrograms as $program) {
-        $content .= '<li>' . date('Y-m-d H:i', $program['start']) . ' — <a href="'
+        $content .= '<li><time>' . date('Y-m-d H:i', $program['start']) . '</time><a href="'
             . htmlspecialchars($program['url'], ENT_QUOTES, 'UTF-8') . '">'
             . htmlspecialchars($program['program_title'], ENT_QUOTES, 'UTF-8') . '</a></li>';
     }
-    $content .= '</ul>';
+    $content .= '</ul></section>';
 }
-$content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/live.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a> · '
-    . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
 
 if ($onDemandEnabled) {
-    $content .= '<div class="radio-catalogue"><h1>' . htmlspecialchars($LANG_RADIO['public_on_demand'], ENT_QUOTES, 'UTF-8') . '</h1>';
+    $content .= '<section class="radio-catalogue"><div class="radio-section-heading"><h2>'
+        . htmlspecialchars($LANG_RADIO['public_on_demand'], ENT_QUOTES, 'UTF-8') . '</h2></div>';
+
     if (count($media) === 0) {
         $content .= '<p>' . htmlspecialchars($LANG_RADIO['public_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
     } else {
         $content .= '<div class="radio-list">';
         foreach ($media as $row) {
             $itemUrl = $_CONF['site_url'] . '/radio/index.php?id=' . (int) $row['media_id'];
-            $content .= '<article><h2><a href="'
+            $content .= '<article class="radio-media-card">'
+                . '<div class="radio-media-card__content"><h3><a href="'
                 . htmlspecialchars($itemUrl, ENT_QUOTES, 'UTF-8') . '">'
-                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . '</a></h2>';
+                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . '</a></h3>';
+
             if ($row['description'] !== '') {
                 $content .= '<p>' . nl2br(htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
             }
-            $content .= '<audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="metadata" style="width:100%;max-width:800px" src="'
-                . htmlspecialchars(RADIO_mediaUrl((int) $row['media_id'], false), ENT_QUOTES, 'UTF-8') . '"></audio></article>';
+
+            $content .= '</div><audio data-radio-media-id="' . (int) $row['media_id']
+                . '" data-radio-source="catalogue" controls preload="metadata" src="'
+                . htmlspecialchars(RADIO_mediaUrl((int) $row['media_id'], false), ENT_QUOTES, 'UTF-8')
+                . '"></audio></article>';
         }
         $content .= '</div>';
     }
-    $content .= '</div>';
-    
-    
+    $content .= '</section>';
 }
+
+$content .= '</div>';
 
 COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
