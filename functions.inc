@@ -20,6 +20,68 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     }
 }
 
+
+function RADIO_defaultGroupId()
+{
+    global $_TABLES;
+    $id = (int) DB_getItem($_TABLES['groups'], 'grp_id', "grp_name='Radio Admin'");
+    return $id > 0 ? $id : 1;
+}
+
+function RADIO_permissionValues($data, $existing)
+{
+    $owner = isset($data['perm_owner']) ? $data['perm_owner'] : (isset($existing['perm_owner']) ? $existing['perm_owner'] : 3);
+    $group = isset($data['perm_group']) ? $data['perm_group'] : (isset($existing['perm_group']) ? $existing['perm_group'] : 2);
+    $members = isset($data['perm_members']) ? $data['perm_members'] : (isset($existing['perm_members']) ? $existing['perm_members'] : 2);
+    $anon = isset($data['perm_anon']) ? $data['perm_anon'] : (isset($existing['perm_anon']) ? $existing['perm_anon'] : 2);
+
+    if (is_array($owner) || is_array($group) || is_array($members) || is_array($anon)) {
+        list($owner, $group, $members, $anon) = SEC_getPermissionValues($owner, $group, $members, $anon);
+    }
+
+    return array(
+        max(0, min(3, (int) $owner)),
+        max(0, min(3, (int) $group)),
+        max(0, min(3, (int) $members)),
+        max(0, min(3, (int) $anon))
+    );
+}
+
+function RADIO_hasReadAccess($row)
+{
+    if (!is_array($row)) {
+        return false;
+    }
+    return SEC_hasAccess(
+        isset($row['owner_id']) ? (int) $row['owner_id'] : 0,
+        isset($row['group_id']) ? (int) $row['group_id'] : 0,
+        isset($row['perm_owner']) ? (int) $row['perm_owner'] : 0,
+        isset($row['perm_group']) ? (int) $row['perm_group'] : 0,
+        isset($row['perm_members']) ? (int) $row['perm_members'] : 0,
+        isset($row['perm_anon']) ? (int) $row['perm_anon'] : 0
+    ) >= 2;
+}
+
+function RADIO_hasEditAccess($row)
+{
+    if (SEC_hasRights('radio.admin')) {
+        return true;
+    }
+    return is_array($row) && SEC_hasAccess(
+        (int) $row['owner_id'],
+        (int) $row['group_id'],
+        (int) $row['perm_owner'],
+        (int) $row['perm_group'],
+        (int) $row['perm_members'],
+        (int) $row['perm_anon']
+    ) >= 3;
+}
+
+function RADIO_permissionSql($alias, $uid)
+{
+    return COM_getPermSQL('AND', (int) $uid, 2, $alias);
+}
+
 function RADIO_externalId($type, $id)
 {
     $type = $type === 'program' ? 'program' : 'media';
@@ -285,10 +347,12 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
+    $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
+    list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, array());
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
@@ -300,7 +364,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
         . (int) $validated['size'] . ","
         . "'" . DB_escapeString($status) . "',"
         . $allowDownload . ",0,"
-        . $owner . ","
+        . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
         . "'" . DB_escapeString($now) . "',"
         . "'" . DB_escapeString($now) . "')";
 
@@ -333,7 +397,11 @@ function RADIO_getMedia($id, $publishedOnly)
     if (DB_numRows($result) < 1) {
         return false;
     }
-    return DB_fetchArray($result);
+    $row = DB_fetchArray($result);
+    if ($publishedOnly && !RADIO_hasReadAccess($row)) {
+        return false;
+    }
+    return $row;
 }
 
 function RADIO_getMediaList($limit, $publishedOnly)
@@ -341,6 +409,9 @@ function RADIO_getMediaList($limit, $publishedOnly)
     global $_TABLES;
     $limit = max(1, min(200, (int) $limit));
     $where = $publishedOnly ? " WHERE status='published'" : '';
+    if ($publishedOnly) {
+        $where .= RADIO_permissionSql('radio_media', 0);
+    }
     $result = DB_query("SELECT * FROM {$_TABLES['radio_media']}" . $where . " ORDER BY modified DESC, media_id DESC LIMIT " . $limit);
     $items = array();
     while ($row = DB_fetchArray($result)) {
@@ -353,7 +424,7 @@ function RADIO_updateMedia($id, $metadata)
 {
     global $_TABLES;
     $row = RADIO_getMedia($id, false);
-    if ($row === false) {
+    if ($row === false || !RADIO_hasEditAccess($row)) {
         return false;
     }
 
@@ -375,6 +446,8 @@ function RADIO_updateMedia($id, $metadata)
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
+    $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : (int) $row['group_id'];
+    list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, $row);
     $now = date('Y-m-d H:i:s');
 
     DB_query(
@@ -386,6 +459,7 @@ function RADIO_updateMedia($id, $metadata)
         . "status='" . DB_escapeString($status) . "',"
         . "allow_download=" . $allowDownload . ","
         . "duration=" . $duration . ","
+        . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
         . "modified='" . DB_escapeString($now) . "' "
         . "WHERE media_id=" . (int) $id
     );
@@ -517,6 +591,9 @@ function RADIO_getPrograms($limit, $publishedOnly)
     global $_TABLES;
     $limit = max(1, min(200, (int) $limit));
     $where = $publishedOnly ? " WHERE status='published'" : '';
+    if ($publishedOnly) {
+        $where .= RADIO_permissionSql('radio_programs', 0);
+    }
     $result = DB_query("SELECT * FROM {$_TABLES['radio_programs']}" . $where . " ORDER BY modified DESC, program_id DESC LIMIT " . $limit);
     $items = array();
     while ($row = DB_fetchArray($result)) {
@@ -537,7 +614,14 @@ function RADIO_getProgram($id, $publishedOnly)
         $where .= " AND status='published'";
     }
     $result = DB_query("SELECT * FROM {$_TABLES['radio_programs']} WHERE " . $where);
-    return DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
+    if (DB_numRows($result) < 1) {
+        return false;
+    }
+    $row = DB_fetchArray($result);
+    if ($publishedOnly && !RADIO_hasReadAccess($row)) {
+        return false;
+    }
+    return $row;
 }
 
 function RADIO_saveProgram($id, $data)
@@ -551,6 +635,12 @@ function RADIO_saveProgram($id, $data)
     $host = trim(isset($data['program_host']) ? (string) $data['program_host'] : '');
     $coverName = isset($data['cover_name']) ? basename((string)$data['cover_name']) : '';
     $status = isset($data['program_status']) && $data['program_status'] === 'published' ? 'published' : 'draft';
+    $existingProgram = (int) $id > 0 ? RADIO_getProgram((int) $id, false) : array();
+    if ((int) $id > 0 && ($existingProgram === false || !RADIO_hasEditAccess($existingProgram))) {
+        return false;
+    }
+    $groupId = isset($data['group_id']) ? max(1, (int) $data['group_id']) : (!empty($existingProgram['group_id']) ? (int) $existingProgram['group_id'] : RADIO_defaultGroupId());
+    list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($data, is_array($existingProgram) ? $existingProgram : array());
     $now = date('Y-m-d H:i:s');
 
     if ((int) $id > 0) {
@@ -559,8 +649,9 @@ function RADIO_saveProgram($id, $data)
             . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
             . "description='" . DB_escapeString($description) . "',"
             . "host='" . DB_escapeString(substr($host,0,255)) . "',"
-            . "cover_name='" . DB_escapeString($coverName !== '' ? $coverName : RADIO_getProgram((int)$id,false)['cover_name']) . "',"
+            . "cover_name='" . DB_escapeString($coverName !== '' ? $coverName : $existingProgram['cover_name']) . "',"
             . "status='" . DB_escapeString($status) . "',"
+            . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
             . "modified='" . DB_escapeString($now) . "' "
             . "WHERE program_id=" . (int) $id
         );
@@ -572,13 +663,13 @@ function RADIO_saveProgram($id, $data)
         $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
         DB_query(
             "INSERT INTO {$_TABLES['radio_programs']} "
-            . "(title,description,host,cover_name,status,owner_id,created,modified) VALUES ("
+            . "(title,description,host,cover_name,status,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
             . "'" . DB_escapeString(substr($title, 0, 255)) . "',"
             . "'" . DB_escapeString($description) . "',"
             . "'" . DB_escapeString(substr($host,0,255)) . "',"
             . "'" . DB_escapeString($coverName) . "',"
             . "'" . DB_escapeString($status) . "',"
-            . $owner . ","
+            . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
             . "'" . DB_escapeString($now) . "',"
             . "'" . DB_escapeString($now) . "')"
         );
@@ -598,10 +689,10 @@ function RADIO_deleteProgram($id)
 {
     global $_TABLES;
     $id = (int) $id;
-    if ($id < 1 || RADIO_getProgram($id, false) === false) {
+    $program = $id > 0 ? RADIO_getProgram($id, false) : false;
+    if ($program === false || !RADIO_hasEditAccess($program)) {
         return false;
     }
-    $program = RADIO_getProgram($id, false);
     if ($program !== false && !empty($program['cover_name'])) {
         RADIO_deleteCover($program['cover_name']);
     }
@@ -1045,7 +1136,8 @@ function RADIO_getPodcastItems($limit, $since)
 
     $limit = max(1, min(100, (int) $limit));
     $sql = "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND media_type='podcast' AND storage_name<>''";
+        . "WHERE status='published' AND media_type='podcast' AND storage_name<>''"
+        . RADIO_permissionSql('radio_media', 1);
 
     if ((int) $since > 0) {
         $sql .= " AND modified >= '" . DB_escapeString(date('Y-m-d H:i:s', (int) $since)) . "'";
@@ -1349,6 +1441,7 @@ function RADIO_getRotationMediaByTypes($types)
     $result = DB_query(
         "SELECT * FROM {$_TABLES['radio_media']} "
         . "WHERE status='published' AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
+        . RADIO_permissionSql('radio_media', 0) . " "
         . "ORDER BY media_id ASC"
     );
 
@@ -1717,7 +1810,7 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
         $items = array();
 
         if ($type === 'program') {
-            $sql = "SELECT * FROM {$_TABLES['radio_programs']} WHERE status='published'";
+            $sql = "SELECT * FROM {$_TABLES['radio_programs']} WHERE status='published'" . RADIO_permissionSql('radio_programs', (int) $uid);
             if (!empty($options['since'])) {
                 $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
                 $sql .= " AND modified >= '" . $since . "'";
@@ -1730,7 +1823,7 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
             return $items;
         }
 
-        $sql = "SELECT media_id,title,description,media_type,created,modified,hits FROM {$_TABLES['radio_media']} WHERE status='published'";
+        $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE status='published'" . RADIO_permissionSql('radio_media', (int) $uid);
         if (!empty($options['since'])) {
             $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
             $sql .= " AND modified >= '" . $since . "'";
@@ -1756,11 +1849,15 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
         return array();
     }
     if ($identity['type'] === 'program') {
-        $row = RADIO_getProgram($identity['id'], true);
+        $sql = "SELECT * FROM {$_TABLES['radio_programs']} WHERE program_id=" . (int) $identity['id'] . " AND status='published'" . RADIO_permissionSql('radio_programs', (int) $uid);
+        $result = DB_query($sql);
+        $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
         return $row === false ? array() : RADIO_programInfoFromRow($row, $fields);
     }
 
-    $row = RADIO_getMedia($identity['id'], true);
+    $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id'] . " AND status='published'" . RADIO_permissionSql('radio_media', (int) $uid);
+    $result = DB_query($sql);
+    $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
     return $row === false ? array() : RADIO_itemInfoFromRow($row, $fields);
 }
 
@@ -1881,6 +1978,13 @@ function plugin_upgrade_radio()
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'host',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
+    foreach (array('radio_media','radio_programs') as $aclTable) {
+        $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'group_id',"mediumint(8) unsigned NOT NULL default '1'") && $ok;
+        $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_owner',"tinyint(1) unsigned NOT NULL default '3'") && $ok;
+        $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_group',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
+        $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_members',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
+        $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_anon',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
+    }
     if (!$ok) return false;
 
     DB_query(
@@ -1919,13 +2023,13 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
         . "m.owner_id AS uid,m.hits,"
         . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url,"
         . "m.author AS author "
-        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' "
+        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' " . COM_getPermSQL('AND', 0, 2, 'm') . " "
         . "UNION ALL "
         . "SELECT CONCAT('program:',p.program_id) AS id,p.title,p.description,p.modified AS date,"
         . "p.owner_id AS uid,0 AS hits,"
         . "CONCAT('" . $siteUrl . "/radio/program.php?id=',p.program_id) AS url,"
         . "p.host AS author "
-        . "FROM {$_TABLES['radio_programs']} p WHERE p.status='published'"
+        . "FROM {$_TABLES['radio_programs']} p WHERE p.status='published'" . COM_getPermSQL('AND', 0, 2, 'p')
         . ") rs WHERE 1 ";
 
     if ((int) $author > 0) {
@@ -2033,7 +2137,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     $items = array();
 
     $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' ORDER BY modified DESC,media_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2, 'radio_media') . " ORDER BY modified DESC,media_id DESC";
     $media = DB_query($mediaSql);
     while ($row = DB_fetchArray($media)) {
         $modified = strtotime($row['modified']);
@@ -2047,7 +2151,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     }
 
     $programSql = "SELECT program_id,modified FROM {$_TABLES['radio_programs']} "
-        . "WHERE status='published' ORDER BY modified DESC,program_id DESC";
+        . "WHERE status='published'" . COM_getPermSQL('AND', 1, 2, 'radio_programs') . " ORDER BY modified DESC,program_id DESC";
     $programs = DB_query($programSql);
     while ($row = DB_fetchArray($programs)) {
         $modified = strtotime($row['modified']);
