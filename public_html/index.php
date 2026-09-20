@@ -9,7 +9,7 @@ if ($id > 0) {
     $row = RADIO_getMedia($id, true);
     if ($row === false) {
         $content = COM_showMessageText($LANG_RADIO['media_not_found'], $title);
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title, 'footercode' => RADIO_trackingScript())));
+COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
         exit;
     }
 
@@ -57,7 +57,7 @@ COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title, 'footer
     }
     $content .= '<p><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/index.php', ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($LANG_RADIO['back_to_library'], ENT_QUOTES, 'UTF-8') . '</a></p></div>';
-    COM_output(COM_createHTMLDocument($content, array('pagetitle' => $row['title'], 'footercode' => RADIO_trackingScript())));
+    COM_output(COM_createHTMLDocument($content, array('pagetitle' => $row['title'])));
     exit;
 }
 
@@ -110,7 +110,7 @@ if (count($media) === 0) {
         if ($row['description'] !== '') {
             $content .= '<p>' . nl2br(htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
         }
-        $content .= '<audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="none" style="width:100%;max-width:800px" src="'
+        $content .= '<audio data-radio-media-id="' . (int) $row['media_id'] . '" data-radio-source="catalogue" controls preload="metadata" style="width:100%;max-width:800px" src="'
             . htmlspecialchars(RADIO_mediaUrl((int) $row['media_id'], false), ENT_QUOTES, 'UTF-8') . '"></audio></article>';
     }
     $content .= '</div>';
