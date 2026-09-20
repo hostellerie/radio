@@ -1,0 +1,68 @@
+.radio-status,
+.radio-live,
+.radio-item,
+.radio-catalogue {
+    box-sizing: border-box;
+}
+
+.radio-status {
+    margin: 0 0 1.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(127, 127, 127, .3);
+    border-radius: .45rem;
+}
+
+.radio-on-air-progress {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin-top: .65rem;
+    max-width: 760px;
+}
+
+.radio-on-air-progress progress {
+    flex: 1 1 auto;
+    min-width: 140px;
+}
+
+.radio-home-controls {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .75rem;
+    flex-wrap: wrap;
+}
+
+.radio-home-controls button,
+.radio-live button {
+    cursor: pointer;
+}
+
+.radio-wave {
+    display: block;
+    width: 240px;
+    max-width: 60vw;
+    height: 42px;
+}
+
+.radio-list article {
+    margin: 0 0 1.5rem;
+}
+
+.radio-list audio,
+.radio-item audio,
+.radio-live audio {
+    width: 100%;
+    max-width: 850px;
+}
+
+@media (max-width: 640px) {
+    .radio-on-air-progress {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .radio-on-air-progress progress {
+        width: 100%;
+    }
+}
