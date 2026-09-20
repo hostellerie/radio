@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
     COM_accessLog('User tried to access Radio feed sources without permission.');
@@ -129,9 +130,7 @@ if (isset($_POST['import_episode']) && is_array($preview) && $previewSource !== 
 $sources = RADIO_getFeedSources(100, false);
 $token = SEC_createToken();
 
-$content = COM_startBlock($LANG_RADIO['feed_sources'], '', COM_getBlockTemplate('_admin_block', 'header'));
-$content .= $message;
-$content .= '<p><a href="' . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($LANG_RADIO['back_to_library_admin'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+$content = '';
 $content .= '<h2>' . htmlspecialchars($LANG_RADIO['feed_source_new'], ENT_QUOTES, 'UTF-8') . '</h2>'
     . '<form method="post" action="">'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['feed_source_title'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="source_title" maxlength="255" required style="width:100%"></label></p>'
@@ -212,5 +211,16 @@ if (!empty($syncLog)) {
     $content .= '</tbody></table>';
 }
 
-$content .= COM_endBlock(COM_getBlockTemplate('_admin_block', 'footer'));
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $LANG_RADIO['feed_sources'])));
+$content = RADIO_adminRenderPage(
+    'sources',
+    $LANG_RADIO['feed_sources'],
+    $LANG_RADIO['admin_sources_intro'],
+    $LANG_RADIO['admin_sources_help_title'],
+    $LANG_RADIO['admin_sources_help_text'],
+    $content,
+    $message
+);
+COM_output(COM_createHTMLDocument($content, array(
+    'pagetitle' => $LANG_RADIO['feed_sources'],
+    'headercode' => RADIO_adminHeaderCode()
+)));
