@@ -7,7 +7,8 @@ $_RADIO_DEFAULT = array(
     'enabled' => 1,
     'public_title' => 'Radio',
     'default_replay_days' => 30,
-    'allow_downloads' => 1
+    'allow_downloads' => 1,
+    'max_upload_mb' => 100
 );
 
 function plugin_initconfig_radio()
@@ -22,6 +23,7 @@ function plugin_initconfig_radio()
         $c->add('public_title', $_RADIO_DEFAULT['public_title'], 'text', 0, 0, 0, 20, true, 'radio', 0);
         $c->add('default_replay_days', $_RADIO_DEFAULT['default_replay_days'], 'text', 0, 0, 0, 30, true, 'radio', 0);
         $c->add('allow_downloads', $_RADIO_DEFAULT['allow_downloads'], 'select', 0, 0, 0, 40, true, 'radio', 0);
+        $c->add('max_upload_mb', $_RADIO_DEFAULT['max_upload_mb'], 'text', 0, 0, 0, 50, true, 'radio', 0);
     }
     return true;
 }
