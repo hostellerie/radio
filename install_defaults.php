@@ -14,7 +14,10 @@ $_RADIO_DEFAULT = array(
     'fallback_jingle_interval' => 4,
     'fallback_announcement_interval' => 8,
     'fallback_type_weights' => 'music=5,podcast=2,interview=2,chronicle=2',
-    'fallback_min_repeat_minutes' => 120
+    'fallback_min_repeat_minutes' => 120,
+    'whatsnew_enabled' => 1,
+    'whatsnew_interval' => 1209600,
+    'whatsnew_limit' => 10
 );
 
 function RADIO_configSortOrder()
@@ -29,13 +32,16 @@ function RADIO_configSortOrder()
         'fallback_jingle_interval' => 70,
         'fallback_announcement_interval' => 80,
         'fallback_type_weights' => 90,
-        'fallback_min_repeat_minutes' => 100
+        'fallback_min_repeat_minutes' => 100,
+        'whatsnew_enabled' => 110,
+        'whatsnew_interval' => 120,
+        'whatsnew_limit' => 130
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled', 'whatsnew_enabled'), true)
         ? 'select'
         : 'text';
 
