@@ -27,22 +27,28 @@
 
 .radio-home-controls {
     display: flex;
-    align-items: center;
-    gap: .75rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .45rem;
     margin-top: .75rem;
-    flex-wrap: wrap;
+    max-width: 760px;
 }
 
-.radio-home-controls button,
+.radio-home-controls audio {
+    width: 100%;
+    max-width: 760px;
+}
+
 .radio-live button {
     cursor: pointer;
 }
 
 .radio-wave {
     display: block;
-    width: 240px;
-    max-width: 60vw;
-    height: 42px;
+    width: 100%;
+    max-width: 560px;
+    height: 46px;
+    opacity: .72;
 }
 
 .radio-list article {
@@ -68,5 +74,6 @@
 }
 
 .radio-live-wave {
-    margin: .75rem 0;
+    margin: .45rem 0 .75rem;
+    max-width: 760px;
 }
