@@ -255,7 +255,7 @@ The plugin should distinguish **remote metadata**, **remote playback**, **cached
 Study support for:
 
 - [x] direct remote audio URLs as browser-side remote references;
-- [ ] podcast RSS/Atom feeds with audio enclosures;
+- [x] podcast RSS/Atom feeds with bounded preview and explicit remote-reference import;
 - [x] Icecast/Shoutcast-compatible live stream URLs as browser-side live references;
 - [ ] remote playlists where the format and licensing permit it;
 - [ ] public/open audio archives and media catalogues;
@@ -304,9 +304,9 @@ Follow the principles in `geeklog-external-data-integration-vision-2030.md`.
 
 - [ ] Define an allowlist/provider model rather than unrestricted editor-controlled server-side URL fetching.
 - [x] Reject localhost, literal private/reserved IPs and hostnames resolving to private/reserved IPv4 before accepting remote references; no server-side remote fetching is performed in this prototype.
-- [ ] Validate redirects.
-- [ ] Apply connection and total timeouts.
-- [ ] Limit response and imported file sizes.
+- [x] Validate every feed redirect before following it.
+- [x] Apply bounded connection and total timeouts to feed retrieval.
+- [x] Limit feed responses to 1 MB; episode imports remain remote references and do not copy audio files.
 - [ ] Validate MIME and actual audio type.
 - [ ] Sanitize remote metadata.
 - [ ] Define cache TTL and stale-cache behaviour.
@@ -600,7 +600,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.1.6**.
+Current development version: **0.1.7**.
 
 Focus:
 

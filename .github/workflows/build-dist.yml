@@ -97,6 +97,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/schedule.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/rotation.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/stats.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/sources.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/media.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/program.php'
