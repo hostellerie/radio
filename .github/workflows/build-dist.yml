@@ -48,6 +48,9 @@ jobs:
       - name: Plugin API contract check
         run: php tests/plugin_api_contract.php
 
+      - name: Bootstrap runtime contract check
+        run: php tests/bootstrap_runtime.php
+
   build-dist:
     needs: compatibility-lint
     runs-on: ubuntu-latest
@@ -134,6 +137,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/services.inc.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/docs/SERVICES.md'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/tests/plugin_api_contract.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/tests/bootstrap_runtime.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
