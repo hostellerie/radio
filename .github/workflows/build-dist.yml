@@ -96,6 +96,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/programs.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/schedule.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/rotation.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/stats.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/media.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/program.php'
@@ -105,6 +106,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/replay.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/podcast.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/cover.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/event.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/sql/mysql_install.php'
 
       - name: Upload workflow artifact
