@@ -9,6 +9,7 @@ $_RADIO_DEFAULT = array(
     'public_title' => 'Radio',
     'default_replay_days' => 30,
     'allow_downloads' => 1,
+    'on_demand_enabled' => 1,
     'max_upload_mb' => 100,
     'fallback_enabled' => 1,
     'fallback_jingle_interval' => 4,
@@ -29,6 +30,7 @@ function RADIO_configSortOrder()
         'public_title' => 20,
         'default_replay_days' => 30,
         'allow_downloads' => 40,
+        'on_demand_enabled' => 45,
         'max_upload_mb' => 50,
         'fallback_enabled' => 60,
         'fallback_jingle_interval' => 70,
@@ -45,7 +47,7 @@ function RADIO_configSortOrder()
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled'), true)
         ? 'select'
         : 'text';
 
