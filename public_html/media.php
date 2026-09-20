@@ -10,7 +10,11 @@ if ($row === false) {
     exit;
 }
 
-if ($download && RADIO_sourceKind($row) === 'local') {
+if ($download && !RADIO_downloadAllowed($row)) {
+    header('HTTP/1.1 403 Forbidden');
+    exit;
+}
+if ($download) {
     RADIO_recordStatEvent($id, 0, 'download', 'download', 0);
 }
 

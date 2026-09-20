@@ -96,7 +96,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 
 - [x] Upload audio files from the administration interface.
 - [ ] Support safe drag-and-drop upload.
-- [ ] Validate extension, MIME type, actual media type and configured size limits.
+- [x] Validate extension, detected MIME type, lightweight audio file signature and configured size limits for local uploads.
 - [x] Generate filesystem-safe storage names independently from the uploaded filename.
 - [x] Keep the original human filename and metadata separately when useful.
 - [ ] Extract available audio metadata such as title, artist, album, duration and embedded artwork.
@@ -601,17 +601,17 @@ Do not collect unnecessary personal listener data merely to provide a dashboard.
 
 Before stable release:
 
-- [ ] Audit all upload paths.
-- [ ] Audit controlled download paths.
-- [ ] Audit ACL for draft/private media.
-- [ ] Audit schedule administration permissions.
+- [x] Audit local audio and cover upload paths: uploaded-file checks, size limits, MIME/signature validation, generated storage names and persistent-storage boundaries.
+- [x] Audit controlled download paths: published/ACL gate, download policy, basename storage resolution, single HTTP Range handling and suffix ranges.
+- [x] Audit ACL for draft/private media and playlist mutations; delegated schedule users are filtered by item ACL.
+- [x] Audit schedule administration permissions in both admin routes and business helpers.
 - [x] Audit CSRF protection for administration actions; remote feed preview/import is token-gated before any network request.
 - [ ] Audit stored and reflected metadata output.
-- [ ] Audit path traversal protections.
+- [x] Audit current persistent media/cover delivery path traversal protections; stored filenames are generated and resolved through `basename()`.
 - [x] Audit remote-source SSRF protections for the current RSS/Atom fetch path: redirects are revalidated and cURL DNS resolution is pinned to the validated public IP.
 - [ ] Audit credentials and logs.
-- [ ] Audit cache vs persistent storage separation.
-- [ ] Ensure uninstall never silently removes user audio without an explicit administrator choice.
+- [x] Audit cache vs persistent storage separation for current Radio media/covers.
+- [x] Ensure uninstall does not silently remove persistent user audio; uninstall removes Geeklog tables/features but does not delete the external Radio storage directory.
 
 ---
 

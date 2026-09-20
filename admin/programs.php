@@ -64,10 +64,18 @@ if (isset($_POST['move_down']) && SEC_checkToken()) {
     RADIO_moveProgramItem(isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0, $selectedId, 'down');
 }
 
-$programs = RADIO_getPrograms(100, false);
+$programs = array_values(array_filter(RADIO_getPrograms(100, false), function ($row) {
+    return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
+}));
 $selected = $selectedId > 0 ? RADIO_getProgram($selectedId, false) : false;
+if ($selected !== false && !RADIO_hasReadAccess($selected) && !RADIO_hasEditAccess($selected)) {
+    $selected = false;
+    $selectedId = 0;
+}
 $items = $selected ? RADIO_getProgramItems($selectedId) : array();
-$media = RADIO_getMediaList(200, false);
+$media = array_values(array_filter(RADIO_getMediaList(200, false), function ($row) {
+    return RADIO_hasReadAccess($row);
+}));
 $token = SEC_createToken();
 
 $content = COM_startBlock($LANG_RADIO['programs'], '', COM_getBlockTemplate('_admin_block', 'header'));

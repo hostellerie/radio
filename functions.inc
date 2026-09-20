@@ -384,7 +384,24 @@ function RADIO_saveCoverUpload($file, &$error)
         return false;
     }
     $mime = RADIO_detectMime($tmp);
-    if ($mime !== '' && !in_array($mime, $allowed[$ext], true)) {
+    if ($mime === '' || !in_array($mime, $allowed[$ext], true)) {
+        $error = 'cover_upload_type';
+        return false;
+    }
+    $validImage = false;
+    if (function_exists('getimagesize')) {
+        $imageInfo = @getimagesize($tmp);
+        $validImage = is_array($imageInfo);
+    }
+    if (!$validImage && $ext === 'webp') {
+        $handle = @fopen($tmp, 'rb');
+        $head = $handle ? fread($handle, 12) : '';
+        if ($handle) fclose($handle);
+        $validImage = is_string($head) && strlen($head) >= 12
+            && substr($head, 0, 4) === 'RIFF'
+            && substr($head, 8, 4) === 'WEBP';
+    }
+    if (!$validImage) {
         $error = 'cover_upload_type';
         return false;
     }
@@ -601,6 +618,41 @@ function RADIO_detectMime($path)
     return '';
 }
 
+function RADIO_audioSignatureMatches($path, $extension)
+{
+    $handle = @fopen($path, 'rb');
+    if (!$handle) {
+        return false;
+    }
+    $head = fread($handle, 16);
+    fclose($handle);
+    if (!is_string($head) || strlen($head) < 4) {
+        return false;
+    }
+
+    if ($extension === 'mp3') {
+        return substr($head, 0, 3) === 'ID3'
+            || (ord($head[0]) === 0xFF && (ord($head[1]) & 0xE0) === 0xE0);
+    }
+    if ($extension === 'm4a') {
+        return strlen($head) >= 8 && substr($head, 4, 4) === 'ftyp';
+    }
+    if ($extension === 'aac') {
+        return strlen($head) >= 2
+            && ord($head[0]) === 0xFF
+            && (ord($head[1]) & 0xF6) === 0xF0;
+    }
+    if ($extension === 'ogg') {
+        return substr($head, 0, 4) === 'OggS';
+    }
+    if ($extension === 'wav') {
+        return strlen($head) >= 12
+            && substr($head, 0, 4) === 'RIFF'
+            && substr($head, 8, 4) === 'WAVE';
+    }
+    return false;
+}
+
 function RADIO_validateUpload($file, &$error)
 {
     global $_RADIO_CONF;
@@ -633,14 +685,15 @@ function RADIO_validateUpload($file, &$error)
     }
 
     $mime = RADIO_detectMime($tmp);
-    if ($mime !== '' && !in_array($mime, $allowed[$extension], true)) {
+    if ($mime === '' || !in_array($mime, $allowed[$extension], true)
+        || !RADIO_audioSignatureMatches($tmp, $extension)) {
         $error = 'upload_type';
         return false;
     }
 
     return array(
         'extension' => $extension,
-        'mime' => $mime !== '' ? $mime : $allowed[$extension][0],
+        'mime' => $mime,
         'size' => $size,
         'original_name' => $name
     );
@@ -822,7 +875,7 @@ function RADIO_deleteMedia($id)
 {
     global $_TABLES;
     $row = RADIO_getMedia($id, false);
-    if ($row === false) {
+    if ($row === false || !RADIO_hasEditAccess($row)) {
         return false;
     }
 
@@ -857,6 +910,15 @@ function RADIO_mediaUrl($id, $download)
     return $url;
 }
 
+function RADIO_downloadAllowed($row)
+{
+    global $_RADIO_CONF;
+    return is_array($row)
+        && RADIO_sourceKind($row) === 'local'
+        && !empty($_RADIO_CONF['allow_downloads'])
+        && !empty($row['allow_download']);
+}
+
 function RADIO_sendMedia($row, $download)
 {
     global $_RADIO_CONF;
@@ -881,8 +943,7 @@ function RADIO_sendMedia($row, $download)
         return false;
     }
 
-    $downloadAllowed = !empty($_RADIO_CONF['allow_downloads']) && !empty($row['allow_download']);
-    if ($download && !$downloadAllowed) {
+    if ($download && !RADIO_downloadAllowed($row)) {
         return false;
     }
 
@@ -891,13 +952,32 @@ function RADIO_sendMedia($row, $download)
     $end = $size - 1;
     $status = 200;
 
-    if (!$download && isset($_SERVER['HTTP_RANGE']) && preg_match('/bytes=(\d*)-(\d*)/', $_SERVER['HTTP_RANGE'], $m)) {
-        if ($m[1] !== '') {
+    if (!$download && isset($_SERVER['HTTP_RANGE'])) {
+        $range = trim((string) $_SERVER['HTTP_RANGE']);
+        if (strpos($range, ',') !== false
+            || !preg_match('/^bytes=(\d*)-(\d*)$/', $range, $m)
+            || ($m[1] === '' && $m[2] === '')) {
+            header('HTTP/1.1 416 Range Not Satisfiable');
+            header('Content-Range: bytes */' . $size);
+            exit;
+        }
+
+        if ($m[1] === '') {
+            $suffix = (int) $m[2];
+            if ($suffix < 1) {
+                header('HTTP/1.1 416 Range Not Satisfiable');
+                header('Content-Range: bytes */' . $size);
+                exit;
+            }
+            $start = max(0, $size - $suffix);
+            $end = $size - 1;
+        } else {
             $start = (int) $m[1];
+            if ($m[2] !== '') {
+                $end = min($end, (int) $m[2]);
+            }
         }
-        if ($m[2] !== '') {
-            $end = min($end, (int) $m[2]);
-        }
+
         if ($start > $end || $start >= $size) {
             header('HTTP/1.1 416 Range Not Satisfiable');
             header('Content-Range: bytes */' . $size);
@@ -1091,7 +1171,10 @@ function RADIO_addProgramItem($programId, $mediaId)
     global $_TABLES;
     $programId = (int) $programId;
     $mediaId = (int) $mediaId;
-    if (RADIO_getProgram($programId, false) === false || RADIO_getMedia($mediaId, false) === false) {
+    $program = RADIO_getProgram($programId, false);
+    $media = RADIO_getMedia($mediaId, false);
+    if ($program === false || !RADIO_hasEditAccess($program)
+        || $media === false || !RADIO_hasReadAccess($media)) {
         return false;
     }
     $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
@@ -1106,6 +1189,10 @@ function RADIO_addProgramItem($programId, $mediaId)
 function RADIO_removeProgramItem($itemId, $programId)
 {
     global $_TABLES;
+    $program = RADIO_getProgram((int) $programId, false);
+    if ($program === false || !RADIO_hasEditAccess($program)) {
+        return false;
+    }
     DB_query(
         "DELETE FROM {$_TABLES['radio_program_items']} WHERE item_id=" . (int) $itemId
         . " AND program_id=" . (int) $programId
@@ -1116,6 +1203,10 @@ function RADIO_removeProgramItem($itemId, $programId)
 function RADIO_moveProgramItem($itemId, $programId, $direction)
 {
     global $_TABLES;
+    $program = RADIO_getProgram((int) $programId, false);
+    if ($program === false || !RADIO_hasEditAccess($program)) {
+        return false;
+    }
     $items = RADIO_getProgramItems($programId);
     $index = -1;
     for ($i = 0; $i < count($items); $i++) {
@@ -1179,10 +1270,14 @@ function RADIO_saveSchedule($id, $data, &$error)
 {
     global $_TABLES;
     $error = '';
+    if (!SEC_hasRights('radio.schedule')) {
+        $error = 'access_denied';
+        return false;
+    }
 
     $programId = isset($data['program_id']) ? (int) $data['program_id'] : 0;
     $program = RADIO_getProgram($programId, false);
-    if ($program === false) {
+    if ($program === false || (!RADIO_hasReadAccess($program) && !RADIO_hasEditAccess($program))) {
         $error = 'schedule_program_invalid';
         return false;
     }
@@ -1297,6 +1392,9 @@ function RADIO_getSchedules($enabledOnly)
 function RADIO_deleteSchedule($id)
 {
     global $_TABLES;
+    if (!SEC_hasRights('radio.schedule')) {
+        return false;
+    }
     DB_query("DELETE FROM {$_TABLES['radio_schedule']} WHERE schedule_id=" . (int) $id);
     return !DB_error();
 }

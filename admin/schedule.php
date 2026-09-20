@@ -40,7 +40,9 @@ if (isset($_POST['delete_schedule'])) {
 }
 
 $selected = $selectedId > 0 ? RADIO_getSchedule($selectedId) : false;
-$programs = RADIO_getPrograms(200, false);
+$programs = array_values(array_filter(RADIO_getPrograms(200, false), function ($row) {
+    return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
+}));
 $schedules = RADIO_getSchedules(false);
 $token = SEC_createToken();
 
