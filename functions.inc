@@ -2893,6 +2893,7 @@ function RADIO_requestPath()
 function RADIO_isPublicHtmlPage($path)
 {
     foreach (array(
+        '/radio/',
         '/radio/index.php',
         '/radio/live.php',
         '/radio/program.php',
