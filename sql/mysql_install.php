@@ -98,3 +98,29 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_events']} (
   KEY media_event (media_id,event_type),
   KEY source_event (source,event_type)
 ) ENGINE=MyISAM;";
+
+
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_sources']} (
+  source_id int(10) unsigned NOT NULL auto_increment,
+  title varchar(255) NOT NULL default '',
+  source_type varchar(24) NOT NULL default 'rss',
+  source_url text,
+  provider varchar(255) NOT NULL default '',
+  enabled tinyint(1) unsigned NOT NULL default '1',
+  etag varchar(255) NOT NULL default '',
+  last_modified varchar(255) NOT NULL default '',
+  last_checked datetime default NULL,
+  last_status int(10) unsigned NOT NULL default '0',
+  last_error text,
+  owner_id int(10) unsigned NOT NULL default '2',
+  group_id mediumint(8) unsigned NOT NULL default '1',
+  perm_owner tinyint(1) unsigned NOT NULL default '3',
+  perm_group tinyint(1) unsigned NOT NULL default '2',
+  perm_members tinyint(1) unsigned NOT NULL default '2',
+  perm_anon tinyint(1) unsigned NOT NULL default '0',
+  created datetime NOT NULL,
+  modified datetime NOT NULL,
+  PRIMARY KEY (source_id),
+  KEY enabled (enabled),
+  KEY source_type (source_type)
+) ENGINE=MyISAM;";

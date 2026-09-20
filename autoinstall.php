@@ -36,7 +36,8 @@ function plugin_autoinstall_radio($pi_name)
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
-            'radio_events'
+            'radio_events',
+            'radio_sources'
         )
     );
 }
@@ -75,7 +76,8 @@ function plugin_autouninstall_radio()
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
-            'radio_events'
+            'radio_events',
+            'radio_sources'
         ),
         'groups' => array('Radio Admin'),
         'features' => array(

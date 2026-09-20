@@ -3,6 +3,7 @@ if (!isset($GLOBALS['_CONF'])) {
     die('This file cannot be used on its own.');
 }
 require_once __DIR__ . '/version.php';
+require_once __DIR__ . '/lib/feed.inc.php';
 
 global $_TABLES, $_DB_table_prefix, $_RADIO_CONF;
 $_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
@@ -10,6 +11,7 @@ $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
 $_TABLES['radio_events'] = $_DB_table_prefix . 'radio_events';
+$_TABLES['radio_sources'] = $_DB_table_prefix . 'radio_sources';
 
 if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
     $_RADIO_CONF = array();
@@ -2192,7 +2194,8 @@ function plugin_getcapabilities_radio()
             'radio.podcast.read',
             'radio.stats.read',
             'radio.source.read',
-            'radio.source.summary'
+            'radio.source.summary',
+            'radio.source.feed.read'
         )
     );
 }
@@ -2394,7 +2397,7 @@ function plugin_upgrade_radio()
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_members',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
         $ok = RADIO_ensureSchemaColumn($_TABLES[$aclTable],'perm_anon',"tinyint(1) unsigned NOT NULL default '2'") && $ok;
     }
-    if (!$ok || !RADIO_ensureStatsTable()) return false;
+    if (!$ok || !RADIO_ensureStatsTable() || !RADIO_ensureSourcesTable()) return false;
 
     DB_query(
         "UPDATE {$_TABLES['plugins']} SET "
