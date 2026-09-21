@@ -523,6 +523,181 @@ function RADIO_externalUrlValidation($url, &$error)
     return $url;
 }
 
+function RADIO_externalAudioMimeAccepted($contentType, $url)
+{
+    $contentType = strtolower(trim((string) $contentType));
+    if (($semicolon = strpos($contentType, ';')) !== false) {
+        $contentType = trim(substr($contentType, 0, $semicolon));
+    }
+
+    if (strpos($contentType, 'audio/') === 0 || $contentType === 'application/ogg') {
+        return true;
+    }
+
+    if ($contentType === 'application/octet-stream') {
+        $path = parse_url((string) $url, PHP_URL_PATH);
+        $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
+        return isset(RADIO_allowedAudio()[$extension]);
+    }
+
+    return false;
+}
+
+function RADIO_externalAudioProbeRequest($url, $range, &$result)
+{
+    $result = array(
+        'status' => 0,
+        'content_type' => '',
+        'location' => '',
+        'accept_ranges' => '',
+        'content_range' => ''
+    );
+
+    if (!function_exists('curl_init')) {
+        return false;
+    }
+
+    $headers = array();
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Geeklog Radio/0.3');
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $line) use (&$headers) {
+        $length = strlen($line);
+        $line = trim($line);
+        if ($line === '' || strpos($line, ':') === false) {
+            return $length;
+        }
+        list($name, $value) = explode(':', $line, 2);
+        $headers[strtolower(trim($name))] = trim($value);
+        return $length;
+    });
+    if ($range !== '') {
+        curl_setopt($ch, CURLOPT_RANGE, $range);
+    } else {
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+    }
+
+    $body = curl_exec($ch);
+    if ($body === false) {
+        curl_close($ch);
+        return false;
+    }
+
+    $result['status'] = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $result['content_type'] = isset($headers['content-type'])
+        ? $headers['content-type']
+        : (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $result['location'] = isset($headers['location']) ? $headers['location'] : '';
+    $result['accept_ranges'] = isset($headers['accept-ranges']) ? strtolower($headers['accept-ranges']) : '';
+    $result['content_range'] = isset($headers['content-range']) ? strtolower($headers['content-range']) : '';
+    curl_close($ch);
+
+    return true;
+}
+
+function RADIO_externalRedirectUrl($baseUrl, $location)
+{
+    $location = trim((string) $location);
+    if ($location === '') {
+        return false;
+    }
+    if (preg_match('#^https?://#i', $location)) {
+        return $location;
+    }
+    if (substr($location, 0, 2) === '//') {
+        $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+        return $scheme . ':' . $location;
+    }
+
+    $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+    $host = parse_url($baseUrl, PHP_URL_HOST);
+    $port = parse_url($baseUrl, PHP_URL_PORT);
+    if (!$scheme || !$host) {
+        return false;
+    }
+    $authority = $scheme . '://' . $host . ($port ? ':' . (int) $port : '');
+    if (substr($location, 0, 1) === '/') {
+        return $authority . $location;
+    }
+
+    $path = parse_url($baseUrl, PHP_URL_PATH);
+    $dir = rtrim(str_replace('\\', '/', dirname($path ? $path : '/')), '/');
+    return $authority . ($dir !== '' ? $dir : '') . '/' . $location;
+}
+
+function RADIO_validateExternalAudioSource($url, $sourceKind, $requireRange, &$error)
+{
+    $error = '';
+    if (!function_exists('curl_init')) {
+        $error = 'http_transport_unavailable';
+        return false;
+    }
+
+    $current = $url;
+    for ($redirects = 0; $redirects <= 5; $redirects++) {
+        $validated = RADIO_externalUrlValidation($current, $error);
+        if ($validated === false) {
+            return false;
+        }
+
+        $probe = array();
+        if (!RADIO_externalAudioProbeRequest($validated, '', $probe)) {
+            $error = 'external_url_unreachable';
+            return false;
+        }
+
+        if ($probe['status'] >= 300 && $probe['status'] < 400 && $probe['location'] !== '') {
+            if ($redirects === 5) {
+                $error = 'too_many_redirects';
+                return false;
+            }
+            $next = RADIO_externalRedirectUrl($validated, $probe['location']);
+            if ($next === false) {
+                $error = 'invalid_redirect';
+                return false;
+            }
+            $current = $next;
+            continue;
+        }
+
+        if ($probe['status'] < 200 || $probe['status'] >= 300) {
+            $error = 'external_url_http_error';
+            return false;
+        }
+
+        if (!RADIO_externalAudioMimeAccepted($probe['content_type'], $validated)) {
+            // Some audio servers do not implement HEAD correctly. Retry with a one-byte range GET.
+            $rangeProbe = array();
+            if (!RADIO_externalAudioProbeRequest($validated, '0-0', $rangeProbe)
+                || ($rangeProbe['status'] !== 200 && $rangeProbe['status'] !== 206)
+                || !RADIO_externalAudioMimeAccepted($rangeProbe['content_type'], $validated)) {
+                $error = 'external_url_not_audio';
+                return false;
+            }
+            $probe = $rangeProbe;
+        }
+
+        if ($sourceKind !== 'live' && $requireRange) {
+            $rangeProbe = array();
+            if (!RADIO_externalAudioProbeRequest($validated, '0-0', $rangeProbe)
+                || $rangeProbe['status'] !== 206
+                || strpos($rangeProbe['content_range'], 'bytes ') !== 0) {
+                $error = 'external_url_no_range';
+                return false;
+            }
+        }
+
+        return $validated;
+    }
+
+    $error = 'too_many_redirects';
+    return false;
+}
+
 function RADIO_sourceKind($row)
 {
     if (!is_array($row) || empty($row['source_kind'])) {
@@ -545,6 +720,18 @@ function RADIO_saveExternalMedia($metadata, &$error)
 
     $sourceUrl = RADIO_externalUrlValidation(
         isset($metadata['source_url']) ? $metadata['source_url'] : '',
+        $error
+    );
+    if ($sourceUrl === false) {
+        return false;
+    }
+
+    $requireRange = $sourceKind !== 'live'
+        && (!isset($metadata['broadcast']) || !empty($metadata['broadcast']));
+    $sourceUrl = RADIO_validateExternalAudioSource(
+        $sourceUrl,
+        $sourceKind,
+        $requireRange,
         $error
     );
     if ($sourceUrl === false) {
