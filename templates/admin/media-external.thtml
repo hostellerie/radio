@@ -5,7 +5,8 @@
 
     <p><label>{source_url_label}<br>
         <input type="url" name="source_url" maxlength="2048" required>
-    </label></p>
+    </label><br>
+    <small class="radio-admin__muted">{source_url_help}</small></p>
 
     <p><label>{title_label}<br>
         <input type="text" name="title" maxlength="255" required>
