@@ -13,29 +13,101 @@ if (!SEC_hasRights('radio.upload')) {
 global $LANG_RADIO, $_CONF;
 $message = '';
 
+function RADIO_adminUploadFiles()
+{
+    $files = array();
+    if (!isset($_FILES['audio_files']) || !is_array($_FILES['audio_files'])) {
+        return $files;
+    }
+
+    $names = isset($_FILES['audio_files']['name']) ? $_FILES['audio_files']['name'] : array();
+    if (!is_array($names)) {
+        return $files;
+    }
+
+    $count = count($names);
+    for ($i = 0; $i < $count; $i++) {
+        $files[] = array(
+            'name' => isset($_FILES['audio_files']['name'][$i]) ? $_FILES['audio_files']['name'][$i] : '',
+            'type' => isset($_FILES['audio_files']['type'][$i]) ? $_FILES['audio_files']['type'][$i] : '',
+            'tmp_name' => isset($_FILES['audio_files']['tmp_name'][$i]) ? $_FILES['audio_files']['tmp_name'][$i] : '',
+            'error' => isset($_FILES['audio_files']['error'][$i]) ? $_FILES['audio_files']['error'][$i] : UPLOAD_ERR_NO_FILE,
+            'size' => isset($_FILES['audio_files']['size'][$i]) ? $_FILES['audio_files']['size'][$i] : 0
+        );
+    }
+
+    return $files;
+}
+
 if (isset($_POST['upload_media'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['upload_title']);
     } else {
-        $error = '';
-        $coverError = '';
-        $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
-        if ($coverName === false) {
-            $error = $coverError;
-            $id = false;
+        $files = RADIO_adminUploadFiles();
+        $successCount = 0;
+        $failures = array();
+
+        if (count($files) === 1) {
+            $error = '';
+            $coverError = '';
+            $coverName = RADIO_saveCoverUpload(isset($_FILES['cover_file']) ? $_FILES['cover_file'] : array(), $coverError);
+            if ($coverName === false) {
+                $error = $coverError;
+                $id = false;
+            } else {
+                $_POST['cover_name'] = $coverName;
+                $id = RADIO_saveUpload($files[0], $_POST, $error);
+                if ($id === false && $coverName !== '') {
+                    RADIO_deleteCover($coverName);
+                }
+            }
+
+            if ($id !== false) {
+                $successCount = 1;
+            } else {
+                $key = isset($LANG_RADIO[$error]) ? $error : 'upload_failed';
+                $failures[] = basename($files[0]['name']) . ': ' . $LANG_RADIO[$key];
+            }
         } else {
-            $_POST['cover_name'] = $coverName;
-            $id = RADIO_saveUpload(isset($_FILES['audio_file']) ? $_FILES['audio_file'] : array(), $_POST, $error);
-            if ($id === false && $coverName !== '') {
-                RADIO_deleteCover($coverName);
+            foreach ($files as $file) {
+                $error = '';
+                $metadata = $_POST;
+                $metadata['title'] = '';
+                $metadata['description'] = '';
+                $metadata['season_number'] = 0;
+                $metadata['episode_number'] = 0;
+                $metadata['duration'] = 0;
+                $metadata['cover_name'] = '';
+
+                $id = RADIO_saveUpload($file, $metadata, $error);
+                if ($id !== false) {
+                    $successCount++;
+                } else {
+                    $key = isset($LANG_RADIO[$error]) ? $error : 'upload_failed';
+                    $failures[] = basename($file['name']) . ': ' . $LANG_RADIO[$key];
+                }
             }
         }
 
-        if ($id !== false) {
-            $message = COM_showMessageText($LANG_RADIO['upload_saved'], $LANG_RADIO['upload_title']);
+        if ($successCount > 0 && count($failures) === 0) {
+            $message = COM_showMessageText(
+                sprintf($LANG_RADIO['batch_upload_success'], $successCount),
+                $LANG_RADIO['upload_title']
+            );
+        } elseif ($successCount > 0) {
+            $message = COM_showMessageText(
+                sprintf($LANG_RADIO['batch_upload_partial'], $successCount, count($failures))
+                    . '<br><small>' . htmlspecialchars(implode(' · ', $failures), ENT_QUOTES, 'UTF-8') . '</small>',
+                $LANG_RADIO['upload_title']
+            );
+        } elseif (count($failures) > 0) {
+            $message = COM_showMessageText(
+                $LANG_RADIO['batch_upload_failed']
+                    . '<br><small>' . htmlspecialchars(implode(' · ', $failures), ENT_QUOTES, 'UTF-8') . '</small>',
+                $LANG_RADIO['upload_title']
+            );
         } else {
-            $key = isset($LANG_RADIO[$error]) ? $error : 'upload_failed';
-            $message = COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['upload_title']);
+            $message = COM_showMessageText($LANG_RADIO['batch_upload_none'], $LANG_RADIO['upload_title']);
         }
     }
 }
@@ -44,6 +116,12 @@ $token = SEC_createToken();
 $template = RADIO_adminTemplate('media-upload.thtml');
 $template->set_var(array(
     'audio_file_label' => htmlspecialchars($LANG_RADIO['audio_file'], ENT_QUOTES, 'UTF-8'),
+    'batch_drop_title' => htmlspecialchars($LANG_RADIO['batch_drop_title'], ENT_QUOTES, 'UTF-8'),
+    'batch_drop_text' => htmlspecialchars($LANG_RADIO['batch_drop_text'], ENT_QUOTES, 'UTF-8'),
+    'batch_drop_label' => htmlspecialchars($LANG_RADIO['batch_drop_label'], ENT_QUOTES, 'UTF-8'),
+    'batch_remove_label' => htmlspecialchars($LANG_RADIO['batch_remove'], ENT_QUOTES, 'UTF-8'),
+    'batch_server_limit' => htmlspecialchars($LANG_RADIO['batch_server_limit'], ENT_QUOTES, 'UTF-8'),
+    'batch_metadata_note' => htmlspecialchars($LANG_RADIO['batch_metadata_note'], ENT_QUOTES, 'UTF-8'),
     'title_label' => htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8'),
     'author_label' => htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8'),
     'series_title_label' => htmlspecialchars($LANG_RADIO['series_title'], ENT_QUOTES, 'UTF-8'),
