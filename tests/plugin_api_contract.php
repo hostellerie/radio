@@ -132,6 +132,14 @@ radio_contract_require(
     'Radio media library must decode imported filenames and keep administrative columns compact.'
 );
 radio_contract_require(
+    strpos($functions, 'function RADIO_validateExternalAudioSource') !== false
+        && strpos($functions, 'function RADIO_externalAudioProbeRequest') !== false
+        && strpos($functions, 'external_url_not_audio') !== false
+        && strpos($functions, 'external_url_no_range') !== false
+        && strpos($functions, 'RADIO_validateExternalAudioSource(') !== false,
+    'Radio remote sources must be probed and validated before they are saved.'
+);
+radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
     'Radio home player must not reference undeclared live-page synchronization state.'
