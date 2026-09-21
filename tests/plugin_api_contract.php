@@ -118,7 +118,7 @@ radio_contract_require(
 $adminUi = file_get_contents($root . '/admin/admin-ui.inc.php');
 $mediaTable = file_get_contents($root . '/templates/admin/media-list-table.thtml');
 radio_contract_require(
-    strpos($adminUi, "return $LANG_RADIO['source_local'];") !== false
+    strpos($adminUi, "return \$LANG_RADIO['source_local'];") !== false
         && strpos($adminUi, 'function RADIO_adminSortHeader') !== false
         && strpos($mediaTable, '{modified_header}') !== false,
     'Radio media library must identify local files correctly and expose sortable administrative columns.'
