@@ -5,6 +5,7 @@
             <th>{title_label}</th>
             <th>{type_label}</th>
             <th>{status_label}</th>
+            <th>{availability_label}</th>
             <th>{source_label}</th>
             <th>{duration_label}</th>
             <th>{size_label}</th>
