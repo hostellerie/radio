@@ -169,6 +169,8 @@
         var endedAt = 0;
         var endedMediaId = 0;
         var endedRetryCount = 0;
+        var transitionTimer = 0;
+        var transitionProgramId = 0;
         var scope = createScope(canvas, audio);
 
         function updateButton() {
@@ -192,7 +194,42 @@
             listenStart = 0;
         }
 
-        function apply(data, autoplay, fromEnded) {
+        function scheduleNextProgrammeTransition(data) {
+            if (transitionTimer) {
+                window.clearTimeout(transitionTimer);
+                transitionTimer = 0;
+            }
+            transitionProgramId = 0;
+
+            if (!data || data.source === 'schedule' || !data.upcoming || !data.upcoming.length) {
+                return;
+            }
+
+            var serverNow = Date.parse(data.generated_at || '');
+            var nextStart = Date.parse(data.upcoming[0].start || '');
+            if (!isFinite(serverNow) || !isFinite(nextStart) || nextStart <= serverNow) {
+                return;
+            }
+
+            var delay = nextStart - serverNow;
+            if (delay > 86400000) {
+                return;
+            }
+
+            transitionProgramId = parseInt(
+                String(data.upcoming[0].program_id || '').replace('program:', ''),
+                10
+            ) || 0;
+
+            transitionTimer = window.setTimeout(function () {
+                transitionTimer = 0;
+                sync(wantedPlaying, false, transitionProgramId);
+            }, Math.max(0, delay));
+        }
+
+        function apply(data, autoplay, fromEnded, expectedProgramId) {
+            scheduleNextProgrammeTransition(data);
+
             if (!data.current_media) {
                 flush();
                 wantedPlaying = false;
@@ -209,6 +246,9 @@
                 : 0;
             var streamUrl = data.current_media.stream_url || '';
             var offset = parseInt(data.current_media.offset || 0, 10);
+            if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
+                offset = 0;
+            }
             var changed = mediaId !== nextMediaId || audio.getAttribute('src') !== streamUrl;
 
             if (fromEnded && nextMediaId === endedMediaId
@@ -284,7 +324,7 @@
             }
         }
 
-        function sync(autoplay, fromEnded) {
+        function sync(autoplay, fromEnded, expectedProgramId) {
             fetch(endpoint, {
                 cache: 'no-store',
                 credentials: 'same-origin'
@@ -296,7 +336,7 @@
                     return response.json();
                 })
                 .then(function (data) {
-                    apply(data, autoplay, !!fromEnded);
+                    apply(data, autoplay, !!fromEnded, expectedProgramId || 0);
                 })
                 .catch(function () {
                     wantedPlaying = false;
