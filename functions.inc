@@ -564,8 +564,8 @@ function RADIO_saveExternalMedia($metadata, &$error)
     }
 
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
-    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
-    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
+    $onDemand = isset($metadata['on_demand']) ? (!empty($metadata['on_demand']) ? 1 : 0) : 1;
+    $broadcast = isset($metadata['broadcast']) ? (!empty($metadata['broadcast']) ? 1 : 0) : 1;
     $duration = $sourceKind === 'live' ? 0 : max(0, (int) (isset($metadata['duration']) ? $metadata['duration'] : 0));
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
     $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
@@ -964,8 +964,8 @@ function RADIO_saveUpload($file, $metadata, &$error)
         $mediaType = 'music';
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
-    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
-    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
+    $onDemand = isset($metadata['on_demand']) ? (!empty($metadata['on_demand']) ? 1 : 0) : 1;
+    $broadcast = isset($metadata['broadcast']) ? (!empty($metadata['broadcast']) ? 1 : 0) : 1;
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
     if ($duration < 1) {
@@ -1087,8 +1087,12 @@ function RADIO_updateMedia($id, $metadata)
         $mediaType = 'music';
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
-    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
-    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
+    $onDemand = isset($metadata['on_demand'])
+        ? (!empty($metadata['on_demand']) ? 1 : 0)
+        : (!empty($row['on_demand']) ? 1 : 0);
+    $broadcast = isset($metadata['broadcast'])
+        ? (!empty($metadata['broadcast']) ? 1 : 0)
+        : (!empty($row['broadcast']) ? 1 : 0);
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
     if ($duration < 1 && RADIO_sourceKind($row) === 'local' && !empty($row['storage_name'])) {
