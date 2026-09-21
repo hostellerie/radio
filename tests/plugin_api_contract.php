@@ -108,6 +108,13 @@ radio_contract_require(
         && strpos($uploadAdmin, "ini_get('max_file_uploads')") !== false,
     'Radio batch uploader must display the effective PHP upload limits.'
 );
+$editAdmin = file_get_contents($root . '/admin/edit.php');
+$indexAdmin = file_get_contents($root . '/admin/index.php');
+radio_contract_require(
+    strpos($editAdmin, "/plugins/radio/index.php?updated=1") !== false
+        && strpos($indexAdmin, "isset($_GET['updated'])") !== false,
+    'Successful Radio media saves must redirect back to the media library with confirmation.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
