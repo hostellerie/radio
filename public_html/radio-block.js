@@ -166,6 +166,9 @@
         var programId = 0;
         var listenStart = 0;
         var wantedPlaying = false;
+        var endedAt = 0;
+        var endedMediaId = 0;
+        var endedRetryCount = 0;
         var scope = createScope(canvas, audio);
 
         function updateButton() {
@@ -189,7 +192,7 @@
             listenStart = 0;
         }
 
-        function apply(data, autoplay) {
+        function apply(data, autoplay, fromEnded) {
             if (!data.current_media) {
                 flush();
                 wantedPlaying = false;
@@ -207,6 +210,22 @@
             var streamUrl = data.current_media.stream_url || '';
             var offset = parseInt(data.current_media.offset || 0, 10);
             var changed = mediaId !== nextMediaId || audio.getAttribute('src') !== streamUrl;
+
+            if (fromEnded && nextMediaId === endedMediaId
+                && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
+                && endedRetryCount < 20) {
+                endedRetryCount++;
+                window.setTimeout(function () {
+                    sync(true, true);
+                }, 500);
+                return;
+            }
+
+            if (fromEnded) {
+                endedAt = 0;
+                endedMediaId = 0;
+                endedRetryCount = 0;
+            }
 
             mediaId = nextMediaId;
             programId = nextProgramId;
@@ -265,7 +284,7 @@
             }
         }
 
-        function sync(autoplay) {
+        function sync(autoplay, fromEnded) {
             fetch(endpoint, {
                 cache: 'no-store',
                 credentials: 'same-origin'
@@ -277,7 +296,7 @@
                     return response.json();
                 })
                 .then(function (data) {
-                    apply(data, autoplay);
+                    apply(data, autoplay, !!fromEnded);
                 })
                 .catch(function () {
                     wantedPlaying = false;
@@ -314,7 +333,10 @@
         audio.addEventListener('ended', function () {
             flush();
             if (wantedPlaying) {
-                sync(true);
+                endedAt = audio.currentTime || 0;
+                endedMediaId = mediaId;
+                endedRetryCount = 0;
+                sync(true, true);
             }
         });
 
