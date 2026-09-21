@@ -800,7 +800,7 @@ Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-sa
 
 ## 0.1.x — Foundation
 
-Current development version: **0.2.4**.
+Current development version: **0.2.5**.
 
 Focus:
 
