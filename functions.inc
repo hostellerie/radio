@@ -1137,63 +1137,6 @@ function RADIO_mediaUrl($id, $download)
     return $url;
 }
 
-function RADIO_mediaUrlAtOffset($id, $seconds)
-{
-    $url = RADIO_mediaUrl($id, false);
-    $seconds = max(0, (int) $seconds);
-    if ($seconds > 0) {
-        $url .= '&start=' . $seconds;
-    }
-    return $url;
-}
-
-function RADIO_mediaStartByte($row, $path, $size, $seconds)
-{
-    $seconds = max(0, (int) $seconds);
-    $duration = isset($row['duration']) ? (int) $row['duration'] : 0;
-    if ($seconds < 1 || $duration < 1 || $seconds >= $duration || $size < 1) {
-        return 0;
-    }
-
-    $name = !empty($row['storage_name']) ? $row['storage_name'] : $row['original_name'];
-    $extension = strtolower(pathinfo((string) $name, PATHINFO_EXTENSION));
-
-    // Byte-proportional seeking is suitable for MP3/AAC delivery and avoids
-    // making external players download the complete file before joining live.
-    if ($extension !== 'mp3' && $extension !== 'aac') {
-        return 0;
-    }
-
-    $start = (int) floor(($seconds / $duration) * $size);
-    $start = max(0, min($size - 1, $start));
-
-    // Move forward to a plausible MPEG/ADTS frame boundary.
-    $handle = @fopen($path, 'rb');
-    if (!$handle) {
-        return $start;
-    }
-    if ($start > 0) {
-        fseek($handle, $start);
-    }
-    $probe = fread($handle, 65536);
-    fclose($handle);
-
-    if (!is_string($probe) || strlen($probe) < 2) {
-        return $start;
-    }
-
-    $limit = strlen($probe) - 1;
-    for ($i = 0; $i < $limit; $i++) {
-        $b0 = ord($probe[$i]);
-        $b1 = ord($probe[$i + 1]);
-        if ($b0 === 0xFF && ($b1 & 0xE0) === 0xE0) {
-            return min($size - 1, $start + $i);
-        }
-    }
-
-    return $start;
-}
-
 function RADIO_downloadAllowed($row)
 {
     global $_RADIO_CONF;
@@ -1234,7 +1177,7 @@ function RADIO_playbackMime($row)
         : 'application/octet-stream';
 }
 
-function RADIO_sendMedia($row, $download, $startSeconds = 0)
+function RADIO_sendMedia($row, $download)
 {
     global $_RADIO_CONF;
 
@@ -1263,16 +1206,8 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
     }
 
     $size = filesize($path);
-    $baseStart = (!$download && $startSeconds > 0)
-        ? RADIO_mediaStartByte($row, $path, $size, $startSeconds)
-        : 0;
-    $virtualSize = max(0, $size - $baseStart);
-    if ($virtualSize < 1) {
-        return false;
-    }
-
-    $rangeStart = 0;
-    $rangeEnd = $virtualSize - 1;
+    $start = 0;
+    $end = $size - 1;
     $status = 200;
 
     if (!$download && isset($_SERVER['HTTP_RANGE'])) {
@@ -1281,7 +1216,7 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
             || !preg_match('/^bytes=(\d*)-(\d*)$/', $range, $m)
             || ($m[1] === '' && $m[2] === '')) {
             header('HTTP/1.1 416 Range Not Satisfiable');
-            header('Content-Range: bytes */' . $virtualSize);
+            header('Content-Range: bytes */' . $size);
             exit;
         }
 
@@ -1289,60 +1224,50 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
             $suffix = (int) $m[2];
             if ($suffix < 1) {
                 header('HTTP/1.1 416 Range Not Satisfiable');
-                header('Content-Range: bytes */' . $virtualSize);
+                header('Content-Range: bytes */' . $size);
                 exit;
             }
-            $rangeStart = max(0, $virtualSize - $suffix);
-            $rangeEnd = $virtualSize - 1;
+            $start = max(0, $size - $suffix);
+            $end = $size - 1;
         } else {
-            $rangeStart = (int) $m[1];
+            $start = (int) $m[1];
             if ($m[2] !== '') {
-                $rangeEnd = min($rangeEnd, (int) $m[2]);
+                $end = min($end, (int) $m[2]);
             }
         }
 
-        if ($rangeStart > $rangeEnd || $rangeStart >= $virtualSize) {
+        if ($start > $end || $start >= $size) {
             header('HTTP/1.1 416 Range Not Satisfiable');
-            header('Content-Range: bytes */' . $virtualSize);
+            header('Content-Range: bytes */' . $size);
             exit;
         }
         $status = 206;
     }
 
-    $actualStart = $baseStart + $rangeStart;
-    $actualEnd = $baseStart + $rangeEnd;
-
     if ($status === 206) {
         header('HTTP/1.1 206 Partial Content');
-        header('Content-Range: bytes ' . $rangeStart . '-' . $rangeEnd . '/' . $virtualSize);
+        header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
     }
 
     $mime = RADIO_playbackMime($row);
     header('Content-Type: ' . $mime);
     header('Accept-Ranges: bytes');
-    header('Content-Length: ' . (($rangeEnd - $rangeStart) + 1));
+    header('Content-Length: ' . (($end - $start) + 1));
     header('X-Content-Type-Options: nosniff');
-    if ($baseStart > 0) {
-        header('Cache-Control: no-store');
-    }
 
     $filename = basename($row['original_name']);
     $disposition = $download ? 'attachment' : 'inline';
     header('Content-Disposition: ' . $disposition . '; filename="' . str_replace('"', '', $filename) . '"');
 
-    if (isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) === 'HEAD') {
-        exit;
-    }
-
     $handle = fopen($path, 'rb');
     if (!$handle) {
         return false;
     }
-    if ($actualStart > 0) {
-        fseek($handle, $actualStart);
+    if ($start > 0) {
+        fseek($handle, $start);
     }
 
-    $remaining = ($actualEnd - $actualStart) + 1;
+    $remaining = ($end - $start) + 1;
     while ($remaining > 0 && !feof($handle)) {
         $length = min(8192, $remaining);
         $buffer = fread($handle, $length);
