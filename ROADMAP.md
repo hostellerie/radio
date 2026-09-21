@@ -40,7 +40,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.2.4
+## Implementation status snapshot — 0.3.0
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
@@ -96,7 +96,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 ## Local audio management
 
 - [x] Upload audio files from the administration interface.
-- [ ] Support safe drag-and-drop upload.
+- [x] Support safe drag-and-drop and batch upload.
 - [x] Validate extension, detected MIME type, lightweight audio file signature and configured size limits for local uploads.
 - [x] Generate filesystem-safe storage names independently from the uploaded filename.
 - [x] Keep the original human filename and metadata separately when useful.
@@ -116,6 +116,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 - [x] Support an optional cover/image.
 - [ ] Support draft, published, disabled and archived states.
 - [x] Support per-item download permission.
+- [x] Separate media publication from independent `on_demand` and `broadcast` availability.
 
 ## Persistent storage
 
