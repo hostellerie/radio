@@ -2146,6 +2146,65 @@ function RADIO_getReplayOccurrences($limit, $timestamp)
     return $replays;
 }
 
+function RADIO_getProgramUpcomingOccurrences($programId, $limit, $timestamp)
+{
+    $programId = (int) $programId;
+    $limit = max(1, min(20, (int) $limit));
+    $timestamp = $timestamp ? (int) $timestamp : time();
+
+    if ($programId < 1) {
+        return array();
+    }
+
+    $occurrences = RADIO_getOccurrences(
+        $timestamp,
+        strtotime('+90 days', $timestamp),
+        true
+    );
+    $items = array();
+
+    foreach ($occurrences as $occurrence) {
+        if ((int) $occurrence['program_id'] !== $programId
+            || (int) $occurrence['end'] <= $timestamp) {
+            continue;
+        }
+
+        $items[] = $occurrence;
+        if (count($items) >= $limit) {
+            break;
+        }
+    }
+
+    return $items;
+}
+
+function RADIO_getProgramReplayOccurrences($programId, $limit, $timestamp)
+{
+    $programId = (int) $programId;
+    $limit = max(1, min(20, (int) $limit));
+    $timestamp = $timestamp ? (int) $timestamp : time();
+
+    if ($programId < 1) {
+        return array();
+    }
+
+    $replays = RADIO_getReplayOccurrences(100, $timestamp);
+    $items = array();
+
+    foreach ($replays as $replay) {
+        if ((int) $replay['program_id'] !== $programId) {
+            continue;
+        }
+
+        $items[] = $replay;
+        if (count($items) >= $limit) {
+            break;
+        }
+    }
+
+    return $items;
+}
+
 function RADIO_compareReplayOccurrences($a, $b)
 {
     if ($a['start'] === $b['start']) {
