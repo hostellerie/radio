@@ -26,7 +26,9 @@ $content = '<div class="radio-public"><section class="radio-player-card radio-pl
     . '<nav class="radio-player-links"><a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/index.php', ENT_QUOTES, 'UTF-8') . '">'
     . htmlspecialchars($LANG_RADIO['back_to_library'], ENT_QUOTES, 'UTF-8') . '</a>'
     . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a></nav>'
+    . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a>'
+    . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/vlc.php', ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($LANG_RADIO['open_in_vlc'], ENT_QUOTES, 'UTF-8') . '</a></nav>'
     . '</section></div>';
 
 COM_output(COM_createHTMLDocument($content, array(
