@@ -24,38 +24,45 @@
 
 .radio-block__player {
     display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr);
+    grid-template-columns: 1.7rem minmax(0, 1fr);
     align-items: center;
     gap: .65rem;
 }
 
-.radio-block__play {
+.radio-block button.radio-block__play {
     display: inline-grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 1.7rem;
+    height: 1.7rem;
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    max-width: 1.7rem;
+    max-height: 1.7rem;
     padding: 0;
+    margin: 0;
     border: 1px solid currentColor;
-    border-radius: 50%;
+    border-radius: 999px;
     background: transparent;
     color: inherit;
-    opacity: .62;
+    opacity: .6;
     appearance: none;
     -webkit-appearance: none;
     box-shadow: none;
+    line-height: 1;
+    box-sizing: border-box;
     cursor: pointer;
 }
 
-.radio-block__play:hover {
+.radio-block button.radio-block__play:hover {
     opacity: .9;
     background: rgba(127, 127, 127, .08);
 }
 
-.radio-block__play:focus {
+.radio-block button.radio-block__play:focus {
     outline: none;
 }
 
-.radio-block__play:focus-visible {
+.radio-block button.radio-block__play:focus-visible {
     opacity: .9;
     outline: 1px solid currentColor;
     outline-offset: 2px;
@@ -64,19 +71,19 @@
 .radio-block__play-icon {
     width: 0;
     height: 0;
-    margin-left: .1rem;
-    border-top: .27rem solid transparent;
-    border-bottom: .27rem solid transparent;
-    border-left: .43rem solid currentColor;
+    margin-left: .08rem;
+    border-top: .22rem solid transparent;
+    border-bottom: .22rem solid transparent;
+    border-left: .36rem solid currentColor;
 }
 
 .radio-block.is-playing .radio-block__play-icon {
-    width: .46rem;
-    height: .54rem;
+    width: .38rem;
+    height: .46rem;
     margin-left: 0;
     border: 0;
-    border-left: .13rem solid currentColor;
-    border-right: .13rem solid currentColor;
+    border-left: .11rem solid currentColor;
+    border-right: .11rem solid currentColor;
 }
 
 .radio-block__content {
@@ -111,12 +118,13 @@
 }
 
 .radio-block__scope {
+    grid-column: 1 / -1;
     display: block;
     width: 100%;
-    height: 20px;
-    margin-top: .28rem;
+    height: 28px;
+    margin-top: .05rem;
     color: currentColor;
-    opacity: .68;
+    opacity: .9;
 }
 
 .radio-block__audio {
@@ -134,13 +142,17 @@
 
 @media (max-width: 320px) {
     .radio-block__player {
-        grid-template-columns: 1.9rem minmax(0, 1fr);
+        grid-template-columns: 1.6rem minmax(0, 1fr);
         gap: .48rem;
     }
 
-    .radio-block__play {
-        width: 1.9rem;
-        height: 1.9rem;
+    .radio-block button.radio-block__play {
+        width: 1.6rem;
+        height: 1.6rem;
+        min-width: 1.6rem;
+        min-height: 1.6rem;
+        max-width: 1.6rem;
+        max-height: 1.6rem;
     }
 }
 
