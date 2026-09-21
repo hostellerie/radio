@@ -112,6 +112,17 @@ if (isset($_POST['upload_media'])) {
     }
 }
 
+function RADIO_adminPhpUploadLimits()
+{
+    return array(
+        'upload_max_filesize' => (string) ini_get('upload_max_filesize'),
+        'post_max_size' => (string) ini_get('post_max_size'),
+        'max_file_uploads' => (string) ini_get('max_file_uploads')
+    );
+}
+
+$phpUploadLimits = RADIO_adminPhpUploadLimits();
+
 $token = SEC_createToken();
 $template = RADIO_adminTemplate('media-upload.thtml');
 $template->set_var(array(
@@ -120,7 +131,16 @@ $template->set_var(array(
     'batch_drop_text' => htmlspecialchars($LANG_RADIO['batch_drop_text'], ENT_QUOTES, 'UTF-8'),
     'batch_drop_label' => htmlspecialchars($LANG_RADIO['batch_drop_label'], ENT_QUOTES, 'UTF-8'),
     'batch_remove_label' => htmlspecialchars($LANG_RADIO['batch_remove'], ENT_QUOTES, 'UTF-8'),
-    'batch_server_limit' => htmlspecialchars($LANG_RADIO['batch_server_limit'], ENT_QUOTES, 'UTF-8'),
+    'batch_server_limit' => htmlspecialchars(
+        sprintf(
+            $LANG_RADIO['batch_server_limit'],
+            $phpUploadLimits['upload_max_filesize'],
+            $phpUploadLimits['post_max_size'],
+            $phpUploadLimits['max_file_uploads']
+        ),
+        ENT_QUOTES,
+        'UTF-8'
+    ),
     'batch_metadata_note' => htmlspecialchars($LANG_RADIO['batch_metadata_note'], ENT_QUOTES, 'UTF-8'),
     'title_label' => htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8'),
     'author_label' => htmlspecialchars($LANG_RADIO['author'], ENT_QUOTES, 'UTF-8'),
