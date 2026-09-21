@@ -123,6 +123,14 @@ radio_contract_require(
         && strpos($mediaTable, '{modified_header}') !== false,
     'Radio media library must identify local files correctly and expose sortable administrative columns.'
 );
+$mediaRow = file_get_contents($root . '/templates/admin/media-list-row.thtml');
+radio_contract_require(
+    strpos($adminUi, 'function RADIO_adminDisplayName') !== false
+        && strpos($adminUi, 'rawurldecode') !== false
+        && strpos($mediaRow, 'radio-admin__ellipsis') !== false
+        && strpos($mediaRow, 'radio-admin__nowrap') !== false,
+    'Radio media library must decode imported filenames and keep administrative columns compact.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
