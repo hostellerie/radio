@@ -1,22 +1,22 @@
 .radio-block {
     display: grid;
-    gap: .55rem;
+    gap: .45rem;
 }
 
 .radio-block__status {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
-    font-size: .75rem;
+    font-size: .72rem;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
-    opacity: .78;
+    opacity: .76;
 }
 
 .radio-block__dot {
-    width: .5rem;
-    height: .5rem;
+    width: .46rem;
+    height: .46rem;
     border-radius: 50%;
     background: currentColor;
     animation: radio-block-pulse 1.8s ease-in-out infinite;
@@ -24,16 +24,16 @@
 
 .radio-block__player {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 2.7rem minmax(0, 1fr);
     align-items: center;
-    gap: .55rem;
+    gap: .65rem;
 }
 
 .radio-block__play {
     display: inline-grid;
     place-items: center;
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 2.7rem;
+    height: 2.7rem;
     padding: 0;
     border: 1px solid currentColor;
     border-radius: 50%;
@@ -50,19 +50,19 @@
 .radio-block__play-icon {
     width: 0;
     height: 0;
-    margin-left: .15rem;
-    border-top: .38rem solid transparent;
-    border-bottom: .38rem solid transparent;
-    border-left: .6rem solid currentColor;
+    margin-left: .14rem;
+    border-top: .34rem solid transparent;
+    border-bottom: .34rem solid transparent;
+    border-left: .56rem solid currentColor;
 }
 
 .radio-block.is-playing .radio-block__play-icon {
-    width: .62rem;
-    height: .72rem;
+    width: .58rem;
+    height: .68rem;
     margin-left: 0;
     border: 0;
-    border-left: .18rem solid currentColor;
-    border-right: .18rem solid currentColor;
+    border-left: .17rem solid currentColor;
+    border-right: .17rem solid currentColor;
 }
 
 .radio-block__content {
@@ -72,24 +72,37 @@
 .radio-block__title {
     margin: 0;
     font-weight: 700;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
+    line-height: 1.25;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: auto;
+}
+
+.radio-block__title a {
+    text-decoration: none;
+}
+
+.radio-block__title a:hover,
+.radio-block__title a:focus-visible {
+    text-decoration: underline;
 }
 
 .radio-block__meta {
-    margin: .12rem 0 0;
-    font-size: .88rem;
-    opacity: .72;
-    overflow-wrap: anywhere;
+    margin: .1rem 0 0;
+    font-size: .84rem;
+    line-height: 1.3;
+    opacity: .7;
+    overflow-wrap: normal;
+    word-break: normal;
 }
 
 .radio-block__scope {
     display: block;
-    width: 96px;
-    max-width: 28vw;
-    height: 24px;
+    width: 100%;
+    height: 20px;
+    margin-top: .28rem;
     color: currentColor;
-    opacity: .72;
+    opacity: .68;
 }
 
 .radio-block__audio {
@@ -99,19 +112,21 @@
 .radio-block__links {
     display: flex;
     flex-wrap: wrap;
-    gap: .35rem .75rem;
-    font-size: .9rem;
+    gap: .25rem .7rem;
+    margin-top: .05rem;
+    font-size: .84rem;
+    line-height: 1.3;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 320px) {
     .radio-block__player {
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: 2.45rem minmax(0, 1fr);
+        gap: .5rem;
     }
 
-    .radio-block__scope {
-        grid-column: 2;
-        width: 100%;
-        max-width: none;
+    .radio-block__play {
+        width: 2.45rem;
+        height: 2.45rem;
     }
 }
 
