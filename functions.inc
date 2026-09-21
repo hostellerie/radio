@@ -1105,16 +1105,44 @@ function RADIO_getMedia($id, $publishedOnly)
     return $row;
 }
 
-function RADIO_getMediaList($limit, $publishedOnly)
+function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $direction = 'desc')
 {
     global $_TABLES;
+
     $limit = max(1, min(200, (int) $limit));
     $where = $publishedOnly ? " WHERE status='published'" : '';
     if ($publishedOnly) {
         $where .= RADIO_mediaAvailabilitySql('on_demand', '');
         $where .= RADIO_permissionSql('radio_media', 0);
     }
-    $result = DB_query("SELECT * FROM {$_TABLES['radio_media']}" . $where . " ORDER BY modified DESC, media_id DESC LIMIT " . $limit);
+
+    $sortColumns = array(
+        'title' => 'title',
+        'type' => 'media_type',
+        'status' => 'status',
+        'availability' => 'on_demand',
+        'source' => 'source_kind',
+        'duration' => 'duration',
+        'size' => 'file_size',
+        'modified' => 'modified'
+    );
+    if (!isset($sortColumns[$sort])) {
+        $sort = 'modified';
+    }
+    $direction = strtolower((string) $direction) === 'asc' ? 'ASC' : 'DESC';
+
+    $orderBy = $sortColumns[$sort] . ' ' . $direction;
+    if ($sort === 'availability') {
+        $orderBy .= ', broadcast ' . $direction;
+    }
+    $orderBy .= ', media_id DESC';
+
+    $result = DB_query(
+        "SELECT * FROM {$_TABLES['radio_media']}"
+        . $where
+        . " ORDER BY " . $orderBy
+        . " LIMIT " . $limit
+    );
     $items = array();
     while ($row = DB_fetchArray($result)) {
         $items[] = $row;
