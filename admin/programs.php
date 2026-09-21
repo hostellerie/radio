@@ -75,7 +75,7 @@ if ($selected !== false && !RADIO_hasReadAccess($selected) && !RADIO_hasEditAcce
 }
 $items = $selected ? RADIO_getProgramItems($selectedId) : array();
 $media = array_values(array_filter(RADIO_getMediaList(200, false), function ($row) {
-    return RADIO_hasReadAccess($row);
+    return RADIO_hasReadAccess($row) && RADIO_isBroadcastAvailable($row);
 }));
 $token = SEC_createToken();
 
@@ -157,7 +157,7 @@ if ($selected) {
             . ' <select name="media_id">';
         foreach ($media as $row) {
             $content .= '<option value="' . (int) $row['media_id'] . '">'
-                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . ' [' . htmlspecialchars(RADIO_adminStatusLabel($row['status']), ENT_QUOTES, 'UTF-8') . ']</option>';
+                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . ' [' . htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8') . ']</option>';
         }
         $content .= '</select></label> '
             . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
