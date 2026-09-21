@@ -101,6 +101,13 @@ radio_contract_require(
         && strpos($radioBlockJs, 'expectedProgramId') !== false,
     'Active Radio listeners must hand off scheduled programmes from the beginning.'
 );
+$uploadAdmin = file_get_contents($root . '/admin/upload.php');
+radio_contract_require(
+    strpos($uploadAdmin, "ini_get('upload_max_filesize')") !== false
+        && strpos($uploadAdmin, "ini_get('post_max_size')") !== false
+        && strpos($uploadAdmin, "ini_get('max_file_uploads')") !== false,
+    'Radio batch uploader must display the effective PHP upload limits.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
