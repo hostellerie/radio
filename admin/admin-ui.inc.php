@@ -225,6 +225,32 @@ function RADIO_adminFormatSize($bytes)
     return number_format($mb, 2) . ' ' . $LANG_RADIO['admin_mb_short'];
 }
 
+function RADIO_adminDisplayName($value)
+{
+    $value = (string) $value;
+    $decoded = rawurldecode($value);
+    return $decoded !== '' ? $decoded : $value;
+}
+
+function RADIO_adminAvailabilityHtml($row)
+{
+    global $LANG_RADIO;
+
+    $items = array();
+    if (!empty($row['on_demand'])) {
+        $items[] = '<span class="radio-admin__badge">'
+            . htmlspecialchars($LANG_RADIO['on_demand'], ENT_QUOTES, 'UTF-8')
+            . '</span>';
+    }
+    if (!empty($row['broadcast'])) {
+        $items[] = '<span class="radio-admin__badge">'
+            . htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8')
+            . '</span>';
+    }
+
+    return empty($items) ? '<span class="radio-admin__muted">—</span>' : implode('', $items);
+}
+
 function RADIO_adminSortHeader($key, $label, $sort, $direction)
 {
     global $_CONF;
@@ -260,17 +286,13 @@ function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'de
     foreach ($media as $row) {
         $rowTemplate = RADIO_adminTemplate('media-list-row.thtml');
         $rowTemplate->set_var(array(
-            'title' => htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8'),
-            'filename' => htmlspecialchars($row['original_name'], ENT_QUOTES, 'UTF-8'),
+            'title' => htmlspecialchars(RADIO_adminDisplayName($row['title']), ENT_QUOTES, 'UTF-8'),
+            'title_full' => htmlspecialchars(RADIO_adminDisplayName($row['title']), ENT_QUOTES, 'UTF-8'),
+            'filename' => htmlspecialchars(RADIO_adminDisplayName($row['original_name']), ENT_QUOTES, 'UTF-8'),
+            'filename_full' => htmlspecialchars(RADIO_adminDisplayName($row['original_name']), ENT_QUOTES, 'UTF-8'),
             'media_type' => htmlspecialchars(RADIO_adminMediaTypeLabel($row['media_type']), ENT_QUOTES, 'UTF-8'),
             'status' => htmlspecialchars(RADIO_adminStatusLabel($row['status']), ENT_QUOTES, 'UTF-8'),
-            'availability' => htmlspecialchars(
-                (!empty($row['on_demand']) ? $LANG_RADIO['on_demand'] : '—')
-                . ' · '
-                . (!empty($row['broadcast']) ? $LANG_RADIO['broadcast'] : '—'),
-                ENT_QUOTES,
-                'UTF-8'
-            ),
+            'availability' => RADIO_adminAvailabilityHtml($row),
             'source' => htmlspecialchars(RADIO_adminSourceKindLabel(RADIO_sourceKind($row)), ENT_QUOTES, 'UTF-8'),
             'duration' => htmlspecialchars(RADIO_adminFormatDuration($row['duration']), ENT_QUOTES, 'UTF-8'),
             'size' => htmlspecialchars(RADIO_adminFormatSize($row['file_size']), ENT_QUOTES, 'UTF-8'),
@@ -292,7 +314,7 @@ function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'de
         'status_header' => RADIO_adminSortHeader('status', $LANG_RADIO['status'], $sort, $direction),
         'availability_header' => RADIO_adminSortHeader('availability', $LANG_RADIO['availability'], $sort, $direction),
         'source_header' => RADIO_adminSortHeader('source', $LANG_RADIO['source_kind'], $sort, $direction),
-        'duration_header' => RADIO_adminSortHeader('duration', $LANG_RADIO['duration_seconds'], $sort, $direction),
+        'duration_header' => RADIO_adminSortHeader('duration', $LANG_RADIO['admin_duration'], $sort, $direction),
         'size_header' => RADIO_adminSortHeader('size', $LANG_RADIO['admin_size'], $sort, $direction),
         'modified_header' => RADIO_adminSortHeader('modified', $LANG_RADIO['admin_modified'], $sort, $direction),
         'actions_label' => htmlspecialchars($LANG_RADIO['admin_actions'], ENT_QUOTES, 'UTF-8'),
