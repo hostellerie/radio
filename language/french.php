@@ -15,6 +15,7 @@ $LANG_RADIO = array(
     'admin_edit_media_help_text' => 'Utilisez cette page pour les modifications détaillées. La médiathèque reste une vue compacte qui renvoie ici pour l’édition.',
     'admin_size' => 'Taille',
     'admin_modified' => 'Modifié',
+    'admin_duration' => 'Durée',
     'admin_actions' => 'Actions',
     'admin_mb_short' => 'Mo',
     'admin_add_audio' => 'Ajouter un audio',
