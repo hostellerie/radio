@@ -244,6 +244,7 @@ $LANG_RADIO = array(
     'source_external' => 'URL audio distante',
     'source_live' => 'Flux live',
     'source_url' => 'URL de la source',
+    'source_url_help' => 'URL audio HTTP/HTTPS directe uniquement. Utilisez « URL audio distante » pour un fichier ou flux audio lisible directement, et « Flux live » pour un stream continu. Les pages YouTube, Spotify, SoundCloud, Mixcloud ou Dailymotion ne sont pas des URL audio directes et ne sont pas prises en charge.',
     'source_provider' => 'Fournisseur',
     'source_external_id' => 'ID fournisseur / externe',
     'source_attribution' => 'Attribution',
