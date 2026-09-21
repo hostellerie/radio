@@ -60,17 +60,22 @@ function RADIO_pathEndsWith($path, $suffix)
 function plugin_getfootercode_radio()
 {
     $path = RADIO_requestPath();
+    $footer = '';
 
     if (RADIO_isPublicHtmlPage($path)) {
-        return RADIO_publicScriptTag();
+        $footer .= RADIO_publicScriptTag();
+    }
+
+    if (!empty($GLOBALS['_RADIO_NEEDS_BLOCK_JS'])) {
+        $footer .= RADIO_blockScriptTag();
     }
 
     if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')
         || RADIO_pathEndsWith($path, '/admin/plugins/radio/edit.php')) {
-        return RADIO_adminScriptTag();
+        $footer .= RADIO_adminScriptTag();
     }
 
-    return '';
+    return $footer;
 }
 
 function RADIO_statsEnabled()
@@ -2877,6 +2882,22 @@ function RADIO_publicScriptTag()
         . '"></script>' . "\n";
 }
 
+function RADIO_blockScriptTag()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_html'])
+        ? rtrim($_CONF['path_html'], '/\\') . '/radio/radio-block.js'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/public_html/radio-block.js';
+    }
+
+    return '<script src="'
+        . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/radio-block.js', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '"></script>' . "\n";
+}
+
 function RADIO_adminScriptTag()
 {
     global $_CONF;
@@ -3016,6 +3037,7 @@ function plugin_getBlocks_radio($side, $topic = '')
     }
 
     $GLOBALS['_RADIO_NEEDS_BLOCK_CSS'] = true;
+    $GLOBALS['_RADIO_NEEDS_BLOCK_JS'] = true;
 
     $blocks[] = array(
         'name'           => 'radio_now_playing',
@@ -3061,23 +3083,45 @@ function RADIO_renderBlock()
     $liveUrl = rtrim($_CONF['site_url'], '/') . '/radio/live.php';
     $scheduleUrl = rtrim($_CONF['site_url'], '/') . '/radio/schedule.php';
     $radioUrl = rtrim($_CONF['site_url'], '/') . '/radio/index.php';
+    $nowUrl = rtrim($_CONF['site_url'], '/') . '/radio/now.php';
+    $eventUrl = rtrim($_CONF['site_url'], '/') . '/radio/event.php';
+    $listenLabel = isset($LANG_RADIO['public_listen']) ? $LANG_RADIO['public_listen'] : 'Listen';
+    $pauseLabel = isset($LANG_RADIO['public_pause']) ? $LANG_RADIO['public_pause'] : 'Pause';
 
-    $html = '<div class="radio-block">';
+    $html = '<div class="radio-block"'
+        . ' data-now-endpoint="' . htmlspecialchars($nowUrl, ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-event-endpoint="' . htmlspecialchars($eventUrl, ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-listen-label="' . htmlspecialchars($listenLabel, ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-pause-label="' . htmlspecialchars($pauseLabel, ENT_QUOTES, 'UTF-8') . '">';
 
     if ($state['media'] !== false) {
         $media = $state['media'];
         $html .= '<div class="radio-block__status"><span class="radio-block__dot" aria-hidden="true"></span>'
             . htmlspecialchars(isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air', ENT_QUOTES, 'UTF-8')
             . '</div>'
-            . '<p class="radio-block__title"><a href="'
+            . '<div class="radio-block__player">'
+            . '<button type="button" class="radio-block__play" aria-label="'
+            . htmlspecialchars($listenLabel, ENT_QUOTES, 'UTF-8') . '" title="'
+            . htmlspecialchars($listenLabel, ENT_QUOTES, 'UTF-8') . '">'
+            . '<span class="radio-block__play-icon" aria-hidden="true"></span>'
+            . '</button>'
+            . '<div class="radio-block__content">'
+            . '<p class="radio-block__title"><a data-radio-block-title href="'
             . htmlspecialchars(isset($media['item_url']) ? $media['item_url'] : $radioUrl, ENT_QUOTES, 'UTF-8') . '">'
             . htmlspecialchars($media['title'], ENT_QUOTES, 'UTF-8') . '</a></p>';
 
         if ($state['program'] !== false && !empty($state['program']['program_title'])) {
-            $html .= '<p class="radio-block__meta">'
+            $html .= '<p class="radio-block__meta" data-radio-block-program>'
                 . htmlspecialchars($state['program']['program_title'], ENT_QUOTES, 'UTF-8')
                 . '</p>';
+        } else {
+            $html .= '<p class="radio-block__meta" data-radio-block-program></p>';
         }
+
+        $html .= '</div>'
+            . '<canvas class="radio-block__scope" width="120" height="28" aria-hidden="true"></canvas>'
+            . '<audio class="radio-block__audio" preload="none"></audio>'
+            . '</div>';
     } else {
         $html .= '<p class="radio-block__meta">'
             . htmlspecialchars(isset($LANG_RADIO['nothing_scheduled_now']) ? $LANG_RADIO['nothing_scheduled_now'] : 'Nothing is on air right now.', ENT_QUOTES, 'UTF-8')
@@ -3093,7 +3137,6 @@ function RADIO_renderBlock()
 
     return $html;
 }
-
 
 function RADIO_ensureSchemaColumn($table, $column, $definition)
 {
