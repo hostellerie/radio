@@ -15,6 +15,7 @@ $LANG_RADIO = array(
     'admin_edit_media_help_text' => 'Use this page for detailed changes. The media library remains a compact overview and links here for editing.',
     'admin_size' => 'Size',
     'admin_modified' => 'Modified',
+    'admin_duration' => 'Duration',
     'admin_actions' => 'Actions',
     'admin_mb_short' => 'MB',
     'admin_add_audio' => 'Add audio',
