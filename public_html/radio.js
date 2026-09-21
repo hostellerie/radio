@@ -399,6 +399,8 @@
         var onAirLabel = root.getAttribute('data-on-air-label') || 'On air';
         var incompleteLabel = root.getAttribute('data-incomplete-label') || '';
         var unavailableLabel = root.getAttribute('data-unavailable-label') || '';
+        var listenLabel = root.getAttribute('data-listen-label') || 'Listen';
+        var pauseLabel = root.getAttribute('data-pause-label') || 'Pause';
         var player = q('#radio-live-player', root);
         var status = q('#radio-live-status', root);
         var program = q('#radio-live-program', root);
@@ -423,6 +425,12 @@
                     (Date.now() - listenStart) / 1000);
                 listenStart = 0;
             }
+        }
+
+        function updateControl() {
+            var playing = !player.paused && !player.ended;
+            start.textContent = playing ? pauseLabel : listenLabel;
+            start.setAttribute('aria-label', playing ? pauseLabel : listenLabel);
         }
 
         function sync(play) {
@@ -497,17 +505,26 @@
         }
 
         start.addEventListener('click', function () {
+            if (!player.paused && !player.ended) {
+                player.pause();
+                return;
+            }
             userStarted = true;
             sync(true);
         });
         player.addEventListener('play', function () {
+            updateControl();
             if (activeMediaId) {
                 postEvent(eventEndpoint, activeMediaId, activeProgramId, 'play', 'live', 0);
                 listenStart = Date.now();
             }
         });
-        player.addEventListener('pause', flush);
+        player.addEventListener('pause', function () {
+            flush();
+            updateControl();
+        });
         player.addEventListener('ended', function () {
+            updateControl();
             sync(true);
         });
         window.addEventListener('pagehide', flush);
@@ -517,6 +534,7 @@
             }
         }, 15000);
         wave.draw();
+        updateControl();
         sync(false);
     }
 
