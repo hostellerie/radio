@@ -8,7 +8,7 @@ $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($id > 0) {
     $row = RADIO_getMedia($id, true);
-    if ($row === false) {
+    if ($row === false || !RADIO_isOnDemandAvailable($row)) {
         $content = COM_showMessageText($LANG_RADIO['media_not_found'], $title);
 COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
         exit;
