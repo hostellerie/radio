@@ -20,7 +20,10 @@ $_RADIO_DEFAULT = array(
     'whatsnew_interval' => 1209600,
     'whatsnew_limit' => 10,
     'stats_enabled' => 1,
-    'stats_retention_days' => 90
+    'stats_retention_days' => 90,
+    'block_enabled' => 0,
+    'block_isleft' => 0,
+    'block_order' => 50
 );
 
 function RADIO_configSortOrder()
@@ -41,13 +44,16 @@ function RADIO_configSortOrder()
         'whatsnew_interval' => 120,
         'whatsnew_limit' => 130,
         'stats_enabled' => 140,
-        'stats_retention_days' => 150
+        'stats_retention_days' => 150,
+        'block_enabled' => 160,
+        'block_isleft' => 170,
+        'block_order' => 180
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft'), true)
         ? 'select'
         : 'text';
 
