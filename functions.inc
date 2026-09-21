@@ -2842,6 +2842,22 @@ function RADIO_publicStylesheetLink()
         . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '">' . "\n";
 }
 
+function RADIO_blockStylesheetLink()
+{
+    global $_CONF;
+
+    $path = !empty($_CONF['path_html'])
+        ? rtrim($_CONF['path_html'], '/\\') . '/radio/radio-block.css'
+        : '';
+    if ($path === '' || !is_file($path)) {
+        $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/public_html/radio-block.css';
+    }
+
+    return '<link rel="stylesheet" type="text/css" href="'
+        . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/radio-block.css', ENT_QUOTES, 'UTF-8')
+        . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '">' . "\n";
+}
+
 function RADIO_publicScriptTag()
 {
     global $_CONF;
@@ -2930,11 +2946,17 @@ function plugin_getheadercode_radio()
         return RADIO_adminStylesheetLink();
     }
 
+    $header = '';
+
     if (RADIO_isPublicHtmlPage($path)) {
-        return RADIO_publicStylesheetLink();
+        $header .= RADIO_publicStylesheetLink();
     }
 
-    return '';
+    if (!empty($GLOBALS['_RADIO_NEEDS_BLOCK_CSS'])) {
+        $header .= RADIO_blockStylesheetLink();
+    }
+
+    return $header;
 }
 
 function plugin_getadminoption_radio()
@@ -2952,6 +2974,124 @@ function plugin_getadminoption_radio()
         $_CONF['site_admin_url'] . '/plugins/radio/index.php',
         0
     );
+}
+
+
+function plugin_getmenuitems_radio()
+{
+    global $_CONF, $_RADIO_CONF, $LANG_RADIO;
+
+    if (isset($_RADIO_CONF['enabled']) && !$_RADIO_CONF['enabled']) {
+        return array();
+    }
+
+    $label = isset($_RADIO_CONF['public_title']) && trim((string) $_RADIO_CONF['public_title']) !== ''
+        ? trim((string) $_RADIO_CONF['public_title'])
+        : (isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio');
+
+    return array(
+        $label => rtrim($_CONF['site_url'], '/') . '/radio/index.php'
+    );
+}
+
+function plugin_getBlocks_radio($side, $topic = '')
+{
+    global $_RADIO_CONF, $LANG_RADIO;
+
+    $blocks = array();
+
+    if ((isset($_RADIO_CONF['enabled']) && !$_RADIO_CONF['enabled'])
+        || empty($_RADIO_CONF['block_enabled'])) {
+        return $blocks;
+    }
+
+    $configuredSide = empty($_RADIO_CONF['block_isleft']) ? 'right' : 'left';
+    if ($side !== $configuredSide) {
+        return $blocks;
+    }
+
+    $content = RADIO_renderBlock();
+    if ($content === '') {
+        return $blocks;
+    }
+
+    $GLOBALS['_RADIO_NEEDS_BLOCK_CSS'] = true;
+
+    $blocks[] = array(
+        'name'           => 'radio_now_playing',
+        'type'           => 'dynamic',
+        'onleft'         => empty($_RADIO_CONF['block_isleft']) ? 0 : 1,
+        'title'          => isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air',
+        'blockorder'     => isset($_RADIO_CONF['block_order']) ? (int) $_RADIO_CONF['block_order'] : 50,
+        'content'        => $content,
+        'allow_autotags' => false,
+        'help'           => ''
+    );
+
+    return $blocks;
+}
+
+function plugin_getBlocksConfig_radio($side, $topic = '')
+{
+    global $_RADIO_CONF, $LANG_RADIO;
+
+    return array(
+        array(
+            'plugin'         => isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio',
+            'name'           => 'radio_now_playing',
+            'title'          => isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air',
+            'type'           => 'dynamic',
+            'onleft'         => empty($_RADIO_CONF['block_isleft']) ? 0 : 1,
+            'blockorder'     => isset($_RADIO_CONF['block_order']) ? (int) $_RADIO_CONF['block_order'] : 50,
+            'allow_autotags' => false,
+            'help'           => '',
+            'enable'         => empty($_RADIO_CONF['block_enabled']) ? 0 : 1,
+            'topic_option'   => 'all',
+            'topic'          => array(),
+            'inherit'        => array()
+        )
+    );
+}
+
+function RADIO_renderBlock()
+{
+    global $_CONF, $LANG_RADIO;
+
+    $state = RADIO_getLiveState(time());
+    $liveUrl = rtrim($_CONF['site_url'], '/') . '/radio/live.php';
+    $scheduleUrl = rtrim($_CONF['site_url'], '/') . '/radio/schedule.php';
+    $radioUrl = rtrim($_CONF['site_url'], '/') . '/radio/index.php';
+
+    $html = '<div class="radio-block">';
+
+    if ($state['media'] !== false) {
+        $media = $state['media'];
+        $html .= '<div class="radio-block__status"><span class="radio-block__dot" aria-hidden="true"></span>'
+            . htmlspecialchars(isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air', ENT_QUOTES, 'UTF-8')
+            . '</div>'
+            . '<p class="radio-block__title"><a href="'
+            . htmlspecialchars(isset($media['item_url']) ? $media['item_url'] : $radioUrl, ENT_QUOTES, 'UTF-8') . '">'
+            . htmlspecialchars($media['title'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+
+        if ($state['program'] !== false && !empty($state['program']['program_title'])) {
+            $html .= '<p class="radio-block__meta">'
+                . htmlspecialchars($state['program']['program_title'], ENT_QUOTES, 'UTF-8')
+                . '</p>';
+        }
+    } else {
+        $html .= '<p class="radio-block__meta">'
+            . htmlspecialchars(isset($LANG_RADIO['nothing_scheduled_now']) ? $LANG_RADIO['nothing_scheduled_now'] : 'Nothing is on air right now.', ENT_QUOTES, 'UTF-8')
+            . '</p>';
+    }
+
+    $html .= '<div class="radio-block__links">'
+        . '<a href="' . htmlspecialchars($liveUrl, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars(isset($LANG_RADIO['listen_live']) ? $LANG_RADIO['listen_live'] : 'Listen live', ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars($scheduleUrl, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars(isset($LANG_RADIO['view_full_schedule']) ? $LANG_RADIO['view_full_schedule'] : 'Schedule', ENT_QUOTES, 'UTF-8') . '</a>'
+        . '</div></div>';
+
+    return $html;
 }
 
 
