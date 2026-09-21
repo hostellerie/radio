@@ -49,14 +49,16 @@ if (isset($_POST['save_media'])) {
             RADIO_deleteCover($coverName);
         }
 
+        if ($saved) {
+            COM_redirect(
+                $_CONF['site_admin_url'] . '/plugins/radio/index.php?updated=1'
+            );
+        }
+
         $message = COM_showMessageText(
-            $saved ? $LANG_RADIO['media_saved'] : $LANG_RADIO['media_save_failed'],
+            $LANG_RADIO['media_save_failed'],
             $LANG_RADIO['admin_title']
         );
-
-        if ($saved) {
-            $row = RADIO_getMedia($id, false);
-        }
     }
 }
 
