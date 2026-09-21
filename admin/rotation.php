@@ -16,12 +16,26 @@ $sequence = RADIO_buildRotationSequence(date('Y-m-d'));
 $totalDuration = RADIO_rotationDuration($sequence);
 $diagnostics = RADIO_rotationDiagnostics(date('Y-m-d'));
 $current = RADIO_getRotationState(time());
+$jinglePool = RADIO_getRotationMediaByTypes(array('jingle'));
+$jingleCount = count($jinglePool);
+$jingleInterval = isset($_RADIO_CONF['fallback_jingle_interval'])
+    ? max(0, (int) $_RADIO_CONF['fallback_jingle_interval'])
+    : 4;
 
 $content = '<section class="radio-admin__panel">';
+$content .= '<h2>' . htmlspecialchars($LANG_RADIO['rotation_jingle_pool_title'], ENT_QUOTES, 'UTF-8') . '</h2>'
+    . '<p>' . sprintf(
+        htmlspecialchars($LANG_RADIO['rotation_jingle_pool_summary'], ENT_QUOTES, 'UTF-8'),
+        $jingleCount,
+        $jingleInterval
+    ) . '</p>'
+    . '<p class="radio-admin__muted">'
+    . htmlspecialchars($LANG_RADIO['rotation_jingle_pool_help'], ENT_QUOTES, 'UTF-8')
+    . '</p>';
 $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_enabled'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . htmlspecialchars(!empty($_RADIO_CONF['fallback_enabled']) ? $LANG_RADIO['yes'] : $LANG_RADIO['no'], ENT_QUOTES, 'UTF-8') . '<br>'
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_jingle_interval'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-    . (int) (isset($_RADIO_CONF['fallback_jingle_interval']) ? $_RADIO_CONF['fallback_jingle_interval'] : 4) . '<br>'
+    . $jingleInterval . '<br>'
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_announcement_interval'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . (int) (isset($_RADIO_CONF['fallback_announcement_interval']) ? $_RADIO_CONF['fallback_announcement_interval'] : 8) . '<br>'
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_weights'], ENT_QUOTES, 'UTF-8') . ':</strong> <code>'
