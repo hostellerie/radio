@@ -349,6 +349,9 @@
         }
 
         function sync(play) {
+            var requestSequence = ++syncSequence;
+            var requestIntentVersion = intentVersion;
+
             fetch(endpoint, { cache: 'no-store', credentials: 'same-origin' })
                 .then(function (response) {
                     if (!response.ok) {
@@ -417,6 +420,9 @@
         var activeProgramId = 0;
         var listenStart = 0;
         var userStarted = false;
+        var desiredPlaying = false;
+        var intentVersion = 0;
+        var syncSequence = 0;
         var wave = waveform(canvas, player);
 
         function flush() {
@@ -442,6 +448,10 @@
                     return response.json();
                 })
                 .then(function (data) {
+                    if (requestSequence !== syncSequence || requestIntentVersion !== intentVersion) {
+                        return;
+                    }
+
                     if (!data.now_playing && !data.current_media) {
                         program.textContent = '';
                         media.textContent = '';
@@ -471,17 +481,27 @@
                         activeProgramId = data.now_playing
                             ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                             : 0;
+                        var expectedMedia = activeMedia;
+                        var expectedIntentVersion = intentVersion;
                         player.src = data.current_media.stream_url;
                         player.load();
                         player.addEventListener('loadedmetadata', function once() {
                             player.removeEventListener('loadedmetadata', once);
+
+                            if (expectedIntentVersion !== intentVersion || expectedMedia !== activeMedia) {
+                                return;
+                            }
+
                             try {
                                 player.currentTime = data.current_media.offset;
                             } catch (error) {}
-                            if (play && userStarted) {
+
+                            if (play && userStarted && desiredPlaying) {
                                 wave.start();
                                 player.play().catch(function () {
-                                    status.textContent = unavailableLabel;
+                                    if (desiredPlaying) {
+                                        status.textContent = unavailableLabel;
+                                    }
                                 });
                             }
                         });
@@ -491,10 +511,12 @@
                                 player.currentTime = data.current_media.offset;
                             } catch (error) {}
                         }
-                        if (play && userStarted && player.paused) {
+                        if (play && userStarted && desiredPlaying && player.paused) {
                             wave.start();
                             player.play().catch(function () {
-                                status.textContent = unavailableLabel;
+                                if (desiredPlaying) {
+                                    status.textContent = unavailableLabel;
+                                }
                             });
                         }
                     }
@@ -505,14 +527,27 @@
         }
 
         start.addEventListener('click', function () {
-            if (!player.paused && !player.ended) {
+            if (desiredPlaying || (!player.paused && !player.ended)) {
+                desiredPlaying = false;
+                intentVersion++;
+                syncSequence++;
                 player.pause();
+                updateControl();
                 return;
             }
+
+            desiredPlaying = true;
+            intentVersion++;
             userStarted = true;
             sync(true);
         });
         player.addEventListener('play', function () {
+            if (!desiredPlaying) {
+                player.pause();
+                updateControl();
+                return;
+            }
+
             updateControl();
             if (activeMediaId) {
                 postEvent(eventEndpoint, activeMediaId, activeProgramId, 'play', 'live', 0);
@@ -525,12 +560,14 @@
         });
         player.addEventListener('ended', function () {
             updateControl();
-            sync(true);
+            if (desiredPlaying) {
+                sync(true);
+            }
         });
         window.addEventListener('pagehide', flush);
         window.setInterval(function () {
             if (userStarted) {
-                sync(false);
+                sync(desiredPlaying);
             }
         }, 15000);
         wave.draw();
