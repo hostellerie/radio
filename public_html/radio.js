@@ -273,6 +273,8 @@
         var endedAt = 0;
         var endedMediaId = 0;
         var endedRetryCount = 0;
+        var transitionTimer = 0;
+        var transitionProgramId = 0;
         var wave = waveform(canvas, audio);
 
         function flush() {
@@ -304,7 +306,42 @@
             }
         }
 
-        function apply(data, play, fromEnded) {
+        function scheduleNextProgrammeTransition(data) {
+            if (transitionTimer) {
+                window.clearTimeout(transitionTimer);
+                transitionTimer = 0;
+            }
+            transitionProgramId = 0;
+
+            if (!data || data.source === 'schedule' || !data.upcoming || !data.upcoming.length) {
+                return;
+            }
+
+            var serverNow = Date.parse(data.generated_at || '');
+            var nextStart = Date.parse(data.upcoming[0].start || '');
+            if (!isFinite(serverNow) || !isFinite(nextStart) || nextStart <= serverNow) {
+                return;
+            }
+
+            var delay = nextStart - serverNow;
+            if (delay > 86400000) {
+                return;
+            }
+
+            transitionProgramId = parseInt(
+                String(data.upcoming[0].program_id || '').replace('program:', ''),
+                10
+            ) || 0;
+
+            transitionTimer = window.setTimeout(function () {
+                transitionTimer = 0;
+                sync(userStarted, false, transitionProgramId);
+            }, Math.max(0, delay));
+        }
+
+        function apply(data, play, fromEnded, expectedProgramId) {
+            scheduleNextProgrammeTransition(data);
+
             if (!data.current_media) {
                 flush();
                 audio.pause();
@@ -319,6 +356,10 @@
                 : 0;
             var offset = parseInt(data.current_media.offset || 0, 10);
             var streamUrl = data.current_media.stream_url || '';
+
+            if (expectedProgramId > 0 && nextProgram === expectedProgramId) {
+                offset = 0;
+            }
 
             if (fromEnded && nextId === endedMediaId
                 && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
@@ -367,7 +408,7 @@
             }
         }
 
-        function sync(play, fromEnded) {
+        function sync(play, fromEnded, expectedProgramId) {
             fetch(endpoint, { cache: 'no-store', credentials: 'same-origin' })
                 .then(function (response) {
                     if (!response.ok) {
@@ -376,7 +417,7 @@
                     return response.json();
                 })
                 .then(function (data) {
-                    apply(data, play, !!fromEnded);
+                    apply(data, play, !!fromEnded, expectedProgramId || 0);
                 })
                 .catch(function () {});
         }
