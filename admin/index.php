@@ -12,6 +12,14 @@ if (!SEC_hasRights('radio.admin')) {
 
 global $LANG_RADIO;
 
+$message = '';
+if (isset($_GET['updated']) && (int) $_GET['updated'] === 1) {
+    $message = COM_showMessageText(
+        $LANG_RADIO['media_saved'],
+        $LANG_RADIO['admin_title']
+    );
+}
+
 $storage = RADIO_storageDir();
 $ready = RADIO_ensureStorage();
 $media = RADIO_getMediaList(100, false);
@@ -31,7 +39,7 @@ $content = RADIO_adminRenderPage(
     $LANG_RADIO['admin_library_help_title'],
     $LANG_RADIO['admin_library_help_text'],
     $content,
-    ''
+    $message
 );
 
 COM_output(COM_createHTMLDocument($content, array(
