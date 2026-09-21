@@ -270,6 +270,9 @@
         var programId = 0;
         var userStarted = false;
         var listenStart = 0;
+        var endedAt = 0;
+        var endedMediaId = 0;
+        var endedRetryCount = 0;
         var wave = waveform(canvas, audio);
 
         function flush() {
@@ -301,7 +304,7 @@
             }
         }
 
-        function apply(data, play) {
+        function apply(data, play, fromEnded) {
             if (!data.current_media) {
                 flush();
                 audio.pause();
@@ -316,6 +319,22 @@
                 : 0;
             var offset = parseInt(data.current_media.offset || 0, 10);
             var streamUrl = data.current_media.stream_url || '';
+
+            if (fromEnded && nextId === endedMediaId
+                && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
+                && endedRetryCount < 20) {
+                endedRetryCount++;
+                window.setTimeout(function () {
+                    sync(true, true);
+                }, 500);
+                return;
+            }
+
+            if (fromEnded) {
+                endedAt = 0;
+                endedMediaId = 0;
+                endedRetryCount = 0;
+            }
 
             wave.setExternal(data.current_media.source_kind && data.current_media.source_kind !== 'local');
 
@@ -348,10 +367,7 @@
             }
         }
 
-        function sync(play) {
-            var requestSequence = ++syncSequence;
-            var requestIntentVersion = intentVersion;
-
+        function sync(play, fromEnded) {
             fetch(endpoint, { cache: 'no-store', credentials: 'same-origin' })
                 .then(function (response) {
                     if (!response.ok) {
@@ -360,7 +376,7 @@
                     return response.json();
                 })
                 .then(function (data) {
-                    apply(data, play);
+                    apply(data, play, !!fromEnded);
                 })
                 .catch(function () {});
         }
@@ -379,7 +395,10 @@
         audio.addEventListener('pause', flush);
         audio.addEventListener('ended', function () {
             flush();
-            sync(true);
+            endedAt = audio.currentTime || 0;
+            endedMediaId = mediaId;
+            endedRetryCount = 0;
+            sync(true, true);
         });
         window.addEventListener('pagehide', flush);
 
