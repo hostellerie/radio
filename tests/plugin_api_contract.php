@@ -105,6 +105,17 @@ radio_contract_require(
         && strpos($functions, 'if (!RADIO_isDatabaseCurrent())') !== false,
     'Radio external integrations must stay inactive until the database upgrade is complete.'
 );
+$searchStart = strpos($functions, 'function plugin_dopluginsearch_radio');
+$searchEnd = strpos($functions, 'function plugin_whatsnewsupported_radio', $searchStart);
+$searchBlock = ($searchStart !== false && $searchEnd !== false)
+    ? substr($functions, $searchStart, $searchEnd - $searchStart)
+    : '';
+radio_contract_require(
+    $searchBlock !== ''
+        && strpos($searchBlock, 'UNION ALL') === false
+        && substr_count($searchBlock, 'new SearchCriteria') >= 2,
+    'Radio search must use separate simple SearchCriteria queries for media and programmes.'
+);
 radio_contract_require(
     preg_match('/function\s+plugin_wsEnabled_radio\s*\(\s*\)/', $functions) === 1,
     'Missing plugin_wsEnabled_radio().'
