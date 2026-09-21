@@ -90,7 +90,6 @@ $LANG_RADIO = array(
     'listen_live' => 'Listen live',
     'podcast_feed' => 'Podcast RSS feed',
     'm3u_playlist' => 'M3U playlist',
-    'open_in_vlc' => 'Open live in VLC',
     'live_ready' => 'Press Listen to join the current programme.',
     'start_listening' => 'Listen',
     'autoplay_notice' => 'Your browser may require an explicit click before audio playback can start.',
