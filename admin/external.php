@@ -44,6 +44,7 @@ $template->set_var(array(
         'live' => $LANG_RADIO['source_live']
     ), 'external'),
     'source_url_label' => htmlspecialchars($LANG_RADIO['source_url'], ENT_QUOTES, 'UTF-8'),
+    'source_url_help' => htmlspecialchars($LANG_RADIO['source_url_help'], ENT_QUOTES, 'UTF-8'),
     'title_label' => htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8'),
     'source_provider_label' => htmlspecialchars($LANG_RADIO['source_provider'], ENT_QUOTES, 'UTF-8'),
     'source_external_id_label' => htmlspecialchars($LANG_RADIO['source_external_id'], ENT_QUOTES, 'UTF-8'),
