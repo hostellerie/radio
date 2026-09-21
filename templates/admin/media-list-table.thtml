@@ -2,15 +2,15 @@
 <table class="radio-admin__table">
     <thead>
         <tr>
-            <th scope="col">{title_header}</th>
-            <th scope="col">{type_header}</th>
-            <th scope="col">{status_header}</th>
-            <th scope="col">{availability_header}</th>
-            <th scope="col">{source_header}</th>
-            <th scope="col">{duration_header}</th>
-            <th scope="col">{size_header}</th>
-            <th scope="col">{modified_header}</th>
-            <th scope="col">{actions_label}</th>
+            <th class="radio-admin__media-title" scope="col">{title_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{type_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{status_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{availability_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{source_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{duration_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{size_header}</th>
+            <th class="radio-admin__nowrap" scope="col">{modified_header}</th>
+            <th class="radio-admin__actions" scope="col">{actions_label}</th>
         </tr>
     </thead>
     <tbody>
