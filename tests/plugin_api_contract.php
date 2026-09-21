@@ -77,6 +77,12 @@ radio_contract_require(
     'Removed Radio live.php must not be referenced by runtime code.'
 );
 radio_contract_require(
+    strpos($functions, 'function RADIO_isDatabaseCurrent') !== false
+        && strpos($functions, 'function plugin_collectSitemapItems_radio') !== false
+        && strpos($functions, 'if (!RADIO_isDatabaseCurrent())') !== false,
+    'Radio external integrations must stay inactive until the database upgrade is complete.'
+);
+radio_contract_require(
     preg_match('/function\s+plugin_wsEnabled_radio\s*\(\s*\)/', $functions) === 1,
     'Missing plugin_wsEnabled_radio().'
 );
