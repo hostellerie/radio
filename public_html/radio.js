@@ -275,6 +275,7 @@
         var endedRetryCount = 0;
         var transitionTimer = 0;
         var transitionProgramId = 0;
+        var transitionRetryCount = 0;
         var wave = waveform(canvas, audio);
 
         function flush() {
@@ -354,6 +355,20 @@
             var nextProgram = data.now_playing
                 ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                 : 0;
+
+            if (expectedProgramId > 0 && nextProgram !== expectedProgramId
+                && transitionRetryCount < 20) {
+                transitionRetryCount++;
+                window.setTimeout(function () {
+                    sync(play, false, expectedProgramId);
+                }, 250);
+                return;
+            }
+
+            if (expectedProgramId > 0 && nextProgram === expectedProgramId) {
+                transitionRetryCount = 0;
+            }
+
             var offset = parseInt(data.current_media.offset || 0, 10);
             var streamUrl = data.current_media.stream_url || '';
 
