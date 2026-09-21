@@ -3387,38 +3387,60 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
 
     $query = trim(DB_escapeString($query));
     $siteUrl = DB_escapeString(rtrim($_CONF['site_url'], '/'));
+    $label = isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio';
 
-    $sql = "SELECT rs.id,rs.title,rs.description,rs.date,rs.uid,rs.hits,rs.url FROM ("
-        . "SELECT CONCAT('media:',m.media_id) AS id,m.title,m.description,m.modified AS date,"
+    $mediaSql = "SELECT m.media_id AS id,m.title,m.description,m.modified AS date,"
         . "m.owner_id AS uid,m.hits,"
-        . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url,"
-        . "m.author AS author "
-        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published'"
-        . RADIO_mediaAvailabilitySql('on_demand', 'm') . " "
-        . COM_getPermSQL('AND', 0, 2, 'm') . " "
-        . "UNION ALL "
-        . "SELECT CONCAT('program:',p.program_id) AS id,p.title,p.description,p.modified AS date,"
-        . "p.owner_id AS uid,0 AS hits,"
-        . "CONCAT('" . $siteUrl . "/radio/program.php?id=',p.program_id) AS url,"
-        . "p.host AS author "
-        . "FROM {$_TABLES['radio_programs']} p WHERE p.status='published'" . COM_getPermSQL('AND', 0, 2, 'p')
-        . ") rs WHERE 1 ";
+        . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url "
+        . "FROM {$_TABLES['radio_media']} m "
+        . "WHERE m.status='published'"
+        . RADIO_mediaAvailabilitySql('on_demand', 'm')
+        . COM_getPermSQL('AND', 0, 2, 'm') . " ";
 
     if ((int) $author > 0) {
-        $sql .= "AND rs.uid=" . (int) $author . " ";
+        $mediaSql .= "AND m.owner_id=" . (int) $author . " ";
     }
 
-    $search = new SearchCriteria('radio', isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio');
-    $columns = array('title' => 'rs.title', 'rs.description', 'rs.author');
-    $sql .= $search->getDateRangeSQL('AND', 'rs.date', $datestart, $dateend);
-    list($sql, $ftsql) = $search->buildSearchSQL($keyType, $query, $columns, $sql);
+    $mediaSearch = new SearchCriteria('radio', $label);
+    $mediaColumns = array('title' => 'm.title', 'm.description', 'm.author');
+    $mediaSql .= $mediaSearch->getDateRangeSQL('AND', 'm.modified', $datestart, $dateend);
+    list($mediaSql, $mediaFtSql) = $mediaSearch->buildSearchSQL(
+        $keyType,
+        $query,
+        $mediaColumns,
+        $mediaSql
+    );
+    $mediaSearch->setSQL($mediaSql);
+    $mediaSearch->setFtSQL($mediaFtSql);
+    $mediaSearch->setRank(3);
+    $mediaSearch->setAppendQuery(false);
 
-    $search->setSQL($sql);
-    $search->setFtSQL($ftsql);
-    $search->setRank(3);
-    $search->setAppendQuery(false);
+    $programSql = "SELECT p.program_id AS id,p.title,p.description,p.modified AS date,"
+        . "p.owner_id AS uid,0 AS hits,"
+        . "CONCAT('" . $siteUrl . "/radio/program.php?id=',p.program_id) AS url "
+        . "FROM {$_TABLES['radio_programs']} p "
+        . "WHERE p.status='published'"
+        . COM_getPermSQL('AND', 0, 2, 'p') . " ";
 
-    return array($search, null);
+    if ((int) $author > 0) {
+        $programSql .= "AND p.owner_id=" . (int) $author . " ";
+    }
+
+    $programSearch = new SearchCriteria('radio', $label);
+    $programColumns = array('title' => 'p.title', 'p.description', 'p.host');
+    $programSql .= $programSearch->getDateRangeSQL('AND', 'p.modified', $datestart, $dateend);
+    list($programSql, $programFtSql) = $programSearch->buildSearchSQL(
+        $keyType,
+        $query,
+        $programColumns,
+        $programSql
+    );
+    $programSearch->setSQL($programSql);
+    $programSearch->setFtSQL($programFtSql);
+    $programSearch->setRank(3);
+    $programSearch->setAppendQuery(false);
+
+    return array($mediaSearch, $programSearch);
 }
 
 function plugin_whatsnewsupported_radio()
