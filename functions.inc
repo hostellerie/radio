@@ -1009,20 +1009,60 @@ function RADIO_saveUpload($file, $metadata, &$error)
     return $id;
 }
 
+function RADIO_mediaAvailabilitySchemaReady()
+{
+    static $ready = null;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    global $_TABLES;
+
+    $ready = true;
+    foreach (array('on_demand', 'broadcast') as $column) {
+        $result = DB_query(
+            "SHOW COLUMNS FROM {$_TABLES['radio_media']} LIKE '"
+            . DB_escapeString($column) . "'"
+        );
+        if (DB_numRows($result) < 1) {
+            $ready = false;
+            break;
+        }
+    }
+
+    return $ready;
+}
+
+function RADIO_mediaAvailabilitySql($field, $alias)
+{
+    if (!in_array($field, array('on_demand', 'broadcast'), true)
+        || !RADIO_mediaAvailabilitySchemaReady()) {
+        return '';
+    }
+
+    $prefix = trim((string) $alias);
+    if ($prefix !== '') {
+        $prefix .= '.';
+    }
+
+    return ' AND ' . $prefix . $field . '=1';
+}
+
 function RADIO_isOnDemandAvailable($row)
 {
     return is_array($row)
-        && isset($row['status'], $row['on_demand'])
+        && isset($row['status'])
         && $row['status'] === 'published'
-        && !empty($row['on_demand']);
+        && (!array_key_exists('on_demand', $row) || !empty($row['on_demand']));
 }
 
 function RADIO_isBroadcastAvailable($row)
 {
     return is_array($row)
-        && isset($row['status'], $row['broadcast'])
+        && isset($row['status'])
         && $row['status'] === 'published'
-        && !empty($row['broadcast']);
+        && (!array_key_exists('broadcast', $row) || !empty($row['broadcast']));
 }
 
 function RADIO_getMedia($id, $publishedOnly)
@@ -1051,8 +1091,9 @@ function RADIO_getMediaList($limit, $publishedOnly)
 {
     global $_TABLES;
     $limit = max(1, min(200, (int) $limit));
-    $where = $publishedOnly ? " WHERE status='published' AND on_demand=1" : '';
+    $where = $publishedOnly ? " WHERE status='published'" : '';
     if ($publishedOnly) {
+        $where .= RADIO_mediaAvailabilitySql('on_demand', '');
         $where .= RADIO_permissionSql('radio_media', 0);
     }
     $result = DB_query("SELECT * FROM {$_TABLES['radio_media']}" . $where . " ORDER BY modified DESC, media_id DESC LIMIT " . $limit);
@@ -1886,7 +1927,9 @@ function RADIO_getPodcastItems($limit, $since)
 
     $limit = max(1, min(100, (int) $limit));
     $sql = "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND on_demand=1 AND media_type='podcast' AND storage_name<>''"
+        . "WHERE status='published'"
+        . RADIO_mediaAvailabilitySql('on_demand', '')
+        . " AND media_type='podcast' AND storage_name<>''"
         . RADIO_permissionSql('radio_media', 1);
 
     if ((int) $since > 0) {
@@ -2190,7 +2233,9 @@ function RADIO_getRotationMediaByTypes($types)
 
     $result = DB_query(
         "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND broadcast=1 AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
+        . "WHERE status='published'"
+        . RADIO_mediaAvailabilitySql('broadcast', '')
+        . " AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
         . RADIO_permissionSql('radio_media', 0) . " "
         . "ORDER BY media_id ASC"
     );
@@ -2351,8 +2396,7 @@ function RADIO_rotationEligibilityDiagnostics()
     $rows = array();
 
     $result = DB_query(
-        "SELECT media_id,title,media_type,status,on_demand,broadcast,duration,perm_anon,source_kind,original_name "
-        . "FROM {$_TABLES['radio_media']} ORDER BY media_id DESC"
+        "SELECT * FROM {$_TABLES['radio_media']} ORDER BY media_id DESC"
     );
 
     while ($row = DB_fetchArray($result)) {
@@ -2361,7 +2405,7 @@ function RADIO_rotationEligibilityDiagnostics()
         if ($row['status'] !== 'published') {
             $reasons[] = 'status';
         }
-        if (empty($row['broadcast'])) {
+        if (array_key_exists('broadcast', $row) && empty($row['broadcast'])) {
             $reasons[] = 'broadcast';
         }
         if ((int) $row['duration'] < 1) {
@@ -2666,7 +2710,9 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
             return $items;
         }
 
-        $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE status='published' AND on_demand=1" . RADIO_permissionSql('radio_media', (int) $uid);
+        $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE status='published'"
+            . RADIO_mediaAvailabilitySql('on_demand', '')
+            . RADIO_permissionSql('radio_media', (int) $uid);
         if (!empty($options['since'])) {
             $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
             $sql .= " AND modified >= '" . $since . "'";
@@ -2704,7 +2750,10 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
         );
     }
 
-    $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id'] . " AND status='published' AND on_demand=1" . RADIO_permissionSql('radio_media', (int) $uid);
+    $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id']
+        . " AND status='published'"
+        . RADIO_mediaAvailabilitySql('on_demand', '')
+        . RADIO_permissionSql('radio_media', (int) $uid);
     $result = DB_query($sql);
     $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
     if ($row === false) {
@@ -2965,7 +3014,6 @@ function RADIO_isPublicHtmlPage($path)
     foreach (array(
         '/radio/',
         '/radio/index.php',
-        '/radio/live.php',
         '/radio/program.php',
         '/radio/schedule.php',
         '/radio/replay.php'
@@ -3113,7 +3161,6 @@ function RADIO_renderBlock()
     global $_CONF, $LANG_RADIO;
 
     $state = RADIO_getLiveState(time());
-    $liveUrl = rtrim($_CONF['site_url'], '/') . '/radio/live.php';
     $scheduleUrl = rtrim($_CONF['site_url'], '/') . '/radio/schedule.php';
     $radioUrl = rtrim($_CONF['site_url'], '/') . '/radio/index.php';
     $nowUrl = rtrim($_CONF['site_url'], '/') . '/radio/now.php';
@@ -3162,7 +3209,7 @@ function RADIO_renderBlock()
     }
 
     $html .= '<div class="radio-block__links">'
-        . '<a href="' . htmlspecialchars($liveUrl, ENT_QUOTES, 'UTF-8') . '">'
+        . '<a href="' . htmlspecialchars($radioUrl, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars(isset($LANG_RADIO['listen_live']) ? $LANG_RADIO['listen_live'] : 'Listen live', ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars($scheduleUrl, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars(isset($LANG_RADIO['view_full_schedule']) ? $LANG_RADIO['view_full_schedule'] : 'Schedule', ENT_QUOTES, 'UTF-8') . '</a>'
@@ -3265,7 +3312,9 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
         . "m.owner_id AS uid,m.hits,"
         . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url,"
         . "m.author AS author "
-        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' AND m.on_demand=1 " . COM_getPermSQL('AND', 0, 2, 'm') . " "
+        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published'"
+        . RADIO_mediaAvailabilitySql('on_demand', 'm') . " "
+        . COM_getPermSQL('AND', 0, 2, 'm') . " "
         . "UNION ALL "
         . "SELECT CONCAT('program:',p.program_id) AS id,p.title,p.description,p.modified AS date,"
         . "p.owner_id AS uid,0 AS hits,"
@@ -3379,7 +3428,10 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     $items = array();
 
     $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND on_demand=1" . COM_getPermSQL('AND', (int) $uid, 2) . " ORDER BY modified DESC,media_id DESC";
+        . "WHERE status='published'"
+        . RADIO_mediaAvailabilitySql('on_demand', '')
+        . COM_getPermSQL('AND', (int) $uid, 2)
+        . " ORDER BY modified DESC,media_id DESC";
     $media = DB_query($mediaSql);
     while ($row = DB_fetchArray($media)) {
         $modified = strtotime($row['modified']);
