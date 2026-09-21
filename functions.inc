@@ -1273,7 +1273,7 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
 
     $rangeStart = 0;
     $rangeEnd = $virtualSize - 1;
-    $status = $baseStart > 0 ? 206 : 200;
+    $status = 200;
 
     if (!$download && isset($_SERVER['HTTP_RANGE'])) {
         $range = trim((string) $_SERVER['HTTP_RANGE']);
@@ -1281,7 +1281,7 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
             || !preg_match('/^bytes=(\d*)-(\d*)$/', $range, $m)
             || ($m[1] === '' && $m[2] === '')) {
             header('HTTP/1.1 416 Range Not Satisfiable');
-            header('Content-Range: bytes */' . $size);
+            header('Content-Range: bytes */' . $virtualSize);
             exit;
         }
 
@@ -1322,6 +1322,9 @@ function RADIO_sendMedia($row, $download, $startSeconds = 0)
     header('Accept-Ranges: bytes');
     header('Content-Length: ' . (($rangeEnd - $rangeStart) + 1));
     header('X-Content-Type-Options: nosniff');
+    if ($baseStart > 0) {
+        header('Cache-Control: no-store');
+    }
 
     $filename = basename($row['original_name']);
     $disposition = $download ? 'attachment' : 'inline';
