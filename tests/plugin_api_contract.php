@@ -196,6 +196,31 @@ radio_contract_require(
     'Radio CSS/JS asset files must contain the expected public/admin behavior.'
 );
 
+radio_contract_require(
+    preg_match('/function\\s+plugin_getmenuitems_radio\\s*\\(/', $functions) === 1,
+    'Radio must expose a public Geeklog plugin-menu callback.'
+);
+radio_contract_require(
+    preg_match('/function\\s+plugin_getBlocks_radio\\s*\\(/', $functions) === 1
+        && preg_match('/function\\s+plugin_getBlocksConfig_radio\\s*\\(/', $functions) === 1,
+    'Radio must expose Geeklog dynamic block callbacks.'
+);
+radio_contract_require(
+    strpos($functions, 'RADIO_renderBlock') !== false
+        && strpos($functions, 'radio_now_playing') !== false
+        && strpos($functions, 'RADIO_blockStylesheetLink') !== false,
+    'Radio dynamic now-playing block and versioned block stylesheet must be present.'
+);
+radio_contract_require(
+    strpos($defaults, "'block_enabled' => 0") !== false
+        && strpos($defaults, "'block_isleft' => 0") !== false
+        && strpos($defaults, "'block_order' => 50") !== false,
+    'Radio dynamic block configuration defaults must be present.'
+);
+radio_contract_require(
+    file_exists($root . '/public_html/radio-block.css'),
+    'Radio dynamic block stylesheet must be packaged.'
+);
 if (!empty($errors)) {
     fwrite(STDERR, "Radio Plugin API contract check failed:\n");
     foreach ($errors as $error) {
