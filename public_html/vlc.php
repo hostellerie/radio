@@ -25,11 +25,12 @@ $currentId = (int) $current['media_id'];
 $offset = max(0, (int) $current['offset']);
 $duration = max(-1, (int) $current['duration']);
 
-echo '#EXTINF:' . $duration . ',' . RADIO_liveM3uText($current['title']) . "\n";
-if ($offset > 0) {
-    echo '#EXTVLCOPT:start-time=' . $offset . "\n";
-}
-echo $current['stream_url'] . "\n";
+$currentUrl = $current['source_kind'] === 'local'
+    ? RADIO_mediaUrlAtOffset($currentId, $offset)
+    : $current['stream_url'];
+
+echo '#EXTINF:' . max(1, $duration - $offset) . ',' . RADIO_liveM3uText($current['title']) . "\n";
+echo $currentUrl . "\n";
 
 $seen = array($currentId => true);
 
