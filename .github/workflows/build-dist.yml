@@ -100,6 +100,7 @@ jobs:
           test -f admin/radio-admin.js
           test -f public_html/radio.css
           test -f public_html/radio.js
+          test -f public_html/radio-block.css
           test -f templates/admin/page.thtml
           test -f templates/admin/navigation.thtml
           test -f templates/admin/configuration-button.thtml
@@ -194,6 +195,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/radio.css'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/radio.js'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/radio-block.css'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/radio-admin.js'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/media.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/program.php'
