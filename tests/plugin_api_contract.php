@@ -63,6 +63,20 @@ radio_contract_require(
     'Radio must expose independent media availability helpers.'
 );
 radio_contract_require(
+    strpos($functions, 'RADIO_mediaAvailabilitySchemaReady') !== false
+        && strpos($functions, 'RADIO_mediaAvailabilitySql') !== false,
+    'Radio 0.3.0 must remain readable before the availability schema upgrade is applied.'
+);
+radio_contract_require(
+    strpos($functions, "AND on_demand=1") === false
+        && strpos($functions, "AND broadcast=1") === false,
+    'Radio public/runtime reads must not query 0.3.0 availability columns unconditionally before upgrade.'
+);
+radio_contract_require(
+    strpos($functions, '/radio/live.php') === false,
+    'Removed Radio live.php must not be referenced by runtime code.'
+);
+radio_contract_require(
     preg_match('/function\s+plugin_wsEnabled_radio\s*\(\s*\)/', $functions) === 1,
     'Missing plugin_wsEnabled_radio().'
 );
