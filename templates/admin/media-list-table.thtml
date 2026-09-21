@@ -2,14 +2,15 @@
 <table class="radio-admin__table">
     <thead>
         <tr>
-            <th>{title_label}</th>
-            <th>{type_label}</th>
-            <th>{status_label}</th>
-            <th>{availability_label}</th>
-            <th>{source_label}</th>
-            <th>{duration_label}</th>
-            <th>{size_label}</th>
-            <th>{actions_label}</th>
+            <th scope="col">{title_header}</th>
+            <th scope="col">{type_header}</th>
+            <th scope="col">{status_header}</th>
+            <th scope="col">{availability_header}</th>
+            <th scope="col">{source_header}</th>
+            <th scope="col">{duration_header}</th>
+            <th scope="col">{size_header}</th>
+            <th scope="col">{modified_header}</th>
+            <th scope="col">{actions_label}</th>
         </tr>
     </thead>
     <tbody>
