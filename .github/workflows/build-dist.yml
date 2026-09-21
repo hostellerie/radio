@@ -110,6 +110,10 @@ jobs:
           test -f admin/upload.php
           test -f admin/external.php
           test -f admin/edit.php
+          test -f install_updates.php
+          grep -q "on_demand" sql/mysql_install.php
+          grep -q "broadcast" sql/mysql_install.php
+          grep -q "plugin_upgrade_radio" functions.inc
           ! grep -q "name=\"save_media\"" admin/index.php
           ! grep -q "<audio" admin/index.php
 
@@ -177,6 +181,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-upload.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/templates/admin/media-external.thtml'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_defaults.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/install_updates.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/plugin.json'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/language/english.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/index.php'
