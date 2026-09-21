@@ -1,7 +1,16 @@
 <form class="radio-admin-form" method="post" enctype="multipart/form-data" action="">
-    <p><label>{audio_file_label}<br>
-        <input type="file" id="radio-upload-file" name="audio_file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" required>
-    </label></p>
+    <div class="radio-upload-dropzone" id="radio-upload-dropzone"
+         data-drop-label="{batch_drop_label}"
+         data-remove-label="{batch_remove_label}">
+        <label for="radio-upload-file" class="radio-upload-dropzone__label">
+            <strong>{batch_drop_title}</strong>
+            <span>{batch_drop_text}</span>
+        </label>
+        <input type="file" id="radio-upload-file" name="audio_files[]" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" multiple required>
+    </div>
+    <p class="radio-admin__muted">{batch_server_limit}</p>
+    <div id="radio-upload-queue" class="radio-upload-queue" aria-live="polite"></div>
+    <p id="radio-upload-batch-note" class="radio-admin__help radio-upload-batch-note" hidden>{batch_metadata_note}</p>
 
     <p><label>{title_label}<br>
         <input type="text" name="title" maxlength="255">
