@@ -3118,8 +3118,8 @@ function RADIO_renderBlock()
             $html .= '<p class="radio-block__meta" data-radio-block-program></p>';
         }
 
-        $html .= '<canvas class="radio-block__scope" width="240" height="24" aria-hidden="true"></canvas>'
-            . '</div>'
+        $html .= '</div>'
+            . '<canvas class="radio-block__scope" width="320" height="36" aria-hidden="true"></canvas>'
             . '<audio class="radio-block__audio" preload="none"></audio>'
             . '</div>';
     } else {
