@@ -59,3 +59,18 @@
 .radio-admin__panel-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .radio-admin__panel-heading h2{margin:0}
 @media(max-width:720px){.radio-admin__media-preview{grid-template-columns:1fr}.radio-admin__button--danger{margin-left:0}}
+
+.radio-upload-dropzone{position:relative;margin:0 0 .65rem;padding:1.35rem;border:2px dashed rgba(127,127,127,.45);border-radius:.6rem;text-align:center;background:rgba(127,127,127,.04);transition:border-color .15s ease,background .15s ease}
+.radio-upload-dropzone.is-dragover{border-color:currentColor;background:rgba(127,127,127,.12)}
+.radio-upload-dropzone__label{display:grid;gap:.25rem;cursor:pointer}
+.radio-upload-dropzone__label strong{font-size:1.05rem}
+.radio-upload-dropzone__label span{opacity:.72}
+.radio-upload-dropzone input[type="file"]{margin-top:.8rem;max-width:100%}
+.radio-upload-queue{display:grid;gap:.4rem;margin:.75rem 0 1rem}
+.radio-upload-queue__item{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.55rem .7rem;border:1px solid rgba(127,127,127,.25);border-radius:.4rem}
+.radio-upload-queue__info{display:grid;min-width:0;gap:.1rem}
+.radio-upload-queue__info strong{overflow-wrap:anywhere}
+.radio-upload-queue__info small{opacity:.65}
+.radio-upload-queue__remove{flex:0 0 auto;min-height:2rem!important;padding:.25rem .55rem!important}
+.radio-upload-batch-note{margin:.75rem 0}
+@media(max-width:560px){.radio-upload-queue__item{align-items:flex-start;flex-direction:column}.radio-upload-queue__remove{align-self:flex-end}}
