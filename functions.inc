@@ -564,6 +564,8 @@ function RADIO_saveExternalMedia($metadata, &$error)
     }
 
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
+    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
+    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
     $duration = $sourceKind === 'live' ? 0 : max(0, (int) (isset($metadata['duration']) ? $metadata['duration'] : 0));
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
     $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
@@ -574,7 +576,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
         "INSERT INTO {$_TABLES['radio_media']} "
         . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,"
         . "source_kind,source_url,source_provider,source_external_id,source_attribution,source_license,"
-        . "storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,"
+        . "storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,allow_download,hits,owner_id,"
         . "group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . DB_escapeString(substr($title,0,255)) . "',"
         . "'" . DB_escapeString(isset($metadata['description']) ? trim((string)$metadata['description']) : '') . "',"
@@ -591,7 +593,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
         . "'" . DB_escapeString(isset($metadata['source_attribution']) ? trim((string)$metadata['source_attribution']) : '') . "',"
         . "'" . DB_escapeString(substr(trim(isset($metadata['source_license']) ? (string)$metadata['source_license'] : ''),0,255)) . "',"
         . "'','',''," . $duration . ",0,"
-        . "'" . DB_escapeString($status) . "',0,0,"
+        . "'" . DB_escapeString($status) . "'," . $onDemand . "," . $broadcast . ",0,0,"
         . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
         . "'" . DB_escapeString($now) . "','" . DB_escapeString($now) . "')"
     );
@@ -962,6 +964,8 @@ function RADIO_saveUpload($file, $metadata, &$error)
         $mediaType = 'music';
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
+    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
+    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
     if ($duration < 1) {
@@ -973,7 +977,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
@@ -984,6 +988,8 @@ function RADIO_saveUpload($file, $metadata, &$error)
         . $duration . ","
         . (int) $validated['size'] . ","
         . "'" . DB_escapeString($status) . "',"
+        . $onDemand . ","
+        . $broadcast . ","
         . $allowDownload . ",0,"
         . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
         . "'" . DB_escapeString($now) . "',"
@@ -1001,6 +1007,22 @@ function RADIO_saveUpload($file, $metadata, &$error)
         PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
     }
     return $id;
+}
+
+function RADIO_isOnDemandAvailable($row)
+{
+    return is_array($row)
+        && isset($row['status'], $row['on_demand'])
+        && $row['status'] === 'published'
+        && !empty($row['on_demand']);
+}
+
+function RADIO_isBroadcastAvailable($row)
+{
+    return is_array($row)
+        && isset($row['status'], $row['broadcast'])
+        && $row['status'] === 'published'
+        && !empty($row['broadcast']);
 }
 
 function RADIO_getMedia($id, $publishedOnly)
@@ -1029,7 +1051,7 @@ function RADIO_getMediaList($limit, $publishedOnly)
 {
     global $_TABLES;
     $limit = max(1, min(200, (int) $limit));
-    $where = $publishedOnly ? " WHERE status='published'" : '';
+    $where = $publishedOnly ? " WHERE status='published' AND on_demand=1" : '';
     if ($publishedOnly) {
         $where .= RADIO_permissionSql('radio_media', 0);
     }
@@ -1065,6 +1087,8 @@ function RADIO_updateMedia($id, $metadata)
         $mediaType = 'music';
     }
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
+    $onDemand = !empty($metadata['on_demand']) ? 1 : 0;
+    $broadcast = !empty($metadata['broadcast']) ? 1 : 0;
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
     if ($duration < 1 && RADIO_sourceKind($row) === 'local' && !empty($row['storage_name'])) {
@@ -1083,6 +1107,8 @@ function RADIO_updateMedia($id, $metadata)
         . "media_type='" . DB_escapeString($mediaType) . "',"
         . "author='" . DB_escapeString(substr($author,0,255)) . "',series_title='" . DB_escapeString(substr($seriesTitle,0,255)) . "',season_number=" . $seasonNumber . ",episode_number=" . $episodeNumber . ",cover_name='" . DB_escapeString($coverName) . "',"
         . "status='" . DB_escapeString($status) . "',"
+        . "on_demand=" . $onDemand . ","
+        . "broadcast=" . $broadcast . ","
         . "allow_download=" . $allowDownload . ","
         . "duration=" . $duration . ","
         . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
@@ -1432,7 +1458,8 @@ function RADIO_addProgramItem($programId, $mediaId)
     $program = RADIO_getProgram($programId, false);
     $media = RADIO_getMedia($mediaId, false);
     if ($program === false || !RADIO_hasEditAccess($program)
-        || $media === false || !RADIO_hasReadAccess($media)) {
+        || $media === false || !RADIO_hasReadAccess($media)
+        || !RADIO_isBroadcastAvailable($media)) {
         return false;
     }
     $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
@@ -1855,7 +1882,7 @@ function RADIO_getPodcastItems($limit, $since)
 
     $limit = max(1, min(100, (int) $limit));
     $sql = "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND media_type='podcast' AND storage_name<>''"
+        . "WHERE status='published' AND on_demand=1 AND media_type='podcast' AND storage_name<>''"
         . RADIO_permissionSql('radio_media', 1);
 
     if ((int) $since > 0) {
@@ -2159,7 +2186,7 @@ function RADIO_getRotationMediaByTypes($types)
 
     $result = DB_query(
         "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published' AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
+        . "WHERE status='published' AND broadcast=1 AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
         . RADIO_permissionSql('radio_media', 0) . " "
         . "ORDER BY media_id ASC"
     );
@@ -2316,11 +2343,11 @@ function RADIO_rotationEligibilityDiagnostics()
     $weights = RADIO_parseTypeWeights(
         isset($_RADIO_CONF['fallback_type_weights']) ? $_RADIO_CONF['fallback_type_weights'] : ''
     );
-    $allowedTypes = array_keys($weights);
+    $allowedTypes = array_merge(array_keys($weights), array('jingle','announcement','promo'));
     $rows = array();
 
     $result = DB_query(
-        "SELECT media_id,title,media_type,status,duration,perm_anon,source_kind,original_name "
+        "SELECT media_id,title,media_type,status,on_demand,broadcast,duration,perm_anon,source_kind,original_name "
         . "FROM {$_TABLES['radio_media']} ORDER BY media_id DESC"
     );
 
@@ -2329,6 +2356,9 @@ function RADIO_rotationEligibilityDiagnostics()
 
         if ($row['status'] !== 'published') {
             $reasons[] = 'status';
+        }
+        if (empty($row['broadcast'])) {
+            $reasons[] = 'broadcast';
         }
         if ((int) $row['duration'] < 1) {
             $reasons[] = 'duration';
@@ -2430,7 +2460,7 @@ function RADIO_programDuration($programId)
     $items = RADIO_getProgramItems($programId);
     $duration = 0;
     foreach ($items as $item) {
-        if ($item['status'] === 'published' && RADIO_hasReadAccess($item) && (int) $item['duration'] > 0) {
+        if (RADIO_isBroadcastAvailable($item) && RADIO_hasReadAccess($item) && (int) $item['duration'] > 0) {
             $duration += (int) $item['duration'];
         }
     }
@@ -2444,7 +2474,7 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
     $cursor = 0;
 
     foreach ($items as $item) {
-        if ($item['status'] !== 'published' || !RADIO_hasReadAccess($item)) {
+        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)) {
             continue;
         }
         $duration = (int) $item['duration'];
@@ -2632,7 +2662,7 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
             return $items;
         }
 
-        $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE status='published'" . RADIO_permissionSql('radio_media', (int) $uid);
+        $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE status='published' AND on_demand=1" . RADIO_permissionSql('radio_media', (int) $uid);
         if (!empty($options['since'])) {
             $since = DB_escapeString(date('Y-m-d H:i:s', (int) $options['since']));
             $sql .= " AND modified >= '" . $since . "'";
@@ -2670,7 +2700,7 @@ function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
         );
     }
 
-    $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id'] . " AND status='published'" . RADIO_permissionSql('radio_media', (int) $uid);
+    $sql = "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $identity['id'] . " AND status='published' AND on_demand=1" . RADIO_permissionSql('radio_media', (int) $uid);
     $result = DB_query($sql);
     $row = DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
     if ($row === false) {
@@ -2797,6 +2827,59 @@ function plugin_chkVersion_radio()
     $inst = plugin_autoinstall_radio('radio');
 
     return isset($inst['info']['pi_version']) ? $inst['info']['pi_version'] : RADIO_PLUGIN_VERSION;
+}
+
+function plugin_upgrade_radio()
+{
+    global $_CONF, $_TABLES;
+
+    $installedVersion = DB_getItem(
+        $_TABLES['plugins'],
+        'pi_version',
+        "pi_name = 'radio'"
+    );
+    $codeVersion = plugin_chkVersion_radio();
+
+    if ($installedVersion === $codeVersion) {
+        return true;
+    }
+    if ($installedVersion === '' || version_compare($installedVersion, $codeVersion, '>')) {
+        COM_errorLog(
+            "Radio upgrade: unsupported upgrade direction from '"
+            . $installedVersion . "' to '" . $codeVersion . "'.",
+            1
+        );
+        return false;
+    }
+
+    require_once $_CONF['path'] . 'plugins/radio/autoinstall.php';
+    if (!plugin_compatible_with_this_version_radio('radio')) {
+        return 3002;
+    }
+
+    require_once $_CONF['path'] . 'plugins/radio/install_updates.php';
+    if (!radio_apply_updates($installedVersion, $codeVersion)) {
+        COM_errorLog(
+            "Radio upgrade: no valid migration path from '"
+            . $installedVersion . "' to '" . $codeVersion . "'.",
+            1
+        );
+        return false;
+    }
+
+    DB_query(
+        "UPDATE {$_TABLES['plugins']} SET pi_version='"
+        . DB_escapeString($codeVersion)
+        . "', pi_gl_version='"
+        . DB_escapeString(RADIO_MIN_GEEKLOG_VERSION)
+        . "' WHERE pi_name='radio'"
+    );
+    if (DB_error()) {
+        COM_errorLog('Radio upgrade: cannot update the plugin version record.', 1);
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -3213,7 +3296,7 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
         . "m.owner_id AS uid,m.hits,"
         . "CONCAT('" . $siteUrl . "/radio/index.php?id=',m.media_id) AS url,"
         . "m.author AS author "
-        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' " . COM_getPermSQL('AND', 0, 2, 'm') . " "
+        . "FROM {$_TABLES['radio_media']} m WHERE m.status='published' AND m.on_demand=1 " . COM_getPermSQL('AND', 0, 2, 'm') . " "
         . "UNION ALL "
         . "SELECT CONCAT('program:',p.program_id) AS id,p.title,p.description,p.modified AS date,"
         . "p.owner_id AS uid,0 AS hits,"
@@ -3327,7 +3410,7 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
     $items = array();
 
     $mediaSql = "SELECT media_id,modified FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published'" . COM_getPermSQL('AND', (int) $uid, 2) . " ORDER BY modified DESC,media_id DESC";
+        . "WHERE status='published' AND on_demand=1" . COM_getPermSQL('AND', (int) $uid, 2) . " ORDER BY modified DESC,media_id DESC";
     $media = DB_query($mediaSql);
     while ($row = DB_fetchArray($media)) {
         $modified = strtotime($row['modified']);
