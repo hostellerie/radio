@@ -25,6 +25,8 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
   duration int(10) unsigned NOT NULL default '0',
   file_size bigint(20) unsigned NOT NULL default '0',
   status varchar(24) NOT NULL default 'draft',
+  on_demand tinyint(1) unsigned NOT NULL default '1',
+  broadcast tinyint(1) unsigned NOT NULL default '1',
   allow_download tinyint(1) unsigned NOT NULL default '1',
   hits int(10) unsigned NOT NULL default '0',
   owner_id int(10) unsigned NOT NULL default '2',
