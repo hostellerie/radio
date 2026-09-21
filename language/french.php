@@ -90,7 +90,6 @@ $LANG_RADIO = array(
     'listen_live' => 'Écouter en direct',
     'podcast_feed' => 'Flux RSS podcast',
     'm3u_playlist' => 'Playlist M3U',
-    'open_in_vlc' => 'Ouvrir le direct dans VLC',
     'live_ready' => 'Cliquez sur Écouter pour rejoindre l’émission en cours.',
     'start_listening' => 'Écouter',
     'autoplay_notice' => 'Le navigateur peut exiger un clic explicite avant de démarrer la lecture audio.',
