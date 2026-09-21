@@ -100,6 +100,7 @@ $LANG_RADIO = array(
     'public_on_demand' => 'Listen on demand',
     'public_listen' => 'Listen',
     'public_pause' => 'Pause',
+    'public_pause' => 'Pause',
     'public_on_demand_disabled' => 'On-demand listening is disabled.',
     'nothing_scheduled_now' => 'No programme or automatic rotation is available right now.',
     'automatic_rotation' => 'Automatic radio',
