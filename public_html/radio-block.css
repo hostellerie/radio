@@ -1,0 +1,47 @@
+.radio-block {
+    display: grid;
+    gap: .55rem;
+}
+
+.radio-block__status {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: .78;
+}
+
+.radio-block__dot {
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: radio-block-pulse 1.8s ease-in-out infinite;
+}
+
+.radio-block__title {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.radio-block__meta {
+    margin: 0;
+    font-size: .88rem;
+    opacity: .72;
+}
+
+.radio-block__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem .75rem;
+    font-size: .9rem;
+}
+
+@keyframes radio-block-pulse {
+    0%, 100% { opacity: .45; transform: scale(.85); }
+    50% { opacity: 1; transform: scale(1); }
+}
