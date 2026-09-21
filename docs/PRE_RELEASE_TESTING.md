@@ -1,11 +1,11 @@
-# Radio 0.2.4 pre-release validation
+# Radio 0.2.5 pre-release validation
 
 This checklist separates repository/CI validation from Geeklog runtime validation.
 
 ## Already enforced by CI
 
 - versioned Radio public CSS/JS and admin JavaScript are packaged and loaded through Geeklog plugin callbacks;
-- Radio 0.2.4 configuration upgrade includes `on_demand_enabled`;
+- Radio 0.2.5 configuration upgrade includes `on_demand_enabled`;
 
 - PHP syntax on PHP 5.6, 8.1 and 8.3.
 - plugin.json baseline: Geeklog 2.1.1 / PHP 5.6.
@@ -35,8 +35,8 @@ geeklog222-web  -> http://localhost:8081
 
 For each environment:
 
-1. Upload/install `dist/radio_0.2.4_2.1.1.zip`.
-2. Confirm the plugin manager records Data/Code 0.2.4.
+1. Upload/install `dist/radio_0.2.5_2.1.1.zip`.
+2. Confirm the plugin manager records Data/Code 0.2.5.
 3. Confirm the following tables exist with the active site prefix:
    - radio_media
    - radio_programs
@@ -50,7 +50,7 @@ For each environment:
 
 ## 2. Upgrade test
 
-Start with the previous Radio archive/database state, then replace code with 0.2.4.
+Start with the previous Radio archive/database state, then replace code with 0.2.5.
 
 Verify:
 
@@ -125,9 +125,9 @@ If `radio.schedule` is delegated without `radio.admin`, confirm inaccessible pro
 
 Verify:
 
-- public Radio pages load `/radio/radio.css?v=0.2.4-<mtime>`;
-- public Radio pages load `/radio/radio.js?v=0.2.4-<mtime>`;
-- Radio admin upload/edit pages load `radio-admin.js?v=0.2.4-<mtime>`;
+- public Radio pages load `/radio/radio.css?v=0.2.5-<mtime>`;
+- public Radio pages load `/radio/radio.js?v=0.2.5-<mtime>`;
+- Radio admin upload/edit pages load `radio-admin.js?v=0.2.5-<mtime>`;
 - no Radio inline player JavaScript remains in the generated page source;
 - disabling `on_demand_enabled` hides the catalogue/on-demand players while keeping live listening available;
 - enabling it restores on-demand playback;
@@ -135,7 +135,21 @@ Verify:
 - the home page exposes a single native player timeline (no duplicate custom progress bar);
 - the waveform is visible on both `/radio/` and `/radio/live.php` and uses adaptive visual gain during playback.
 
-## 7. Synchronized player
+## 7. Plugin menu and dynamic block
+
+Verify:
+
+- the enabled Radio plugin contributes a **Radio** entry to Geeklog's Plugins menu;
+- disabling Radio removes that public menu entry;
+- Geeklog block administration discovers the dynamic block `radio_now_playing`;
+- the block can be enabled/disabled through Radio configuration;
+- `block_isleft` selects the configured side and `block_order` controls ordering;
+- when audio is on air, the block shows the current media title and, when applicable, the current programme;
+- the block links to live listening and the schedule;
+- when nothing is on air, the block shows the localized idle message without leaking restricted media;
+- pages displaying the block load the versioned `radio-block.css` asset.
+
+## 8. Synchronized player
 
 Verify:
 
@@ -145,7 +159,7 @@ Verify:
 - transition from scheduled programme back to fallback rotation;
 - no long-running PHP request remains open.
 
-## 8. Replay, podcast and statistics
+## 9. Replay, podcast and statistics
 
 Verify:
 
@@ -158,7 +172,7 @@ Verify:
 - rejected downloads do not;
 - stats contain no IP, uid or persistent visitor identifier.
 
-## 9. External sources / SSRF
+## 10. External sources / SSRF
 
 Create a public HTTPS podcast feed.
 
@@ -176,7 +190,7 @@ Verify:
 
 Server-side feed retrieval deliberately requires cURL + CURLOPT_RESOLVE. It must fail closed if DNS pinning cannot be provided.
 
-## 10. Geeklog services
+## 11. Geeklog services
 
 From a Geeklog test context invoke:
 
@@ -197,7 +211,7 @@ Verify:
 - dashboard_summary matches Eclipse schema 1;
 - none of these services performs a remote feed refresh or mutation.
 
-## 10. Eclipse / Agent
+## 12. Eclipse / Agent
 
 ### Eclipse 1.2
 
@@ -211,7 +225,7 @@ Radio already exposes Item Info, capabilities and bounded services.
 
 Current Agent provider catalog still explicitly contains Stories and Static Pages only. Do not add a Radio-specific workaround in Radio. Agent should gain generic capability-driven provider/service discovery in the Agent project, then Radio should be tested through that path.
 
-## 11. Multisite isolation
+## 13. Multisite isolation
 
 With two Geeklog sites sharing Radio code:
 
@@ -223,7 +237,7 @@ With two Geeklog sites sharing Radio code:
 6. configure a feed on site A and confirm site B cannot see its source state/logs;
 7. confirm stats and configuration remain site-specific.
 
-## 12. Release gate
+## 14. Release gate
 
 Do not label Radio stable until:
 
