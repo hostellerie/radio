@@ -141,7 +141,14 @@ function RADIO_adminStatusLabel($status)
 function RADIO_adminSourceKindLabel($kind)
 {
     global $LANG_RADIO;
-    return $kind === 'live' ? $LANG_RADIO['source_live'] : $LANG_RADIO['source_external'];
+
+    if ($kind === 'live') {
+        return $LANG_RADIO['source_live'];
+    }
+    if ($kind === 'external') {
+        return $LANG_RADIO['source_external'];
+    }
+    return $LANG_RADIO['source_local'];
 }
 
 function RADIO_adminSyncModeLabel($mode)
@@ -218,7 +225,26 @@ function RADIO_adminFormatSize($bytes)
     return number_format($mb, 2) . ' ' . $LANG_RADIO['admin_mb_short'];
 }
 
-function RADIO_adminRenderMediaList($media)
+function RADIO_adminSortHeader($key, $label, $sort, $direction)
+{
+    global $_CONF;
+
+    $nextDirection = ($sort === $key && $direction === 'asc') ? 'desc' : 'asc';
+    $indicator = '';
+    if ($sort === $key) {
+        $indicator = $direction === 'asc' ? ' ↑' : ' ↓';
+    }
+
+    $url = $_CONF['site_admin_url'] . '/plugins/radio/index.php?sort='
+        . rawurlencode($key) . '&direction=' . rawurlencode($nextDirection);
+
+    return '<a class="radio-admin__sort" href="'
+        . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($label . $indicator, ENT_QUOTES, 'UTF-8')
+        . '</a>';
+}
+
+function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'desc')
 {
     global $_CONF, $LANG_RADIO;
 
@@ -248,6 +274,11 @@ function RADIO_adminRenderMediaList($media)
             'source' => htmlspecialchars(RADIO_adminSourceKindLabel(RADIO_sourceKind($row)), ENT_QUOTES, 'UTF-8'),
             'duration' => htmlspecialchars(RADIO_adminFormatDuration($row['duration']), ENT_QUOTES, 'UTF-8'),
             'size' => htmlspecialchars(RADIO_adminFormatSize($row['file_size']), ENT_QUOTES, 'UTF-8'),
+            'modified' => htmlspecialchars(
+                !empty($row['modified']) ? date('Y-m-d H:i', strtotime($row['modified'])) : '—',
+                ENT_QUOTES,
+                'UTF-8'
+            ),
             'edit_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/edit.php?media_id=' . (int) $row['media_id'], ENT_QUOTES, 'UTF-8'),
             'edit_label' => htmlspecialchars($LANG_RADIO['admin_edit'], ENT_QUOTES, 'UTF-8')
         ));
@@ -256,13 +287,14 @@ function RADIO_adminRenderMediaList($media)
 
     $table = RADIO_adminTemplate('media-list-table.thtml');
     $table->set_var(array(
-        'title_label' => htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8'),
-        'type_label' => htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8'),
-        'status_label' => htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8'),
-        'availability_label' => htmlspecialchars($LANG_RADIO['availability'], ENT_QUOTES, 'UTF-8'),
-        'source_label' => htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8'),
-        'duration_label' => htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8'),
-        'size_label' => htmlspecialchars($LANG_RADIO['admin_size'], ENT_QUOTES, 'UTF-8'),
+        'title_header' => RADIO_adminSortHeader('title', $LANG_RADIO['title'], $sort, $direction),
+        'type_header' => RADIO_adminSortHeader('type', $LANG_RADIO['type'], $sort, $direction),
+        'status_header' => RADIO_adminSortHeader('status', $LANG_RADIO['status'], $sort, $direction),
+        'availability_header' => RADIO_adminSortHeader('availability', $LANG_RADIO['availability'], $sort, $direction),
+        'source_header' => RADIO_adminSortHeader('source', $LANG_RADIO['source_kind'], $sort, $direction),
+        'duration_header' => RADIO_adminSortHeader('duration', $LANG_RADIO['duration_seconds'], $sort, $direction),
+        'size_header' => RADIO_adminSortHeader('size', $LANG_RADIO['admin_size'], $sort, $direction),
+        'modified_header' => RADIO_adminSortHeader('modified', $LANG_RADIO['admin_modified'], $sort, $direction),
         'actions_label' => htmlspecialchars($LANG_RADIO['admin_actions'], ENT_QUOTES, 'UTF-8'),
         'media_rows' => $rows
     ));
