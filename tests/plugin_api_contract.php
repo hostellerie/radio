@@ -76,6 +76,12 @@ radio_contract_require(
     strpos($functions, '/radio/live.php') === false,
     'Removed Radio live.php must not be referenced by runtime code.'
 );
+$programPage = file_get_contents($root . '/public_html/program.php');
+radio_contract_require(
+    strpos($programPage, '<audio') === false
+        && strpos($programPage, 'RADIO_getProgramItems') === false,
+    'Public programme pages must stay editorial and must not expose programme media players.'
+);
 radio_contract_require(
     strpos($functions, 'function RADIO_isDatabaseCurrent') !== false
         && strpos($functions, 'function plugin_collectSitemapItems_radio') !== false
