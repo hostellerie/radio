@@ -28,7 +28,7 @@ if (count($items) === 0) {
 } else {
     $content .= '<ol>';
     foreach ($items as $item) {
-        if ($item['status'] !== 'published' || !RADIO_hasReadAccess($item)) {
+        if (!RADIO_isOnDemandAvailable($item) || !RADIO_hasReadAccess($item)) {
             continue;
         }
         $content .= '<li style="margin:0 0 1.25rem"><strong>'
