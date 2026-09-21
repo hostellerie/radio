@@ -6,5 +6,6 @@
     <td>{source}</td>
     <td>{duration}</td>
     <td>{size}</td>
+    <td>{modified}</td>
     <td><a class="radio-admin__button" href="{edit_url}">{edit_label}</a></td>
 </tr>
