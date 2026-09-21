@@ -87,6 +87,18 @@ radio_contract_require(
         && strpos($programPage, 'RADIO_getProgramReplayOccurrences') !== false,
     'Public programme pages must expose upcoming broadcasts and available replays.'
 );
+$radioJs = file_get_contents($root . '/public_html/radio.js');
+$radioBlockJs = file_get_contents($root . '/public_html/radio-block.js');
+radio_contract_require(
+    strpos($radioJs, 'endedRetryCount') !== false
+        && strpos($radioBlockJs, 'endedRetryCount') !== false,
+    'Radio live players must retry synchronization across end-of-track rotation boundaries.'
+);
+radio_contract_require(
+    strpos($radioJs, 'syncSequence') === false
+        && strpos($radioJs, 'intentVersion') === false,
+    'Radio home player must not reference undeclared live-page synchronization state.'
+);
 radio_contract_require(
     strpos($functions, 'function RADIO_isDatabaseCurrent') !== false
         && strpos($functions, 'function plugin_collectSitemapItems_radio') !== false
