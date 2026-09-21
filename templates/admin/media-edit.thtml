@@ -40,6 +40,8 @@
     <p>
         <label>{type_label} <select name="media_type">{media_type_options}</select></label>
         <label>{status_label} <select name="status">{status_options}</select></label>
+        <label><input type="checkbox" name="on_demand" value="1"{on_demand_checked}> {on_demand_label}</label>
+        <label><input type="checkbox" name="broadcast" value="1"{broadcast_checked}> {broadcast_label}</label>
         <label><input type="checkbox" name="allow_download" value="1"{allow_download_checked}> {allow_download_label}</label>
     </p>
 
