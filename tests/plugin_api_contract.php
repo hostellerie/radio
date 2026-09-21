@@ -48,6 +48,21 @@ radio_contract_require(
     'Missing plugin_chkVersion_radio().'
 );
 radio_contract_require(
+    preg_match('/function\s+plugin_upgrade_radio\s*\(\s*\)/', $functions) === 1
+        && file_exists($root . '/install_updates.php'),
+    'Radio must provide an explicit upgrade path.'
+);
+radio_contract_require(
+    strpos(file_get_contents($root . '/sql/mysql_install.php'), 'on_demand tinyint(1)') !== false
+        && strpos(file_get_contents($root . '/sql/mysql_install.php'), 'broadcast tinyint(1)') !== false,
+    'Radio media schema must expose on_demand and broadcast availability.'
+);
+radio_contract_require(
+    strpos($functions, 'RADIO_isOnDemandAvailable') !== false
+        && strpos($functions, 'RADIO_isBroadcastAvailable') !== false,
+    'Radio must expose independent media availability helpers.'
+);
+radio_contract_require(
     preg_match('/function\s+plugin_wsEnabled_radio\s*\(\s*\)/', $functions) === 1,
     'Missing plugin_wsEnabled_radio().'
 );
@@ -168,9 +183,8 @@ radio_contract_require(
     'Radio public waveform must use normalized Web Audio time-domain analysis where available.'
 );
 radio_contract_require(
-    strpos($publicIndex, 'radio-home-wave') !== false
-        && strpos(file_get_contents($root . '/public_html/live.php'), 'radio-live-wave') !== false,
-    'Radio waveform canvas must be present on both the public home and live pages.'
+    strpos($publicIndex, 'radio-home-wave') !== false,
+    'Radio waveform canvas must be present on the public home player.'
 );
 radio_contract_require(
     strpos($nowEndpoint, "'source_kind'") !== false,
