@@ -171,6 +171,7 @@
         var endedRetryCount = 0;
         var transitionTimer = 0;
         var transitionProgramId = 0;
+        var transitionRetryCount = 0;
         var scope = createScope(canvas, audio);
 
         function updateButton() {
@@ -244,6 +245,20 @@
             var nextProgramId = data.now_playing
                 ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                 : 0;
+
+            if (expectedProgramId > 0 && nextProgramId !== expectedProgramId
+                && transitionRetryCount < 20) {
+                transitionRetryCount++;
+                window.setTimeout(function () {
+                    sync(autoplay, false, expectedProgramId);
+                }, 250);
+                return;
+            }
+
+            if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
+                transitionRetryCount = 0;
+            }
+
             var streamUrl = data.current_media.stream_url || '';
             var offset = parseInt(data.current_media.offset || 0, 10);
             if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
