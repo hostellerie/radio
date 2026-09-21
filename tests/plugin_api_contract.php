@@ -95,6 +95,13 @@ radio_contract_require(
     'Radio live players must retry synchronization across end-of-track rotation boundaries.'
 );
 radio_contract_require(
+    strpos($radioJs, 'scheduleNextProgrammeTransition') !== false
+        && strpos($radioJs, 'expectedProgramId') !== false
+        && strpos($radioBlockJs, 'scheduleNextProgrammeTransition') !== false
+        && strpos($radioBlockJs, 'expectedProgramId') !== false,
+    'Active Radio listeners must hand off scheduled programmes from the beginning.'
+);
+radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
     'Radio home player must not reference undeclared live-page synchronization state.'
