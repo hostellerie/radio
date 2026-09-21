@@ -20,9 +20,19 @@ if (isset($_GET['updated']) && (int) $_GET['updated'] === 1) {
     );
 }
 
+$sort = isset($_GET['sort']) ? (string) $_GET['sort'] : 'modified';
+$direction = isset($_GET['direction']) ? strtolower((string) $_GET['direction']) : 'desc';
+$allowedSorts = array('title','type','status','availability','source','duration','size','modified');
+if (!in_array($sort, $allowedSorts, true)) {
+    $sort = 'modified';
+}
+if ($direction !== 'asc' && $direction !== 'desc') {
+    $direction = 'desc';
+}
+
 $storage = RADIO_storageDir();
 $ready = RADIO_ensureStorage();
-$media = RADIO_getMediaList(100, false);
+$media = RADIO_getMediaList(200, false, $sort, $direction);
 
 $content = '<section class="radio-admin__panel"><h2>'
     . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . '</h2><p><strong>'
@@ -30,7 +40,7 @@ $content = '<section class="radio-admin__panel"><h2>'
     . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p></section>';
 
 $content .= RADIO_adminQuickActions();
-$content .= RADIO_adminRenderMediaList($media);
+$content .= RADIO_adminRenderMediaList($media, $sort, $direction);
 
 $content = RADIO_adminRenderPage(
     'library',
