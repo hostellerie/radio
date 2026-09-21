@@ -5,7 +5,21 @@
 .radio-admin__header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
 .radio-admin__config-form{margin:0}
 .radio-admin__button,.radio-admin__nav a{display:inline-flex;align-items:center;justify-content:center;min-height:2.4rem;padding:.45rem .8rem;border:1px solid rgba(127,127,127,.45);border-radius:.35rem;text-decoration:none;cursor:pointer}
-.radio-admin__button--secondary{background:transparent}
+.radio-admin__button--secondary{
+    background:#f3f4f6;
+    color:#1f2937;
+    border-color:#c7cbd1
+}
+.radio-admin__button--secondary:hover{
+    background:#e5e7eb;
+    color:#111827
+}
+.radio-admin__button--secondary:focus,
+.radio-admin__button--secondary:focus-visible{
+    color:#111827;
+    outline:2px solid currentColor;
+    outline-offset:2px
+}
 .radio-admin__nav{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
 .radio-admin__nav a.is-active{font-weight:700;border-width:2px}
 .radio-admin__help{margin:0 0 1rem;padding:1rem;border-left:4px solid currentColor;background:rgba(127,127,127,.08)}
