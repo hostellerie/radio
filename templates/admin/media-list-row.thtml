@@ -2,6 +2,7 @@
     <td><strong>{title}</strong><div class="radio-admin__muted">{filename}</div></td>
     <td>{media_type}</td>
     <td>{status}</td>
+    <td>{availability}</td>
     <td>{source}</td>
     <td>{duration}</td>
     <td>{size}</td>
