@@ -47,6 +47,8 @@
 
     <p>
         <label>{status_label} <select name="status">{status_options}</select></label>
+        <label><input type="checkbox" name="on_demand" value="1" checked> {on_demand_label}</label>
+        <label><input type="checkbox" name="broadcast" value="1" checked> {broadcast_label}</label>
         <label><input type="checkbox" name="allow_download" value="1" checked> {allow_download_label}</label>
     </p>
 
