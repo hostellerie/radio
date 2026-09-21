@@ -54,6 +54,8 @@ $template->set_var(array(
     'duration_label' => htmlspecialchars($LANG_RADIO['duration_seconds'], ENT_QUOTES, 'UTF-8'),
     'cover_label' => htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8'),
     'status_label' => htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8'),
+    'on_demand_label' => htmlspecialchars($LANG_RADIO['on_demand'], ENT_QUOTES, 'UTF-8'),
+    'broadcast_label' => htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8'),
     'permissions_label' => htmlspecialchars($LANG_RADIO['permissions'], ENT_QUOTES, 'UTF-8'),
     'group_label' => htmlspecialchars($LANG_RADIO['group'], ENT_QUOTES, 'UTF-8'),
     'group_dropdown' => SEC_getGroupDropdown(RADIO_defaultGroupId(), 3),
