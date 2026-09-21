@@ -24,7 +24,7 @@
 
 .radio-block__player {
     display: grid;
-    grid-template-columns: 2.7rem minmax(0, 1fr);
+    grid-template-columns: 2rem minmax(0, 1fr);
     align-items: center;
     gap: .65rem;
 }
@@ -32,37 +32,51 @@
 .radio-block__play {
     display: inline-grid;
     place-items: center;
-    width: 2.7rem;
-    height: 2.7rem;
+    width: 2rem;
+    height: 2rem;
     padding: 0;
     border: 1px solid currentColor;
     border-radius: 50%;
     background: transparent;
     color: inherit;
+    opacity: .62;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow: none;
     cursor: pointer;
 }
 
-.radio-block__play:hover,
+.radio-block__play:hover {
+    opacity: .9;
+    background: rgba(127, 127, 127, .08);
+}
+
+.radio-block__play:focus {
+    outline: none;
+}
+
 .radio-block__play:focus-visible {
-    background: rgba(127, 127, 127, .12);
+    opacity: .9;
+    outline: 1px solid currentColor;
+    outline-offset: 2px;
 }
 
 .radio-block__play-icon {
     width: 0;
     height: 0;
-    margin-left: .14rem;
-    border-top: .34rem solid transparent;
-    border-bottom: .34rem solid transparent;
-    border-left: .56rem solid currentColor;
+    margin-left: .1rem;
+    border-top: .27rem solid transparent;
+    border-bottom: .27rem solid transparent;
+    border-left: .43rem solid currentColor;
 }
 
 .radio-block.is-playing .radio-block__play-icon {
-    width: .58rem;
-    height: .68rem;
+    width: .46rem;
+    height: .54rem;
     margin-left: 0;
     border: 0;
-    border-left: .17rem solid currentColor;
-    border-right: .17rem solid currentColor;
+    border-left: .13rem solid currentColor;
+    border-right: .13rem solid currentColor;
 }
 
 .radio-block__content {
@@ -120,13 +134,13 @@
 
 @media (max-width: 320px) {
     .radio-block__player {
-        grid-template-columns: 2.45rem minmax(0, 1fr);
-        gap: .5rem;
+        grid-template-columns: 1.9rem minmax(0, 1fr);
+        gap: .48rem;
     }
 
     .radio-block__play {
-        width: 2.45rem;
-        height: 2.45rem;
+        width: 1.9rem;
+        height: 1.9rem;
     }
 }
 
