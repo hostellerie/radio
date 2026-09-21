@@ -83,6 +83,11 @@ radio_contract_require(
     'Public programme pages must stay editorial and must not expose programme media players.'
 );
 radio_contract_require(
+    strpos($programPage, 'RADIO_getProgramUpcomingOccurrences') !== false
+        && strpos($programPage, 'RADIO_getProgramReplayOccurrences') !== false,
+    'Public programme pages must expose upcoming broadcasts and available replays.'
+);
+radio_contract_require(
     strpos($functions, 'function RADIO_isDatabaseCurrent') !== false
         && strpos($functions, 'function plugin_collectSitemapItems_radio') !== false
         && strpos($functions, 'if (!RADIO_isDatabaseCurrent())') !== false,
