@@ -101,7 +101,6 @@ $LANG_RADIO = array(
     'public_on_demand' => 'Écoute à la demande',
     'public_listen' => 'Écouter',
     'public_pause' => 'Pause',
-    'public_pause' => 'Pause',
     'public_on_demand_disabled' => 'L’écoute à la demande est désactivée.',
     'nothing_scheduled_now' => 'Aucune émission ni rotation automatique n’est disponible actuellement.',
     'automatic_rotation' => 'Radio automatique',
