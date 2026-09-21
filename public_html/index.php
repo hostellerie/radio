@@ -106,6 +106,10 @@ if ($liveState['media'] !== false) {
         . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/playlist.php', ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($LANG_RADIO['m3u_playlist'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/vlc.php', ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($LANG_RADIO['open_in_vlc'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '</nav>'
         . '</section>';
 } else {
