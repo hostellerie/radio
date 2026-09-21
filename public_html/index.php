@@ -102,8 +102,6 @@ if ($liveState['media'] !== false) {
         . '<nav class="radio-player-links" aria-label="' . htmlspecialchars($LANG_RADIO['plugin_name'], ENT_QUOTES, 'UTF-8') . '">'
         . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/schedule.php', ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($LANG_RADIO['view_full_schedule'], ENT_QUOTES, 'UTF-8') . '</a>'
-        . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/live.php', ENT_QUOTES, 'UTF-8') . '">'
-        . htmlspecialchars($LANG_RADIO['listen_live'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars(RADIO_podcastFeedUrl(), ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($LANG_RADIO['podcast_feed'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars($_CONF['site_url'] . '/radio/playlist.php', ENT_QUOTES, 'UTF-8') . '">'
