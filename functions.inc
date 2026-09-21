@@ -3043,7 +3043,7 @@ function plugin_getBlocks_radio($side, $topic = '')
         'name'           => 'radio_now_playing',
         'type'           => 'dynamic',
         'onleft'         => empty($_RADIO_CONF['block_isleft']) ? 0 : 1,
-        'title'          => isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air',
+        'title'          => isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio',
         'blockorder'     => isset($_RADIO_CONF['block_order']) ? (int) $_RADIO_CONF['block_order'] : 50,
         'content'        => $content,
         'allow_autotags' => false,
@@ -3061,7 +3061,7 @@ function plugin_getBlocksConfig_radio($side, $topic = '')
         array(
             'plugin'         => isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio',
             'name'           => 'radio_now_playing',
-            'title'          => isset($LANG_RADIO['public_on_air']) ? $LANG_RADIO['public_on_air'] : 'On air',
+            'title'          => isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio',
             'type'           => 'dynamic',
             'onleft'         => empty($_RADIO_CONF['block_isleft']) ? 0 : 1,
             'blockorder'     => isset($_RADIO_CONF['block_order']) ? (int) $_RADIO_CONF['block_order'] : 50,
@@ -3118,8 +3118,8 @@ function RADIO_renderBlock()
             $html .= '<p class="radio-block__meta" data-radio-block-program></p>';
         }
 
-        $html .= '</div>'
-            . '<canvas class="radio-block__scope" width="120" height="28" aria-hidden="true"></canvas>'
+        $html .= '<canvas class="radio-block__scope" width="240" height="24" aria-hidden="true"></canvas>'
+            . '</div>'
             . '<audio class="radio-block__audio" preload="none"></audio>'
             . '</div>';
     } else {
