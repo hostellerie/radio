@@ -2833,60 +2833,6 @@ function plugin_chkVersion_radio()
     return isset($inst['info']['pi_version']) ? $inst['info']['pi_version'] : RADIO_PLUGIN_VERSION;
 }
 
-function plugin_upgrade_radio()
-{
-    global $_CONF, $_TABLES;
-
-    $installedVersion = DB_getItem(
-        $_TABLES['plugins'],
-        'pi_version',
-        "pi_name = 'radio'"
-    );
-    $codeVersion = plugin_chkVersion_radio();
-
-    if ($installedVersion === $codeVersion) {
-        return true;
-    }
-    if ($installedVersion === '' || version_compare($installedVersion, $codeVersion, '>')) {
-        COM_errorLog(
-            "Radio upgrade: unsupported upgrade direction from '"
-            . $installedVersion . "' to '" . $codeVersion . "'.",
-            1
-        );
-        return false;
-    }
-
-    require_once $_CONF['path'] . 'plugins/radio/autoinstall.php';
-    if (!plugin_compatible_with_this_version_radio('radio')) {
-        return 3002;
-    }
-
-    require_once $_CONF['path'] . 'plugins/radio/install_updates.php';
-    if (!radio_apply_updates($installedVersion, $codeVersion)) {
-        COM_errorLog(
-            "Radio upgrade: no valid migration path from '"
-            . $installedVersion . "' to '" . $codeVersion . "'.",
-            1
-        );
-        return false;
-    }
-
-    DB_query(
-        "UPDATE {$_TABLES['plugins']} SET pi_version='"
-        . DB_escapeString($codeVersion)
-        . "', pi_gl_version='"
-        . DB_escapeString(RADIO_MIN_GEEKLOG_VERSION)
-        . "' WHERE pi_name='radio'"
-    );
-    if (DB_error()) {
-        COM_errorLog('Radio upgrade: cannot update the plugin version record.', 1);
-        return false;
-    }
-
-    return true;
-}
-
-
 function RADIO_assetVersion($path)
 {
     $version = RADIO_PLUGIN_VERSION;
@@ -3237,8 +3183,25 @@ function plugin_upgrade_radio()
 {
     global $_CONF, $_TABLES;
 
+    $installedVersion = DB_getItem(
+        $_TABLES['plugins'],
+        'pi_version',
+        "pi_name = 'radio'"
+    );
+
     require_once $_CONF['path_system'] . 'classes/config.class.php';
     require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
+    require_once $_CONF['path'] . 'plugins/radio/install_updates.php';
+
+    if ($installedVersion === '0.2.5'
+        && !radio_apply_updates($installedVersion, RADIO_PLUGIN_VERSION)) {
+        COM_errorLog(
+            "Radio upgrade: migration failed from '"
+            . $installedVersion . "' to '" . RADIO_PLUGIN_VERSION . "'.",
+            1
+        );
+        return false;
+    }
 
     if (!RADIO_ensureConfig()) return false;
     $ok = true;
@@ -3253,6 +3216,8 @@ function plugin_upgrade_radio()
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_external_id',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_attribution',"text") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_license',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'on_demand',"tinyint(1) unsigned NOT NULL default '1'") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'broadcast',"tinyint(1) unsigned NOT NULL default '1'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'host',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
     foreach (array('radio_media','radio_programs') as $aclTable) {
