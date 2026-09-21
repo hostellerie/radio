@@ -1009,6 +1009,24 @@ function RADIO_saveUpload($file, $metadata, &$error)
     return $id;
 }
 
+function RADIO_isDatabaseCurrent()
+{
+    global $_TABLES;
+
+    if (!isset($_TABLES['plugins'])) {
+        return false;
+    }
+
+    $installedVersion = DB_getItem(
+        $_TABLES['plugins'],
+        'pi_version',
+        "pi_name = 'radio'"
+    );
+
+    return $installedVersion !== ''
+        && version_compare($installedVersion, RADIO_PLUGIN_VERSION, '>=');
+}
+
 function RADIO_mediaAvailabilitySchemaReady()
 {
     static $ready = null;
@@ -3297,6 +3315,10 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
 {
     global $_TABLES, $_CONF, $LANG_RADIO;
 
+    if (!RADIO_isDatabaseCurrent()) {
+        return array();
+    }
+
     if (empty($type)) {
         $type = 'all';
     }
@@ -3363,6 +3385,10 @@ function plugin_getwhatsnew_radio()
 {
     global $_RADIO_CONF, $LANG_RADIO;
 
+    if (!RADIO_isDatabaseCurrent()) {
+        return '';
+    }
+
     if (isset($_RADIO_CONF['whatsnew_enabled']) && empty($_RADIO_CONF['whatsnew_enabled'])) {
         return '';
     }
@@ -3423,6 +3449,10 @@ function RADIO_compareItemModifiedDesc($a, $b)
 function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
 {
     global $_TABLES, $_CONF;
+
+    if (!RADIO_isDatabaseCurrent()) {
+        return array();
+    }
 
     $limit = max(0, (int) $limit);
     $items = array();
