@@ -207,10 +207,16 @@ radio_contract_require(
         && strpos($functions, 'function RADIO_loadRotationSnapshot') !== false
         && strpos($functions, 'function RADIO_saveRotationSnapshot') !== false
         && strpos($functions, 'function RADIO_rotationCycleState') !== false
+        && strpos($functions, 'function RADIO_rotationSnapshotItem') !== false
+        && strpos($functions, 'function RADIO_transitionOverlapFor') !== false
         && strpos($functions, "'cycle_start'") !== false
         && strpos($functions, "'cycle_duration'") !== false
+        && strpos($functions, "'transition_mode'") !== false
+        && strpos($functions, "'crossfade_seconds'") !== false
+        && strpos($functions, "'items' => \$items") !== false
+        && strpos($functions, 'SELECT media_id,status') !== false
         && strpos($functions, 'RADIO_buildFreshRotationSequence') !== false,
-    'Radio automatic rotation must keep the active cycle stable and rebuild the playlist at the next cycle boundary.'
+    'Radio automatic rotation must freeze the active cycle and only let deletion or leaving published state affect it before the next cycle.'
 );
 radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
