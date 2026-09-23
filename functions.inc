@@ -750,6 +750,9 @@ function RADIO_saveExternalMedia($metadata, &$error)
         $mediaType = $sourceKind === 'live' ? 'show' : 'music';
     }
 
+    $category = RADIO_normalizeClassificationValue(isset($metadata['category']) ? $metadata['category'] : '', 128);
+    $collectionName = RADIO_normalizeClassificationValue(isset($metadata['collection_name']) ? $metadata['collection_name'] : '', 255);
+    $tags = RADIO_normalizeTags(isset($metadata['tags']) ? $metadata['tags'] : '');
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $onDemand = isset($metadata['on_demand']) ? (!empty($metadata['on_demand']) ? 1 : 0) : 1;
     $broadcast = isset($metadata['broadcast']) ? (!empty($metadata['broadcast']) ? 1 : 0) : 1;
@@ -762,7 +765,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
 
     DB_query(
         "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,"
+        . "(title,description,media_type,author,series_title,category,collection_name,tags,season_number,episode_number,cover_name,"
         . "source_kind,source_url,source_provider,source_external_id,source_attribution,source_license,"
         . "storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,"
         . "group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
@@ -771,6 +774,9 @@ function RADIO_saveExternalMedia($metadata, &$error)
         . "'" . DB_escapeString($mediaType) . "',"
         . "'" . DB_escapeString(substr(trim(isset($metadata['author']) ? (string)$metadata['author'] : ''),0,255)) . "',"
         . "'" . DB_escapeString(substr(trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : ''),0,255)) . "',"
+        . "'" . DB_escapeString($category) . "',"
+        . "'" . DB_escapeString($collectionName) . "',"
+        . "'" . DB_escapeString($tags) . "',"
         . max(0,(int)(isset($metadata['season_number']) ? $metadata['season_number'] : 0)) . ","
         . max(0,(int)(isset($metadata['episode_number']) ? $metadata['episode_number'] : 0)) . ","
         . "'" . DB_escapeString(isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : '') . "',"
@@ -1143,6 +1149,9 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $description = DB_escapeString(isset($metadata['description']) ? trim((string) $metadata['description']) : '');
     $author = DB_escapeString(substr(trim(isset($metadata['author']) ? (string)$metadata['author'] : ''),0,255));
     $seriesTitle = DB_escapeString(substr(trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : ''),0,255));
+    $category = DB_escapeString(RADIO_normalizeClassificationValue(isset($metadata['category']) ? $metadata['category'] : '', 128));
+    $collectionName = DB_escapeString(RADIO_normalizeClassificationValue(isset($metadata['collection_name']) ? $metadata['collection_name'] : '', 255));
+    $tags = DB_escapeString(RADIO_normalizeTags(isset($metadata['tags']) ? $metadata['tags'] : ''));
     $seasonNumber = isset($metadata['season_number']) ? max(0,(int)$metadata['season_number']) : 0;
     $episodeNumber = isset($metadata['episode_number']) ? max(0,(int)$metadata['episode_number']) : 0;
     $coverName = isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : '';
@@ -1166,11 +1175,12 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,category,collection_name,tags,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
-        . "'" . $author . "','" . $seriesTitle . "'," . $seasonNumber . "," . $episodeNumber . ",'" . DB_escapeString($coverName) . "',"
+        . "'" . $author . "','" . $seriesTitle . "','" . $category . "','" . $collectionName . "','" . $tags . "',"
+        . $seasonNumber . "," . $episodeNumber . ",'" . DB_escapeString($coverName) . "',"
         . "'" . DB_escapeString($storageName) . "',"
         . "'" . DB_escapeString($validated['original_name']) . "',"
         . "'" . DB_escapeString($validated['mime']) . "',"
@@ -1367,20 +1377,151 @@ function RADIO_getMedia($id, $publishedOnly)
     return $row;
 }
 
-function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $direction = 'desc')
+function RADIO_normalizeClassificationValue($value, $maxLength)
+{
+    $value = trim((string) $value);
+    $value = preg_replace('/\\s+/', ' ', $value);
+    if ($value === '') {
+        return '';
+    }
+    return substr($value, 0, max(1, (int) $maxLength));
+}
+
+function RADIO_normalizeTags($value)
+{
+    $parts = preg_split('/[,;\\r\\n]+/', (string) $value);
+    $tags = array();
+    $seen = array();
+
+    foreach ($parts as $part) {
+        $tag = RADIO_normalizeClassificationValue($part, 64);
+        if ($tag === '') {
+            continue;
+        }
+
+        $key = strtolower($tag);
+        if (isset($seen[$key])) {
+            continue;
+        }
+
+        $seen[$key] = true;
+        $tags[] = $tag;
+        if (count($tags) >= 50) {
+            break;
+        }
+    }
+
+    return implode(',', $tags);
+}
+
+function RADIO_mediaClassificationOptions()
 {
     global $_TABLES;
 
-    $limit = max(1, min(200, (int) $limit));
-    $where = $publishedOnly ? " WHERE status='published'" : '';
+    $options = array(
+        'categories' => array(),
+        'collections' => array(),
+        'tags' => array()
+    );
+
+    $result = DB_query(
+        "SELECT category,collection_name,tags FROM {$_TABLES['radio_media']} "
+        . "ORDER BY category,collection_name"
+    );
+
+    $categories = array();
+    $collections = array();
+    $tags = array();
+
+    while ($row = DB_fetchArray($result)) {
+        if (!empty($row['category'])) {
+            $categories[(string) $row['category']] = true;
+        }
+        if (!empty($row['collection_name'])) {
+            $collections[(string) $row['collection_name']] = true;
+        }
+        if (!empty($row['tags'])) {
+            foreach (explode(',', (string) $row['tags']) as $tag) {
+                $tag = trim($tag);
+                if ($tag !== '') {
+                    $tags[$tag] = true;
+                }
+            }
+        }
+    }
+
+    $options['categories'] = array_keys($categories);
+    $options['collections'] = array_keys($collections);
+    $options['tags'] = array_keys($tags);
+
+    natcasesort($options['categories']);
+    natcasesort($options['collections']);
+    natcasesort($options['tags']);
+
+    $options['categories'] = array_values($options['categories']);
+    $options['collections'] = array_values($options['collections']);
+    $options['tags'] = array_values($options['tags']);
+
+    return $options;
+}
+
+function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $direction = 'desc', $filters = array())
+{
+    global $_TABLES;
+
+    $limit = max(1, min(500, (int) $limit));
+    $where = $publishedOnly ? " WHERE status='published'" : ' WHERE 1=1';
+
     if ($publishedOnly) {
         $where .= RADIO_mediaAvailabilitySql('on_demand', '');
         $where .= RADIO_permissionSql('radio_media', 0);
     }
 
+    if (!is_array($filters)) {
+        $filters = array();
+    }
+
+    $query = isset($filters['q']) ? trim((string) $filters['q']) : '';
+    if ($query !== '') {
+        $safeQuery = DB_escapeString($query);
+        $where .= " AND (title LIKE '%" . $safeQuery . "%'"
+            . " OR author LIKE '%" . $safeQuery . "%'"
+            . " OR series_title LIKE '%" . $safeQuery . "%'"
+            . " OR category LIKE '%" . $safeQuery . "%'"
+            . " OR collection_name LIKE '%" . $safeQuery . "%'"
+            . " OR tags LIKE '%" . $safeQuery . "%'"
+            . " OR original_name LIKE '%" . $safeQuery . "%')";
+    }
+
+    foreach (array(
+        'type' => 'media_type',
+        'status' => 'status',
+        'source' => 'source_kind',
+        'category' => 'category',
+        'collection' => 'collection_name'
+    ) as $filterKey => $column) {
+        if (isset($filters[$filterKey]) && trim((string) $filters[$filterKey]) !== '') {
+            $where .= " AND " . $column . "='"
+                . DB_escapeString(trim((string) $filters[$filterKey])) . "'";
+        }
+    }
+
+    if (isset($filters['tag']) && trim((string) $filters['tag']) !== '') {
+        $tag = DB_escapeString(RADIO_normalizeClassificationValue($filters['tag'], 64));
+        $where .= " AND FIND_IN_SET('" . $tag . "',tags)>0";
+    }
+
+    foreach (array('on_demand','broadcast','automatic_rotation') as $flag) {
+        if (isset($filters[$flag]) && ($filters[$flag] === '0' || $filters[$flag] === '1')) {
+            $where .= " AND " . $flag . "=" . (int) $filters[$flag];
+        }
+    }
+
     $sortColumns = array(
         'title' => 'title',
         'type' => 'media_type',
+        'category' => 'category',
+        'collection' => 'collection_name',
         'status' => 'status',
         'availability' => 'on_demand',
         'source' => 'source_kind',
@@ -1427,6 +1568,9 @@ function RADIO_updateMedia($id, $metadata)
     $description = isset($metadata['description']) ? trim((string)$metadata['description']) : '';
     $author = trim(isset($metadata['author']) ? (string)$metadata['author'] : '');
     $seriesTitle = trim(isset($metadata['series_title']) ? (string)$metadata['series_title'] : '');
+    $category = RADIO_normalizeClassificationValue(isset($metadata['category']) ? $metadata['category'] : (isset($row['category']) ? $row['category'] : ''), 128);
+    $collectionName = RADIO_normalizeClassificationValue(isset($metadata['collection_name']) ? $metadata['collection_name'] : (isset($row['collection_name']) ? $row['collection_name'] : ''), 255);
+    $tags = RADIO_normalizeTags(isset($metadata['tags']) ? $metadata['tags'] : (isset($row['tags']) ? $row['tags'] : ''));
     $seasonNumber = isset($metadata['season_number']) ? max(0,(int)$metadata['season_number']) : (int)$row['season_number'];
     $episodeNumber = isset($metadata['episode_number']) ? max(0,(int)$metadata['episode_number']) : (int)$row['episode_number'];
     $coverName = isset($metadata['cover_name']) ? basename((string)$metadata['cover_name']) : $row['cover_name'];
@@ -1461,7 +1605,12 @@ function RADIO_updateMedia($id, $metadata)
         . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
         . "description='" . DB_escapeString($description) . "',"
         . "media_type='" . DB_escapeString($mediaType) . "',"
-        . "author='" . DB_escapeString(substr($author,0,255)) . "',series_title='" . DB_escapeString(substr($seriesTitle,0,255)) . "',season_number=" . $seasonNumber . ",episode_number=" . $episodeNumber . ",cover_name='" . DB_escapeString($coverName) . "',"
+        . "author='" . DB_escapeString(substr($author,0,255)) . "',"
+        . "series_title='" . DB_escapeString(substr($seriesTitle,0,255)) . "',"
+        . "category='" . DB_escapeString($category) . "',"
+        . "collection_name='" . DB_escapeString($collectionName) . "',"
+        . "tags='" . DB_escapeString($tags) . "',"
+        . "season_number=" . $seasonNumber . ",episode_number=" . $episodeNumber . ",cover_name='" . DB_escapeString($coverName) . "',"
         . "status='" . DB_escapeString($status) . "',"
         . "on_demand=" . $onDemand . ","
         . "broadcast=" . $broadcast . ","
@@ -3992,6 +4141,9 @@ function plugin_upgrade_radio()
     $ok = true;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'author',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'series_title',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'category',"varchar(128) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'collection_name',"varchar(255) NOT NULL default ''") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'tags',"text") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'season_number',"int(10) unsigned NOT NULL default '0'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'episode_number',"int(10) unsigned NOT NULL default '0'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
@@ -4064,7 +4216,15 @@ function plugin_dopluginsearch_radio($query, $datestart, $dateend, $topic, $type
     }
 
     $mediaSearch = new SearchCriteria('radio', $label);
-    $mediaColumns = array('title' => 'm.title', 'm.description', 'm.author');
+    $mediaColumns = array(
+        'title' => 'm.title',
+        'm.description',
+        'm.author',
+        'm.series_title',
+        'm.category',
+        'm.collection_name',
+        'm.tags'
+    );
     $mediaSql .= $mediaSearch->getDateRangeSQL('AND', 'm.modified', $datestart, $dateend);
     list($mediaSql, $mediaFtSql) = $mediaSearch->buildSearchSQL(
         $keyType,
