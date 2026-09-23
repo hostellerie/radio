@@ -139,6 +139,15 @@ radio_contract_require(
         && strpos($functions, 'RADIO_validateExternalAudioSource(') !== false,
     'Radio remote sources must be probed and validated before they are saved.'
 );
+$radioBlockCss = file_get_contents($root . '/public_html/radio-block.css');
+radio_contract_require(
+    strpos($radioBlockCss, '.radio-block__title') !== false
+        && strpos($radioBlockCss, 'overflow-wrap: anywhere') !== false
+        && strpos($radioBlockCss, 'word-break: break-word') !== false
+        && strpos($radioBlockCss, 'max-width: 100%') !== false
+        && strpos($radioBlockCss, 'min-width: 0') !== false,
+    'Radio block must stay responsive with long unbroken titles in narrow theme sidebars.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
