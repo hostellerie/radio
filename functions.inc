@@ -144,7 +144,7 @@ function RADIO_recordStatEvent($mediaId, $programId, $eventType, $source, $secon
     }
 
     $allowedEvents = array('play','listen','download');
-    $allowedSources = array('catalogue','program','replay','live','live-home','podcast','download');
+    $allowedSources = array('catalogue','program','replay','live','live-home','persistent','podcast','download');
     $eventType = in_array($eventType, $allowedEvents, true) ? $eventType : 'play';
     $source = in_array($source, $allowedSources, true) ? $source : 'catalogue';
 
@@ -3503,6 +3503,9 @@ function RADIO_renderBlock()
     $html .= '<div class="radio-block__links">'
         . '<a href="' . htmlspecialchars($radioUrl, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars(isset($LANG_RADIO['listen_live']) ? $LANG_RADIO['listen_live'] : 'Listen live', ENT_QUOTES, 'UTF-8') . '</a>'
+        . '<a href="' . htmlspecialchars($radioUrl . '/player.php', ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-radio-persistent-player>'
+        . htmlspecialchars(isset($LANG_RADIO['persistent_listen']) ? $LANG_RADIO['persistent_listen'] : 'Keep listening', ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars($scheduleUrl, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars(isset($LANG_RADIO['view_full_schedule']) ? $LANG_RADIO['view_full_schedule'] : 'Schedule', ENT_QUOTES, 'UTF-8') . '</a>'
         . '</div></div>';
