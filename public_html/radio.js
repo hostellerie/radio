@@ -734,7 +734,7 @@
                     items = [];
                 }
 
-                if (!audio || !toggle || !progress || !items.length) {
+                if (!audio || !toggle || !progress || (!items.length && !dynamicPlaylist)) {
                     return;
                 }
 
@@ -910,6 +910,18 @@
 
                 function replacePlaylist(nextItems) {
                     if (!nextItems || !nextItems.length) {
+                        return;
+                    }
+
+                    if (!items.length) {
+                        items = nextItems;
+                        index = 0;
+                        root.setAttribute('data-radio-replay-items', JSON.stringify(items));
+                        renderDynamicChapters();
+                        updateProgressBounds();
+                        audio.src = items[0].stream_url || '';
+                        audio.load();
+                        updateUi();
                         return;
                     }
 
