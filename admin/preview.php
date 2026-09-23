@@ -15,6 +15,92 @@ global $LANG_RADIO, $_CONF;
 $programId = isset($_GET['program_id']) ? (int) $_GET['program_id'] : 0;
 $program = $programId > 0 ? RADIO_getProgram($programId, false) : false;
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    if ($program === false || !RADIO_hasEditAccess($program)) {
+        if (function_exists('http_response_code')) {
+            http_response_code(403);
+        }
+        echo json_encode(array('ok' => false, 'error' => 'access_denied'));
+        exit;
+    }
+
+    if (!SEC_checkToken()) {
+        if (function_exists('http_response_code')) {
+            http_response_code(403);
+        }
+        echo json_encode(array('ok' => false, 'error' => 'invalid_token'));
+        exit;
+    }
+
+    $studioAction = trim((string) $_POST['studio_action']);
+    if ($studioAction !== 'add') {
+        if (function_exists('http_response_code')) {
+            http_response_code(400);
+        }
+        echo json_encode(array('ok' => false, 'error' => 'invalid_action'));
+        exit;
+    }
+
+    $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
+    $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
+    $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
+    $afterItemId = $position === 'next' ? $currentItemId : 0;
+
+    if (!RADIO_addProgramItem($programId, $mediaId, $afterItemId)) {
+        if (function_exists('http_response_code')) {
+            http_response_code(400);
+        }
+        echo json_encode(array('ok' => false, 'error' => 'add_failed'));
+        exit;
+    }
+
+    $savedItems = RADIO_getProgramItems($programId);
+    $studioItems = array();
+    $studioOffset = 0;
+    foreach ($savedItems as $savedItem) {
+        if (!RADIO_hasReadAccess($savedItem)) {
+            continue;
+        }
+
+        $savedDuration = max(0, (int) $savedItem['duration']);
+        $savedPlayable = RADIO_isBroadcastAvailable($savedItem) && $savedDuration > 0;
+        $studioItems[] = array(
+            'item_id' => (int) $savedItem['item_id'],
+            'media_id' => (int) $savedItem['media_id'],
+            'title' => $savedItem['title'],
+            'author' => isset($savedItem['author']) ? $savedItem['author'] : '',
+            'media_type' => isset($savedItem['media_type']) ? $savedItem['media_type'] : '',
+            'category' => isset($savedItem['category']) ? $savedItem['category'] : '',
+            'collection' => isset($savedItem['collection_name']) ? $savedItem['collection_name'] : '',
+            'tags' => isset($savedItem['tags']) ? $savedItem['tags'] : '',
+            'duration' => $savedDuration,
+            'offset' => $studioOffset,
+            'playable' => $savedPlayable,
+            'stream_url' => $savedPlayable ? RADIO_mediaUrl((int) $savedItem['media_id'], false) : ''
+        );
+        if ($savedPlayable) {
+            $studioOffset += $savedDuration;
+        }
+    }
+
+    $signature = array();
+    foreach ($studioItems as $studioItem) {
+        $signature[] = $studioItem['item_id'] . ':' . $studioItem['media_id'] . ':' . $studioItem['duration'];
+    }
+
+    echo json_encode(array(
+        'ok' => true,
+        'items' => $studioItems,
+        'version' => sha1(implode('|', $signature)),
+        'csrf_name' => CSRF_TOKEN,
+        'csrf_token' => SEC_createToken()
+    ));
+    exit;
+}
+
 if ($program === false || (!RADIO_hasReadAccess($program) && !RADIO_hasEditAccess($program))) {
     $content = COM_showMessageText($LANG_RADIO['program_not_found'], $LANG_RADIO['program_preview']);
     COM_output(COM_createHTMLDocument($content, array(
@@ -135,6 +221,8 @@ if ($canEdit) {
         . ' data-radio-program-id="' . $programId . '"'
         . ' data-radio-studio-endpoint="'
         . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio.php', ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-radio-studio-mutation-endpoint="'
+        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/preview.php?program_id=' . $programId, ENT_QUOTES, 'UTF-8') . '"'
         . ' data-radio-csrf-name="' . htmlspecialchars(CSRF_TOKEN, ENT_QUOTES, 'UTF-8') . '"'
         . ' data-radio-csrf-token="' . htmlspecialchars($studioToken, ENT_QUOTES, 'UTF-8') . '"'
         . ' data-empty-label="' . htmlspecialchars($LANG_RADIO['program_media_search_empty'], ENT_QUOTES, 'UTF-8') . '"'
