@@ -201,6 +201,16 @@ radio_contract_require(
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
     'Radio 0.3.1 must provide a real 0.3.0 upgrade path that reconciles new configuration settings.'
 );
+
+radio_contract_require(
+    strpos($functions, 'function RADIO_rotationSnapshotSignature') !== false
+        && strpos($functions, 'function RADIO_loadRotationSnapshot') !== false
+        && strpos($functions, 'function RADIO_saveRotationSnapshot') !== false
+        && strpos($functions, 'rotation-') !== false
+        && strpos($functions, 'media_ids') !== false
+        && strpos($functions, 'RADIO_buildFreshRotationSequence') !== false,
+    'Radio automatic rotation must use a stable daily snapshot so uploads do not reshuffle active playback.'
+);
 radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
