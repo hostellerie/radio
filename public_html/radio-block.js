@@ -185,6 +185,146 @@
         };
     }
 
+    function createTransitionManager(audio, hooks) {
+        var standby = new Audio();
+        standby.preload = 'auto';
+        var mode = 'hard';
+        var seconds = 0;
+        var slotDuration = 0;
+        var nextMedia = null;
+        var preparedUrl = '';
+        var mixing = false;
+        var fadeFrame = 0;
+        var baseVolume = 1;
+
+        function clearStandby() {
+            standby.pause();
+            standby.removeAttribute('src');
+            standby.load();
+            preparedUrl = '';
+        }
+
+        function prepare(data) {
+            mode = data && data.transition_mode ? data.transition_mode : 'hard';
+            seconds = data ? (parseInt(data.transition_seconds || 0, 10) || 0) : 0;
+            slotDuration = data && data.current_media
+                ? (parseInt(data.current_media.slot_duration || data.current_media.duration || 0, 10) || 0)
+                : 0;
+            nextMedia = data && data.next_media ? data.next_media : null;
+
+            if (!nextMedia || mode === 'hard' || !nextMedia.stream_url) {
+                clearStandby();
+                return;
+            }
+
+            if (preparedUrl !== nextMedia.stream_url) {
+                clearStandby();
+                preparedUrl = nextMedia.stream_url;
+                standby.src = preparedUrl;
+                standby.preload = 'auto';
+                standby.load();
+            }
+        }
+
+        function handoff(resumeAt) {
+            if (!nextMedia) {
+                mixing = false;
+                audio.volume = baseVolume;
+                return;
+            }
+
+            var item = nextMedia;
+            hooks.activate(item, Math.max(0, resumeAt || 0), function () {
+                clearStandby();
+                audio.volume = baseVolume;
+                mixing = false;
+            });
+        }
+
+        function maybeStart() {
+            if (mode !== 'crossfade' || seconds < 1 || !nextMedia || mixing
+                || audio.paused || slotDuration < 1) {
+                return;
+            }
+            if (audio.currentTime + 0.08 < slotDuration) {
+                return;
+            }
+
+            mixing = true;
+            baseVolume = Math.max(0, Math.min(1, audio.volume));
+            hooks.beforeTransition(nextMedia);
+
+            try {
+                standby.currentTime = 0;
+            } catch (error) {}
+            standby.volume = 0;
+
+            var promise = standby.play();
+            if (!promise || typeof promise.then !== 'function') {
+                mixing = false;
+                audio.volume = baseVolume;
+                return;
+            }
+
+            promise.then(function () {
+                var started = performance.now();
+
+                function fade(now) {
+                    if (!mixing) {
+                        return;
+                    }
+                    var progress = Math.min(1, (now - started) / (seconds * 1000));
+                    audio.volume = baseVolume * (1 - progress);
+                    standby.volume = baseVolume * progress;
+
+                    if (progress < 1) {
+                        fadeFrame = window.requestAnimationFrame(fade);
+                        return;
+                    }
+
+                    handoff(standby.currentTime || seconds);
+                }
+
+                fadeFrame = window.requestAnimationFrame(fade);
+            }).catch(function () {
+                mixing = false;
+                audio.volume = baseVolume;
+            });
+        }
+
+        function handleEnded() {
+            if (mixing) {
+                return true;
+            }
+            if (mode === 'gapless' && nextMedia) {
+                baseVolume = Math.max(0, Math.min(1, audio.volume));
+                hooks.beforeTransition(nextMedia);
+                handoff(0);
+                return true;
+            }
+            return false;
+        }
+
+        function reset() {
+            if (fadeFrame) {
+                window.cancelAnimationFrame(fadeFrame);
+                fadeFrame = 0;
+            }
+            mixing = false;
+            audio.volume = baseVolume;
+            clearStandby();
+            nextMedia = null;
+        }
+
+        return {
+            prepare: prepare,
+            maybeStart: maybeStart,
+            handleEnded: handleEnded,
+            reset: reset,
+            isMixing: function () { return mixing; }
+        };
+    }
+
     function initBlock(root) {
         var endpoint = root.getAttribute('data-now-endpoint');
         var eventEndpoint = root.getAttribute('data-event-endpoint');
@@ -211,6 +351,50 @@
         var transitionProgramId = 0;
         var transitionRetryCount = 0;
         var scope = createScope(canvas, audio);
+        var transitionManager = createTransitionManager(audio, {
+            beforeTransition: function () {
+                flush();
+            },
+            activate: function (item, resumeAt, done) {
+                mediaId = parseInt(String(item.media_id || '').replace('media:', ''), 10) || 0;
+                if (title) {
+                    title.textContent = item.title || '';
+                    title.href = item.url || '#';
+                }
+                scope.setExternal(item.source_kind && item.source_kind !== 'local');
+                audio.src = item.stream_url || '';
+                audio.load();
+
+                function startNext() {
+                    try {
+                        audio.currentTime = Math.max(0, resumeAt || 0);
+                    } catch (error) {}
+                    scope.start();
+                    audio.play().then(function () {
+                        if (done) {
+                            done();
+                        }
+                        window.setTimeout(function () {
+                            sync(true, false, 0);
+                        }, 200);
+                    }).catch(function () {
+                        if (done) {
+                            done();
+                        }
+                        updateButton();
+                    });
+                }
+
+                if (audio.readyState >= 1) {
+                    startNext();
+                } else {
+                    audio.addEventListener('loadedmetadata', function once() {
+                        audio.removeEventListener('loadedmetadata', once);
+                        startNext();
+                    });
+                }
+            }
+        });
 
         function updateButton() {
             var playing = !audio.paused;
@@ -275,6 +459,7 @@
                 audio.pause();
                 audio.removeAttribute('src');
                 audio.load();
+                transitionManager.reset();
                 updateButton();
                 return;
             }
@@ -326,6 +511,7 @@
 
             mediaId = nextMediaId;
             programId = nextProgramId;
+            transitionManager.prepare(data);
             scope.setExternal(data.current_media.source_kind && data.current_media.source_kind !== 'local');
 
             if (title) {
@@ -429,15 +615,25 @@
 
         audio.addEventListener('ended', function () {
             flush();
-            if (wantedPlaying) {
-                endedAt = audio.currentTime || 0;
-                endedMediaId = mediaId;
-                endedRetryCount = 0;
-                sync(true, true);
+            if (!wantedPlaying) {
+                return;
             }
+            if (transitionManager.handleEnded()) {
+                return;
+            }
+            endedAt = audio.currentTime || 0;
+            endedMediaId = mediaId;
+            endedRetryCount = 0;
+            sync(true, true);
         });
 
         window.addEventListener('pagehide', flush);
+        window.setInterval(function () {
+            if (wantedPlaying) {
+                transitionManager.maybeStart();
+            }
+        }, 100);
+
         window.setInterval(function () {
             sync(wantedPlaying && !audio.paused);
         }, 15000);
