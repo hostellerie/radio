@@ -364,6 +364,113 @@ function RADIO_adminClassificationHtml($row)
     return implode('', $parts);
 }
 
+function RADIO_adminRenderProgramMediaPicker($programId, $media, $filters, $options, $token)
+{
+    global $_CONF, $LANG_RADIO;
+
+    $programId = (int) $programId;
+    $filters = is_array($filters) ? $filters : array();
+    $options = is_array($options) ? $options : array();
+
+    $typeItems = array();
+    foreach (array('music','podcast','interview','show','chronicle','jingle','announcement','promo') as $type) {
+        $typeItems[$type] = $LANG_RADIO['type_' . $type];
+    }
+
+    $query = array('program_id' => $programId);
+    foreach (array('picker_q','picker_type','picker_category','picker_collection','picker_tag') as $key) {
+        if (isset($filters[$key]) && (string) $filters[$key] !== '') {
+            $query[$key] = $filters[$key];
+        }
+    }
+    $postUrl = $_CONF['site_admin_url'] . '/plugins/radio/programs.php?'
+        . http_build_query($query, '', '&');
+
+    $rows = '';
+    if (count($media) === 0) {
+        $rows = '<p class="radio-admin__muted">'
+            . htmlspecialchars($LANG_RADIO['program_media_search_empty'], ENT_QUOTES, 'UTF-8')
+            . '</p>';
+    } else {
+        foreach ($media as $row) {
+            $result = RADIO_adminTemplate('program-media-result.thtml');
+            $meta = array();
+            if (!empty($row['author'])) {
+                $meta[] = $row['author'];
+            }
+            $meta[] = RADIO_adminMediaTypeLabel($row['media_type']);
+            if (!empty($row['duration'])) {
+                $meta[] = gmdate('H:i:s', (int) $row['duration']);
+            }
+
+            $result->set_var(array(
+                'title' => htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8'),
+                'meta' => htmlspecialchars(implode(' · ', $meta), ENT_QUOTES, 'UTF-8'),
+                'classification' => RADIO_adminClassificationHtml($row),
+                'post_url' => htmlspecialchars($postUrl, ENT_QUOTES, 'UTF-8'),
+                'program_id' => $programId,
+                'media_id' => (int) $row['media_id'],
+                'csrf_name' => CSRF_TOKEN,
+                'csrf_token' => htmlspecialchars($token, ENT_QUOTES, 'UTF-8'),
+                'add_title' => htmlspecialchars(
+                    sprintf($LANG_RADIO['program_media_add_title'], $row['title']),
+                    ENT_QUOTES,
+                    'UTF-8'
+                )
+            ));
+            $rows .= $result->finish($result->parse('output', 'page'));
+        }
+    }
+
+    $picker = RADIO_adminTemplate('program-media-picker.thtml');
+    $picker->set_var(array(
+        'picker_title' => htmlspecialchars($LANG_RADIO['program_media_search_title'], ENT_QUOTES, 'UTF-8'),
+        'picker_help' => htmlspecialchars($LANG_RADIO['program_media_search_help'], ENT_QUOTES, 'UTF-8'),
+        'result_count' => sprintf(
+            htmlspecialchars($LANG_RADIO['program_media_search_count'], ENT_QUOTES, 'UTF-8'),
+            count($media)
+        ),
+        'program_id' => $programId,
+        'search_label' => htmlspecialchars($LANG_RADIO['filter_search'], ENT_QUOTES, 'UTF-8'),
+        'search_placeholder' => htmlspecialchars($LANG_RADIO['program_media_search_placeholder'], ENT_QUOTES, 'UTF-8'),
+        'search_value' => htmlspecialchars(isset($filters['picker_q']) ? $filters['picker_q'] : '', ENT_QUOTES, 'UTF-8'),
+        'type_label' => htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8'),
+        'type_options' => RADIO_adminFilterSelectOptions(
+            $typeItems,
+            isset($filters['picker_type']) ? $filters['picker_type'] : '',
+            $LANG_RADIO['filter_all']
+        ),
+        'category_label' => htmlspecialchars($LANG_RADIO['category'], ENT_QUOTES, 'UTF-8'),
+        'category_options' => RADIO_adminFilterSelectOptions(
+            isset($options['categories']) ? $options['categories'] : array(),
+            isset($filters['picker_category']) ? $filters['picker_category'] : '',
+            $LANG_RADIO['filter_all']
+        ),
+        'collection_label' => htmlspecialchars($LANG_RADIO['collection'], ENT_QUOTES, 'UTF-8'),
+        'collection_options' => RADIO_adminFilterSelectOptions(
+            isset($options['collections']) ? $options['collections'] : array(),
+            isset($filters['picker_collection']) ? $filters['picker_collection'] : '',
+            $LANG_RADIO['filter_all']
+        ),
+        'tag_label' => htmlspecialchars($LANG_RADIO['tags'], ENT_QUOTES, 'UTF-8'),
+        'tag_options' => RADIO_adminFilterSelectOptions(
+            isset($options['tags']) ? $options['tags'] : array(),
+            isset($filters['picker_tag']) ? $filters['picker_tag'] : '',
+            $LANG_RADIO['filter_all']
+        ),
+        'search_button' => htmlspecialchars($LANG_RADIO['program_media_search_button'], ENT_QUOTES, 'UTF-8'),
+        'reset_button' => htmlspecialchars($LANG_RADIO['filter_reset'], ENT_QUOTES, 'UTF-8'),
+        'reset_url' => htmlspecialchars(
+            $_CONF['site_admin_url'] . '/plugins/radio/programs.php?program_id=' . $programId,
+            ENT_QUOTES,
+            'UTF-8'
+        ),
+        'media_results' => $rows
+    ));
+
+    return $picker->finish($picker->parse('output', 'page'));
+}
+
 function RADIO_adminSortHeader($key, $label, $sort, $direction, $filters = array())
 {
     global $_CONF;
