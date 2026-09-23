@@ -61,6 +61,20 @@ if ($state['media'] !== false) {
     } else {
         $payload['next_media'] = false;
     }
+    if (!empty($media['next_next_media']) && is_array($media['next_next_media'])) {
+        $nextNext = $media['next_next_media'];
+        $payload['next_next_media'] = array(
+            'media_id' => $nextNext['external_id'],
+            'title' => $nextNext['title'],
+            'media_type' => $nextNext['media_type'],
+            'source_kind' => isset($nextNext['source_kind']) ? $nextNext['source_kind'] : 'local',
+            'duration' => (int) $nextNext['duration'],
+            'stream_url' => $nextNext['stream_url'],
+            'url' => $nextNext['item_url']
+        );
+    } else {
+        $payload['next_next_media'] = false;
+    }
 }
 
 foreach ($upcoming as $item) {
