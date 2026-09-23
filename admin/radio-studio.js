@@ -147,11 +147,27 @@
         var list = document.createElement('ol');
         list.className = 'radio-studio__queue';
 
+        var currentItemId = parseInt(player.getAttribute('data-radio-current-item-id') || '0', 10) || 0;
+        var currentIndex = -1;
+        for (var c = 0; c < items.length; c++) {
+            if ((parseInt(items[c].item_id || 0, 10) || 0) === currentItemId) {
+                currentIndex = c;
+                break;
+            }
+        }
+
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
+            var itemId = parseInt(item.item_id || 0, 10) || 0;
             var li = document.createElement('li');
             li.className = 'radio-studio__queue-item';
-            li.setAttribute('data-item-id', parseInt(item.item_id || 0, 10) || 0);
+            li.setAttribute('data-item-id', itemId);
+
+            if (itemId === currentItemId && currentItemId > 0) {
+                li.classList.add('is-current');
+            } else if (currentIndex >= 0 && i === currentIndex + 1) {
+                li.classList.add('is-next');
+            }
 
             var title = document.createElement('span');
             title.className = 'radio-studio__queue-title';
