@@ -206,10 +206,11 @@ radio_contract_require(
     strpos($functions, 'function RADIO_rotationSnapshotSignature') !== false
         && strpos($functions, 'function RADIO_loadRotationSnapshot') !== false
         && strpos($functions, 'function RADIO_saveRotationSnapshot') !== false
-        && strpos($functions, 'rotation-') !== false
-        && strpos($functions, 'media_ids') !== false
+        && strpos($functions, 'function RADIO_rotationCycleState') !== false
+        && strpos($functions, "'cycle_start'") !== false
+        && strpos($functions, "'cycle_duration'") !== false
         && strpos($functions, 'RADIO_buildFreshRotationSequence') !== false,
-    'Radio automatic rotation must use a stable daily snapshot so uploads do not reshuffle active playback.'
+    'Radio automatic rotation must keep the active cycle stable and rebuild the playlist at the next cycle boundary.'
 );
 radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
