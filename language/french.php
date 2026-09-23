@@ -340,7 +340,7 @@ $LANG_confignames['radio'] = array(
     'fallback_type_weights' => 'Poids des types (exemple : music=5,podcast=2)',
     'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)',
     'transition_mode' => 'Mode d’enchaînement audio',
-    'crossfade_seconds' => 'Durée du crossfade musique → musique (secondes)'
+    'crossfade_seconds' => 'Durée du crossfade musique → musique (secondes)',
     'whatsnew_enabled' => 'Afficher Radio dans Quoi de neuf ?',
     'whatsnew_interval' => 'Période Quoi de neuf (secondes)',
     'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf',
