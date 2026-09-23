@@ -339,10 +339,15 @@ $LANG_confignames['radio'] = array(
     'fallback_announcement_interval' => 'Insérer une annonce/promotion tous les N éléments (0 = jamais)',
     'fallback_type_weights' => 'Poids des types (exemple : music=5,podcast=2)',
     'fallback_min_repeat_minutes' => 'Intervalle minimal cible avant répétition (minutes)',
+    'transition_mode' => 'Mode d’enchaînement audio',
+    'crossfade_seconds' => 'Durée du crossfade musique → musique (secondes)'
     'whatsnew_enabled' => 'Afficher Radio dans Quoi de neuf ?',
     'whatsnew_interval' => 'Période Quoi de neuf (secondes)',
     'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf',
     'stats_enabled' => 'Activer les statistiques d’écoute respectueuses de la vie privée ?',
     'stats_retention_days' => 'Conservation des statistiques (jours)'
 );
-$LANG_configselects['radio'] = array(0 => array('Activé' => 1, 'Désactivé' => 0));
+$LANG_configselects['radio'] = array(
+    0 => array('Activé' => 1, 'Désactivé' => 0),
+    1 => array('Coupure nette' => 'hard', 'Sans blanc' => 'gapless', 'Crossfade intelligent' => 'crossfade')
+);
