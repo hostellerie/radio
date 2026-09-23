@@ -326,6 +326,37 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($functions, "RADIO_buildFreshRotationSequence(\$date, \$cycleStart)") !== false
+        && strpos($functions, "microtime(true)") !== false
+        && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
+        && strpos($functions, "round(\$seconds / 2)") !== false
+        && strpos($functions, "'next_next_media'") !== false
+        && strpos($nowEndpoint, "'next_next_media'") !== false,
+    'Each protected Radio rotation cycle must receive a fresh order, jingle-to-music must use a shorter crossfade, and live state must expose N+2.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, "var reserve = new Audio()") !== false
+        && strpos($blockPlayer, "var reserve = new Audio()") !== false
+        && strpos($persistentPlayer, "var reserve = new Audio()") !== false
+        && strpos($publicPlayer, 'bufferedAhead(standby)') !== false
+        && strpos($blockPlayer, 'maybePrefetchReserve') !== false
+        && strpos($persistentPlayer, 'next_next_media') !== false
+        && strpos($publicPlayer, "mode === 'crossfade'") !== false
+        && strpos($publicPlayer, "mode === 'gapless' || mode === 'crossfade'") !== false,
+    'Radio live players must use adaptive N+1/N+2 buffering and fall back cleanly when a crossfade cannot start safely.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, 'queuePreload = new Audio()') !== false
+        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false
+        && strpos($publicPlayer, "radio:buffer-status") !== false
+        && strpos($programPreview, 'data-radio-studio-buffer') !== false
+        && strpos($studioJs, "player.addEventListener('radio:buffer-status'") !== false,
+    'Radio programme preview and Studio must prebuffer N+1/N+2 and expose buffer readiness.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
         && strpos($persistentPlayer, 'function createTransitionManager') !== false
