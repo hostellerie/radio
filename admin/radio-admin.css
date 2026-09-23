@@ -130,3 +130,13 @@
 .radio-studio__queue-item.is-current{font-weight:700}
 .radio-studio__queue-item.is-current::before{content:"▶";margin-right:.35rem}
 .radio-studio__queue-item.is-next{font-weight:600}
+
+
+.radio-program-items{display:grid;gap:.35rem}
+.radio-program-item{display:flex;align-items:center;gap:.5rem;margin:0!important}
+.radio-program-item__label{min-width:0;overflow-wrap:anywhere}
+.radio-program-item__actions{display:inline-flex!important;align-items:center;gap:.2rem;margin:0!important;padding:0!important;border:0!important}
+.radio-program-item__action{display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;min-height:1.8rem!important;padding:0!important;border:1px solid rgba(127,127,127,.35);border-radius:.3rem;background:transparent;line-height:1;font-size:1rem;cursor:pointer}
+.radio-program-item__action:hover,.radio-program-item__action:focus{background:rgba(127,127,127,.1)}
+.radio-program-item__action--remove{font-size:1.15rem}
+@media(max-width:560px){.radio-program-item{align-items:flex-start;flex-wrap:wrap}.radio-program-item__actions{flex:0 0 auto}}
