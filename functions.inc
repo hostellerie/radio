@@ -2769,10 +2769,11 @@ function RADIO_rotationSnapshotPath($date)
     return $base . 'rotation-' . $safeDate . '.json';
 }
 
-function RADIO_loadRotationSnapshot($date)
+function RADIO_loadRotationSnapshot($date, $timestamp, &$nextCycleStart)
 {
     global $_TABLES;
 
+    $nextCycleStart = 0;
     $path = RADIO_rotationSnapshotPath($date);
     if ($path === '' || !is_file($path) || !is_readable($path)) {
         return false;
@@ -2782,7 +2783,17 @@ function RADIO_loadRotationSnapshot($date)
     $data = is_string($raw) ? json_decode($raw, true) : null;
     if (!is_array($data)
         || !isset($data['signature']) || $data['signature'] !== RADIO_rotationSnapshotSignature()
+        || !isset($data['cycle_start']) || !isset($data['cycle_duration'])
         || empty($data['media_ids']) || !is_array($data['media_ids'])) {
+        return false;
+    }
+
+    $cycleStart = (int) $data['cycle_start'];
+    $cycleDuration = max(1, (int) $data['cycle_duration']);
+    $cycleEnd = $cycleStart + $cycleDuration;
+
+    if ($timestamp >= $cycleEnd) {
+        $nextCycleStart = $cycleEnd;
         return false;
     }
 
@@ -2794,7 +2805,11 @@ function RADIO_loadRotationSnapshot($date)
         }
     }
     if (count($ids) === 0) {
-        return array();
+        return array(
+            'sequence' => array(),
+            'cycle_start' => $cycleStart,
+            'cycle_duration' => $cycleDuration
+        );
     }
 
     $result = DB_query(
@@ -2821,7 +2836,11 @@ function RADIO_loadRotationSnapshot($date)
         $sequence[] = $row;
     }
 
-    return $sequence;
+    return array(
+        'sequence' => $sequence,
+        'cycle_start' => $cycleStart,
+        'cycle_duration' => $cycleDuration
+    );
 }
 
 function RADIO_purgeRotationSnapshots($keepDays)
@@ -2845,7 +2864,7 @@ function RADIO_purgeRotationSnapshots($keepDays)
     }
 }
 
-function RADIO_saveRotationSnapshot($date, $sequence)
+function RADIO_saveRotationSnapshot($date, $sequence, $cycleStart)
 {
     $path = RADIO_rotationSnapshotPath($date);
     if ($path === '') {
@@ -2859,11 +2878,18 @@ function RADIO_saveRotationSnapshot($date, $sequence)
         }
     }
 
+    $cycleDuration = RADIO_rotationDuration($sequence);
+    if ($cycleDuration < 1) {
+        return false;
+    }
+
     RADIO_purgeRotationSnapshots(7);
 
     $payload = json_encode(array(
         'date' => (string) $date,
         'signature' => RADIO_rotationSnapshotSignature(),
+        'cycle_start' => (int) $cycleStart,
+        'cycle_duration' => $cycleDuration,
         'media_ids' => $ids
     ));
     if (!is_string($payload)) {
@@ -2873,16 +2899,50 @@ function RADIO_saveRotationSnapshot($date, $sequence)
     return @file_put_contents($path, $payload, LOCK_EX) !== false;
 }
 
-function RADIO_buildRotationSequence($date)
+function RADIO_rotationCycleState($date, $timestamp)
 {
-    $snapshot = RADIO_loadRotationSnapshot($date);
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $nextCycleStart = 0;
+    $snapshot = RADIO_loadRotationSnapshot($date, $timestamp, $nextCycleStart);
+
     if ($snapshot !== false) {
         return $snapshot;
     }
 
     $sequence = RADIO_buildFreshRotationSequence($date);
-    RADIO_saveRotationSnapshot($date, $sequence);
-    return $sequence;
+    $cycleDuration = RADIO_rotationDuration($sequence);
+    if ($cycleDuration < 1) {
+        return array(
+            'sequence' => array(),
+            'cycle_start' => $timestamp,
+            'cycle_duration' => 0
+        );
+    }
+
+    if ($nextCycleStart > 0) {
+        $cycleStart = $nextCycleStart;
+        while (($cycleStart + $cycleDuration) <= $timestamp) {
+            $cycleStart += $cycleDuration;
+        }
+    } else {
+        $dayStart = strtotime($date . ' 00:00:00');
+        $elapsedDay = max(0, $timestamp - $dayStart);
+        $cycleStart = $dayStart + ((int) floor($elapsedDay / $cycleDuration) * $cycleDuration);
+    }
+
+    RADIO_saveRotationSnapshot($date, $sequence, $cycleStart);
+
+    return array(
+        'sequence' => $sequence,
+        'cycle_start' => $cycleStart,
+        'cycle_duration' => $cycleDuration
+    );
+}
+
+function RADIO_buildRotationSequence($date)
+{
+    $state = RADIO_rotationCycleState($date, time());
+    return isset($state['sequence']) ? $state['sequence'] : array();
 }
 
 
@@ -3018,16 +3078,19 @@ function RADIO_getRotationState($timestamp)
 
     $timestamp = $timestamp ? (int) $timestamp : time();
     $date = date('Y-m-d', $timestamp);
-    $sequence = RADIO_buildRotationSequence($date);
+    $cycle = RADIO_rotationCycleState($date, $timestamp);
+    $sequence = isset($cycle['sequence']) ? $cycle['sequence'] : array();
     $count = count($sequence);
-    $cycleDuration = RADIO_rotationDuration($sequence);
+    $cycleDuration = isset($cycle['cycle_duration']) ? (int) $cycle['cycle_duration'] : 0;
+    $cycleStart = isset($cycle['cycle_start']) ? (int) $cycle['cycle_start'] : $timestamp;
     if ($count === 0 || $cycleDuration < 1) {
         return false;
     }
 
-    $dayStart = strtotime($date . ' 00:00:00');
-    $elapsedDay = max(0, $timestamp - $dayStart);
-    $cycleOffset = $elapsedDay % $cycleDuration;
+    $cycleOffset = max(0, $timestamp - $cycleStart);
+    if ($cycleOffset >= $cycleDuration) {
+        $cycleOffset = $cycleOffset % $cycleDuration;
+    }
     $cursor = 0;
 
     for ($i = 0; $i < $count; $i++) {
@@ -3046,6 +3109,7 @@ function RADIO_getRotationState($timestamp)
                 'source' => 'rotation',
                 'date' => $date,
                 'cycle_duration' => $cycleDuration,
+                'cycle_start' => $cycleStart,
                 'cycle_offset' => $cycleOffset,
                 'media_id' => (int) $item['media_id'],
                 'external_id' => RADIO_externalId('media', (int) $item['media_id']),
