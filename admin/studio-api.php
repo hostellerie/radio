@@ -77,6 +77,44 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
     radio_studio_json(array('ok' => false, 'error' => 'access_denied'), 403);
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
+    if (!SEC_checkToken()) {
+        radio_studio_json(array('ok' => false, 'error' => 'invalid_token'), 403);
+    }
+
+    $studioAction = trim((string) $_POST['studio_action']);
+    $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
+
+    if ($studioAction === 'add') {
+        $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
+        $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
+        $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
+        $afterItemId = $position === 'next' ? $currentItemId : 0;
+        if (!RADIO_addProgramItem($programId, $mediaId, $afterItemId)) {
+            radio_studio_json(array('ok' => false, 'error' => 'add_failed'), 400);
+        }
+        radio_studio_json(radio_studio_state($programId), 200);
+    }
+
+    if ($studioAction === 'remove') {
+        if (!$itemId || !RADIO_removeProgramItem($itemId, $programId)) {
+            radio_studio_json(array('ok' => false, 'error' => 'remove_failed'), 400);
+        }
+        radio_studio_json(radio_studio_state($programId), 200);
+    }
+
+    if ($studioAction === 'move_up' || $studioAction === 'move_down') {
+        $direction = $studioAction === 'move_up' ? 'up' : 'down';
+        if (!$itemId || !RADIO_moveProgramItem($itemId, $programId, $direction)) {
+            radio_studio_json(array('ok' => false, 'error' => 'move_failed'), 400);
+        }
+        radio_studio_json(radio_studio_state($programId), 200);
+    }
+
+    radio_studio_json(array('ok' => false, 'error' => 'invalid_action'), 400);
+}
+
+
 $action = isset($_REQUEST['action']) ? trim((string) $_REQUEST['action']) : 'state';
 
 if ($action === 'state') {
@@ -119,41 +157,5 @@ if ($action === 'search') {
     ), 200);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
-    if (!SEC_checkToken()) {
-        radio_studio_json(array('ok' => false, 'error' => 'invalid_token'), 403);
-    }
-
-    $studioAction = trim((string) $_POST['studio_action']);
-    $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
-
-    if ($studioAction === 'add') {
-        $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
-        $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
-        $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
-        $afterItemId = $position === 'next' ? $currentItemId : 0;
-        if (!RADIO_addProgramItem($programId, $mediaId, $afterItemId)) {
-            radio_studio_json(array('ok' => false, 'error' => 'add_failed'), 400);
-        }
-        radio_studio_json(radio_studio_state($programId), 200);
-    }
-
-    if ($studioAction === 'remove') {
-        if (!$itemId || !RADIO_removeProgramItem($itemId, $programId)) {
-            radio_studio_json(array('ok' => false, 'error' => 'remove_failed'), 400);
-        }
-        radio_studio_json(radio_studio_state($programId), 200);
-    }
-
-    if ($studioAction === 'move_up' || $studioAction === 'move_down') {
-        $direction = $studioAction === 'move_up' ? 'up' : 'down';
-        if (!$itemId || !RADIO_moveProgramItem($itemId, $programId, $direction)) {
-            radio_studio_json(array('ok' => false, 'error' => 'move_failed'), 400);
-        }
-        radio_studio_json(radio_studio_state($programId), 200);
-    }
-
-    radio_studio_json(array('ok' => false, 'error' => 'invalid_action'), 400);
-}
 
 radio_studio_json(array('ok' => false, 'error' => 'invalid_action'), 400);
