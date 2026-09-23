@@ -12,6 +12,25 @@ Each media item now supports:
 
 Category and collection are indexed in MySQL. Tags are normalized, de-duplicated and stored as an exact comma-separated set for reliable filtering.
 
+## Programme media picker
+
+Programme editing no longer uses a long media select. It now provides the same classification-oriented search workflow as the media library:
+
+- text search;
+- media type;
+- category;
+- collection;
+- tag;
+- compact broadcast-eligible results;
+- one-click **+** append action;
+- search state preserved after each addition.
+
+The existing programme playlist remains available underneath for reordering and removal.
+
+## Manual rotation rebuild
+
+Automatic rotation cycles remain protected from normal media and configuration changes until the next cycle. Administrators can now explicitly choose **Rebuild rotation now** from the Rotation page. This CSRF-protected action invalidates the protected snapshot and starts a fresh cycle immediately using current media and settings.
+
 ## Media library filters
 
 The administration library now combines:
