@@ -154,6 +154,10 @@ if ($canEdit) {
         . '<span class="radio-admin__muted" data-radio-studio-status></span>'
         . '</span></div>'
         . '<p class="radio-admin__muted">' . htmlspecialchars($LANG_RADIO['studio_help'], ENT_QUOTES, 'UTF-8') . '</p>'
+        . '<div class="radio-studio__queue-panel">'
+        . '<h3>' . htmlspecialchars($LANG_RADIO['studio_queue_title'], ENT_QUOTES, 'UTF-8') . '</h3>'
+        . '<div data-radio-studio-queue></div>'
+        . '</div>'
         . '<form class="radio-program-picker__filters" data-radio-studio-search>'
         . '<div class="radio-program-picker__filter-grid">'
         . '<label>' . htmlspecialchars($LANG_RADIO['filter_search'], ENT_QUOTES, 'UTF-8')
