@@ -2907,10 +2907,11 @@ function RADIO_rotationCompare($a, $b)
     return strcmp($a['_rotation_key'], $b['_rotation_key']);
 }
 
-function RADIO_rotationShuffle($items, $date, $scope)
+function RADIO_rotationShuffle($items, $seed, $scope)
 {
+    $seed = (string) $seed;
     foreach ($items as $index => $item) {
-        $items[$index]['_rotation_key'] = sha1($date . ':' . $scope . ':' . (int) $item['media_id']);
+        $items[$index]['_rotation_key'] = sha1($seed . ':' . $scope . ':' . (int) $item['media_id']);
     }
     if (count($items) > 1) {
         usort($items, 'RADIO_rotationCompare');
@@ -2921,7 +2922,7 @@ function RADIO_rotationShuffle($items, $date, $scope)
     return $items;
 }
 
-function RADIO_buildWeightedRegularSequence($date)
+function RADIO_buildWeightedRegularSequence($seed)
 {
     global $_RADIO_CONF;
 
@@ -2932,7 +2933,7 @@ function RADIO_buildWeightedRegularSequence($date)
     foreach ($weights as $type => $weight) {
         $queues[$type] = RADIO_rotationShuffle(
             RADIO_getRotationMediaByTypes(array($type)),
-            $date,
+            $seed,
             'type-' . $type
         );
     }
@@ -2961,23 +2962,27 @@ function RADIO_buildWeightedRegularSequence($date)
     return $sequence;
 }
 
-function RADIO_buildFreshRotationSequence($date)
+function RADIO_buildFreshRotationSequence($date, $seed = null)
 {
     global $_RADIO_CONF;
 
-    $regular = RADIO_buildWeightedRegularSequence($date);
+    if ($seed === null || $seed === '') {
+        $seed = $date;
+    }
+
+    $regular = RADIO_buildWeightedRegularSequence($seed);
     if (count($regular) === 0) {
         return array();
     }
 
     $jingles = RADIO_rotationShuffle(
         RADIO_getRotationMediaByTypes(array('jingle')),
-        $date,
+        $seed,
         'jingle'
     );
     $announcements = RADIO_rotationShuffle(
         RADIO_getRotationMediaByTypes(array('announcement','promo')),
-        $date,
+        $seed,
         'announcement'
     );
 
@@ -3064,7 +3069,10 @@ function RADIO_rebuildRotationNow($timestamp)
         return false;
     }
 
-    $sequence = RADIO_buildFreshRotationSequence($date);
+    $sequence = RADIO_buildFreshRotationSequence(
+        $date,
+        $timestamp . ':manual:' . sprintf('%.6F', microtime(true))
+    );
     if (count($sequence) === 0) {
         return array(
             'sequence' => array(),
@@ -3252,10 +3260,33 @@ function RADIO_rotationCycleState($date, $timestamp)
         return $snapshot;
     }
 
-    $sequence = RADIO_buildFreshRotationSequence($date);
     $mode = RADIO_transitionMode();
     $seconds = RADIO_crossfadeSeconds();
-    $cycleDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
+
+    if ($nextCycleStart > 0) {
+        $cycleStart = $nextCycleStart;
+        $sequence = RADIO_buildFreshRotationSequence($date, $cycleStart);
+        $cycleDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
+
+        while ($cycleDuration > 0 && ($cycleStart + $cycleDuration) <= $timestamp) {
+            $cycleStart += $cycleDuration;
+            $sequence = RADIO_buildFreshRotationSequence($date, $cycleStart);
+            $cycleDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
+        }
+    } else {
+        $seed = $date . ':cycle:' . $timestamp;
+        $sequence = RADIO_buildFreshRotationSequence($date, $seed);
+        $cycleDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
+
+        if ($cycleDuration > 0) {
+            $dayStart = strtotime($date . ' 00:00:00');
+            $elapsedDay = max(0, $timestamp - $dayStart);
+            $cycleStart = $dayStart + ((int) floor($elapsedDay / $cycleDuration) * $cycleDuration);
+        } else {
+            $cycleStart = $timestamp;
+        }
+    }
+
     if ($cycleDuration < 1) {
         return array(
             'sequence' => array(),
@@ -3264,17 +3295,6 @@ function RADIO_rotationCycleState($date, $timestamp)
             'transition_mode' => $mode,
             'crossfade_seconds' => $seconds
         );
-    }
-
-    if ($nextCycleStart > 0) {
-        $cycleStart = $nextCycleStart;
-        while (($cycleStart + $cycleDuration) <= $timestamp) {
-            $cycleStart += $cycleDuration;
-        }
-    } else {
-        $dayStart = strtotime($date . ' 00:00:00');
-        $elapsedDay = max(0, $timestamp - $dayStart);
-        $cycleStart = $dayStart + ((int) floor($elapsedDay / $cycleDuration) * $cycleDuration);
     }
 
     RADIO_saveRotationSnapshot($date, $sequence, $cycleStart);
