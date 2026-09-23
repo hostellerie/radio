@@ -333,6 +333,13 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($functions, "if (count(\$jingles) > 0)") !== false
+        && strpos($functions, "\$sequence[] = \$jingles[0]") !== false
+        && strpos($functions, "\$jingleIndex = 1") !== false,
+    'Every new Radio fallback rotation cycle must start with a jingle when one is available.'
+);
+
+radio_contract_require(
     strpos($functions, "RADIO_buildFreshRotationSequence(\$date, \$cycleStart)") !== false
         && strpos($functions, "microtime(true)") !== false
         && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
