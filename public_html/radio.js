@@ -414,6 +414,10 @@
                 offset = 0;
             }
 
+            if (fromEnded && nextId !== endedMediaId && nextProgram === programId) {
+                offset = 0;
+            }
+
             if (fromEnded && nextId === endedMediaId
                 && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
                 && endedRetryCount < 20) {
