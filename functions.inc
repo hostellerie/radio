@@ -3692,7 +3692,7 @@ function plugin_upgrade_radio()
     require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
     require_once $_CONF['path'] . 'plugins/radio/install_updates.php';
 
-    if ($installedVersion === '0.2.5'
+    if ($installedVersion !== RADIO_PLUGIN_VERSION
         && !radio_apply_updates($installedVersion, RADIO_PLUGIN_VERSION)) {
         COM_errorLog(
             "Radio upgrade: migration failed from '"
