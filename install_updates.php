@@ -15,6 +15,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.3.1' => array(
         'next' => '0.3.2',
         'callback' => 'radio_update_0_3_1_to_0_3_2'
+    ),
+    '0.3.2' => array(
+        'next' => '0.4.0',
+        'callback' => 'radio_update_0_3_2_to_0_4_0'
     )
 );
 
@@ -79,6 +83,47 @@ function radio_update_0_3_1_to_0_3_2()
     }
 
     return radio_column_exists($table, 'automatic_rotation');
+}
+
+function radio_update_0_3_2_to_0_4_0()
+{
+    global $_TABLES;
+
+    $table = $_TABLES['radio_media'];
+
+    if (!radio_column_exists($table, 'category')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD category varchar(128) NOT NULL default '' AFTER series_title"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    if (!radio_column_exists($table, 'collection_name')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD collection_name varchar(255) NOT NULL default '' AFTER category"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    if (!radio_column_exists($table, 'tags')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD tags text AFTER collection_name"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    return radio_column_exists($table, 'category')
+        && radio_column_exists($table, 'collection_name')
+        && radio_column_exists($table, 'tags');
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
