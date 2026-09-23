@@ -5,6 +5,29 @@
         return (root || document).querySelector(selector);
     }
 
+    function bindPersistentPlayerLinks() {
+        var links = document.querySelectorAll('[data-radio-persistent-player]');
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener('click', function (event) {
+                var href = this.getAttribute('href');
+                if (!href) {
+                    return;
+                }
+                event.preventDefault();
+                var popup = window.open(
+                    href,
+                    'radio-player',
+                    'width=460,height=520,resizable=yes,scrollbars=yes'
+                );
+                if (popup) {
+                    popup.focus();
+                } else {
+                    window.location.href = href;
+                }
+            });
+        }
+    }
+
     function postEvent(endpoint, mediaId, programId, eventType, seconds) {
         if (!endpoint || !mediaId) {
             return;
@@ -406,6 +429,7 @@
     }
 
     function init() {
+        bindPersistentPlayerLinks();
         var blocks = document.querySelectorAll('.radio-block[data-now-endpoint]');
         for (var i = 0; i < blocks.length; i++) {
             initBlock(blocks[i]);
