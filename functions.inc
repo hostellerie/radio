@@ -2977,6 +2977,31 @@ function RADIO_rotationSnapshotPath($date)
     return $base . 'rotation-' . $safeDate . '.json';
 }
 
+function RADIO_rebuildRotationNow($timestamp)
+{
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $dates = array(
+        date('Y-m-d', $timestamp),
+        date('Y-m-d', $timestamp - 86400),
+        date('Y-m-d', $timestamp + 86400)
+    );
+
+    $ok = true;
+    foreach (array_unique($dates) as $date) {
+        $path = RADIO_rotationSnapshotPath($date);
+        if ($path !== '' && is_file($path) && !@unlink($path)) {
+            $ok = false;
+        }
+    }
+
+    if (!$ok) {
+        return false;
+    }
+
+    // Force immediate reconstruction and persist the new cycle snapshot.
+    return RADIO_rotationCycleState(date('Y-m-d', $timestamp), $timestamp);
+}
+
 function RADIO_loadRotationSnapshot($date, $timestamp, &$nextCycleStart)
 {
     global $_TABLES;
