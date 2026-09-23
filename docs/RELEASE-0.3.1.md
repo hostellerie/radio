@@ -5,7 +5,7 @@ Radio 0.3.1 is a maintenance and playback-improvement release for the Geeklog Ra
 ## Highlights
 
 - Adds configurable audio transition modes: hard cut, gapless and smart crossfade.
-- Keeps the active automatic-rotation cycle stable so uploading new media does not interrupt playback; newly published broadcast media joins at the next rotation cycle.
+- Protects the entire active automatic-rotation cycle from uploads, metadata edits and rotation-configuration changes; newly published media and configuration changes apply at the next cycle, while deleted media or media returned to draft are removed from the active cycle immediately.
 - Adds a configurable music-to-music crossfade duration.
 - Keeps jingles, announcements and promos on hard transitions so their opening is not clipped.
 - Preloads the next media item in the public player, dynamic block and persistent detached player.
