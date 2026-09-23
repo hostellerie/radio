@@ -126,3 +126,7 @@
 .radio-studio__queue-title{min-width:0;overflow-wrap:anywhere}
 .radio-studio__queue-item.is-not-ready{opacity:.65}
 @media(max-width:640px){.radio-studio__queue-item{flex-direction:column;gap:.15rem}}
+
+.radio-studio__queue-item.is-current{font-weight:700}
+.radio-studio__queue-item.is-current::before{content:"▶";margin-right:.35rem}
+.radio-studio__queue-item.is-next{font-weight:600}
