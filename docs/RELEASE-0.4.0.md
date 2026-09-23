@@ -27,6 +27,20 @@ Programme editing no longer uses a long media select. It now provides the same c
 
 The existing programme playlist remains available underneath for reordering and removal.
 
+## Live programme Studio
+
+The private programme preview now doubles as a live editorial Studio for programme owners/editors:
+
+- keep the current audio item playing while the upcoming queue changes;
+- search the broadcast-eligible library without reloading the page;
+- add a result to the end of the programme with **+**;
+- insert a result immediately after the currently playing programme item with **Play next**;
+- poll the real programme playlist every few seconds so edits made in another administration tab appear automatically;
+- update chapters and total duration without resetting the active audio element;
+- exclude Studio listening from public playback/listening statistics.
+
+The Studio uses the real `radio_program_items` order, so the playlist saved while mixing remains the programme order used later for scheduled broadcast and replay.
+
 ## Private programme preview
 
 Programme editors can now open **Listen to programme** from the administration page before any broadcast. The private preview:
