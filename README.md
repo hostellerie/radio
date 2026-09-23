@@ -33,6 +33,10 @@ That preview also provides a **Studio** workflow: while one item keeps playing, 
 
 Automatic rotation stays protected during its active cycle, but administrators can explicitly rebuild it immediately from the Rotation page when they intentionally want current media or configuration changes to take effect at once.
 
+Each newly created rotation cycle receives a fresh shuffled order, then remains frozen for synchronization. Crossfade uses the full configured duration for music-to-music transitions and a shorter half-duration overlap for jingle-to-music transitions.
+
+Radio also uses adaptive N+1/N+2 buffering in its live players and programme Studio. The next media item is prepared immediately, the following item is prepared once enough of N+1 is buffered, and a crossfade is delayed when the next track is not sufficiently ready.
+
 ## Compatibility
 
 Current transition baseline:
