@@ -10,6 +10,9 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
   media_type varchar(32) NOT NULL default 'music',
   author varchar(255) NOT NULL default '',
   series_title varchar(255) NOT NULL default '',
+  category varchar(128) NOT NULL default '',
+  collection_name varchar(255) NOT NULL default '',
+  tags text,
   season_number int(10) unsigned NOT NULL default '0',
   episode_number int(10) unsigned NOT NULL default '0',
   cover_name varchar(255) NOT NULL default '',
@@ -40,7 +43,9 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
   modified datetime NOT NULL,
   PRIMARY KEY (media_id),
   KEY status_modified (status, modified),
-  KEY media_type (media_type)
+  KEY media_type (media_type),
+  KEY category (category(64)),
+  KEY collection_name (collection_name(64))
 ) ENGINE=MyISAM;";
 
 $_SQL[] = "CREATE TABLE {$_TABLES['radio_programs']} (
