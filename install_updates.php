@@ -11,6 +11,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.3.0' => array(
         'next' => '0.3.1',
         'callback' => 'radio_update_0_3_0_to_0_3_1'
+    ),
+    '0.3.1' => array(
+        'next' => '0.3.2',
+        'callback' => 'radio_update_0_3_1_to_0_3_2'
     )
 );
 
@@ -57,6 +61,24 @@ function radio_update_0_3_0_to_0_3_1()
     // No schema migration is required. plugin_upgrade_radio() reconciles
     // the existing Geeklog configuration through RADIO_ensureConfig().
     return true;
+}
+
+function radio_update_0_3_1_to_0_3_2()
+{
+    global $_TABLES;
+
+    $table = $_TABLES['radio_media'];
+    if (!radio_column_exists($table, 'automatic_rotation')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD automatic_rotation tinyint(1) unsigned NOT NULL default '1' AFTER broadcast"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    return radio_column_exists($table, 'automatic_rotation');
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
