@@ -16,6 +16,8 @@ $_RADIO_DEFAULT = array(
     'fallback_announcement_interval' => 8,
     'fallback_type_weights' => 'music=5,podcast=2,interview=2,chronicle=2',
     'fallback_min_repeat_minutes' => 120,
+    'transition_mode' => 'gapless',
+    'crossfade_seconds' => 2,
     'whatsnew_enabled' => 1,
     'whatsnew_interval' => 1209600,
     'whatsnew_limit' => 10,
@@ -40,6 +42,8 @@ function RADIO_configSortOrder()
         'fallback_announcement_interval' => 80,
         'fallback_type_weights' => 90,
         'fallback_min_repeat_minutes' => 100,
+        'transition_mode' => 105,
+        'crossfade_seconds' => 106,
         'whatsnew_enabled' => 110,
         'whatsnew_interval' => 120,
         'whatsnew_limit' => 130,
@@ -53,11 +57,12 @@ function RADIO_configSortOrder()
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode'), true)
         ? 'select'
         : 'text';
+    $select = $name === 'transition_mode' ? 1 : 0;
 
-    $c->add($name, $default, $type, 0, 0, 0, $sort, true, 'radio', 0);
+    $c->add($name, $default, $type, 0, 0, $select, $sort, true, 'radio', 0);
 }
 
 function RADIO_addFullConfig($c)
