@@ -184,11 +184,12 @@ radio_contract_require(
     strpos($defaults, "'transition_mode' => 'gapless'") !== false
         && strpos($defaults, "'crossfade_seconds' => 2") !== false
         && strpos($functions, 'function RADIO_transitionOverlap') !== false
-        && strpos($functions, "\$current['media_type'] !== 'music'") !== false
-        && strpos($functions, "\$next['media_type'] !== 'music'") !== false
+        && strpos($functions, "\$currentType === 'music' && \$nextType === 'music'") !== false
+        && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
+        && strpos($functions, "round(\$seconds / 2)") !== false
         && strpos($nowEndpoint, "'next_media'") !== false
         && strpos($nowEndpoint, "'transition_seconds'") !== false,
-    'Radio must expose configurable gapless/crossfade transitions and only overlap music-to-music rotation items.'
+    'Radio must expose configurable gapless/crossfade transitions with full music-to-music overlap and shorter jingle-to-music overlap.'
 );
 
 $versionFile = file_get_contents($root . '/version.php');
