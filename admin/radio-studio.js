@@ -185,6 +185,45 @@
             }
             li.appendChild(meta);
 
+            var actions = document.createElement('span');
+            actions.className = 'radio-program-item__actions';
+
+            var up = document.createElement('button');
+            up.type = 'button';
+            up.className = 'radio-program-item__action';
+            up.textContent = '↑';
+            up.title = studio.getAttribute('data-move-up-label') || 'Move up';
+            up.setAttribute('aria-label', up.title);
+            up.disabled = i === 0;
+            up.addEventListener('click', (function (id) {
+                return function () { mutateItem('move_up', id); };
+            }(itemId)));
+            actions.appendChild(up);
+
+            var down = document.createElement('button');
+            down.type = 'button';
+            down.className = 'radio-program-item__action';
+            down.textContent = '↓';
+            down.title = studio.getAttribute('data-move-down-label') || 'Move down';
+            down.setAttribute('aria-label', down.title);
+            down.disabled = i === items.length - 1;
+            down.addEventListener('click', (function (id) {
+                return function () { mutateItem('move_down', id); };
+            }(itemId)));
+            actions.appendChild(down);
+
+            var remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'radio-program-item__action radio-program-item__action--remove';
+            remove.textContent = '−';
+            remove.title = studio.getAttribute('data-remove-label') || 'Remove';
+            remove.setAttribute('aria-label', remove.title);
+            remove.addEventListener('click', (function (id) {
+                return function () { mutateItem('remove', id); };
+            }(itemId)));
+            actions.appendChild(remove);
+
+            li.appendChild(actions);
             list.appendChild(li);
         }
 
@@ -299,18 +338,10 @@
             });
     }
 
-    function addMedia(mediaId, position) {
-        var body = new URLSearchParams();
-        body.set('program_id', programId);
-        body.set('studio_action', 'add');
-        body.set('media_id', mediaId);
-        body.set('position', position);
-        body.set('current_item_id', player.getAttribute('data-radio-current-item-id') || '0');
+    function mutate(body, successLabel) {
         if (tokenName && tokenValue) {
             body.set(tokenName, tokenValue);
         }
-
-        setStatus(studio.getAttribute('data-adding-label') || 'Adding…');
 
         fetch(mutationEndpoint || endpoint, {
             method: 'POST',
@@ -318,25 +349,43 @@
             credentials: 'same-origin',
             cache: 'no-store'
         })
-            .then(function (response) {
-                return response.json();
-            })
+            .then(function (response) { return response.json(); })
             .then(function (data) {
                 updateToken(data);
                 if (!data.ok) {
-                    throw new Error(data.error || 'add_failed');
+                    throw new Error(data.error || 'mutation_failed');
                 }
                 version = data.version || version;
                 renderQueue(data.items || []);
                 dispatchPlaylist(data.items || []);
-                setStatus(studio.getAttribute('data-added-label') || 'Added');
-                window.setTimeout(function () {
-                    setStatus('');
-                }, 1800);
+                setStatus(successLabel || '');
+                if (successLabel) {
+                    window.setTimeout(function () { setStatus(''); }, 1200);
+                }
             })
             .catch(function () {
                 setStatus(studio.getAttribute('data-error-label') || 'Error');
             });
+    }
+
+    function mutateItem(action, itemId) {
+        var body = new URLSearchParams();
+        body.set('program_id', programId);
+        body.set('studio_action', action);
+        body.set('item_id', itemId);
+        mutate(body, '');
+    }
+
+    function addMedia(mediaId, position) {
+        var body = new URLSearchParams();
+        body.set('program_id', programId);
+        body.set('studio_action', 'add');
+        body.set('media_id', mediaId);
+        body.set('position', position);
+        body.set('current_item_id', player.getAttribute('data-radio-current-item-id') || '0');
+
+        setStatus(studio.getAttribute('data-adding-label') || 'Adding…');
+        mutate(body, studio.getAttribute('data-added-label') || 'Added');
     }
 
     function syncState() {
