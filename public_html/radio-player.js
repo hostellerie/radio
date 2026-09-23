@@ -236,6 +236,10 @@
                 offset = 0;
             }
 
+            if (fromEnded && nextMediaId !== endedMediaId && nextProgramId === programId) {
+                offset = 0;
+            }
+
             if (fromEnded && nextMediaId === endedMediaId
                 && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
                 && endedRetryCount < 20) {
