@@ -30,6 +30,15 @@ function radio_column_exists($table, $column)
     return !DB_error() && DB_numRows($result) > 0;
 }
 
+function radio_index_exists($table, $index)
+{
+    $result = DB_query(
+        "SHOW INDEX FROM " . $table . " WHERE Key_name='"
+        . DB_escapeString($index) . "'"
+    );
+    return !DB_error() && DB_numRows($result) > 0;
+}
+
 function radio_update_0_2_5_to_0_3_0()
 {
     global $_TABLES;
@@ -121,9 +130,25 @@ function radio_update_0_3_2_to_0_4_0()
         }
     }
 
+    if (!radio_index_exists($table, 'category')) {
+        DB_query("ALTER TABLE " . $table . " ADD KEY category (category(64))");
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    if (!radio_index_exists($table, 'collection_name')) {
+        DB_query("ALTER TABLE " . $table . " ADD KEY collection_name (collection_name(64))");
+        if (DB_error()) {
+            return false;
+        }
+    }
+
     return radio_column_exists($table, 'category')
         && radio_column_exists($table, 'collection_name')
-        && radio_column_exists($table, 'tags');
+        && radio_column_exists($table, 'tags')
+        && radio_index_exists($table, 'category')
+        && radio_index_exists($table, 'collection_name');
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
