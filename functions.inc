@@ -1999,11 +1999,32 @@ function RADIO_getProgramItems($programId)
     return $items;
 }
 
-function RADIO_addProgramItem($programId, $mediaId)
+function RADIO_normalizeProgramItemOrder($programId)
+{
+    global $_TABLES;
+
+    $items = RADIO_getProgramItems((int) $programId);
+    $sort = 10;
+    foreach ($items as $item) {
+        DB_query(
+            "UPDATE {$_TABLES['radio_program_items']} SET sort_order=" . $sort
+            . " WHERE item_id=" . (int) $item['item_id']
+            . " AND program_id=" . (int) $programId
+        );
+        if (DB_error()) {
+            return false;
+        }
+        $sort += 10;
+    }
+    return true;
+}
+
+function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)
 {
     global $_TABLES;
     $programId = (int) $programId;
     $mediaId = (int) $mediaId;
+    $afterItemId = (int) $afterItemId;
     $program = RADIO_getProgram($programId, false);
     $media = RADIO_getMedia($mediaId, false);
     if ($program === false || !RADIO_hasEditAccess($program)
@@ -2011,8 +2032,52 @@ function RADIO_addProgramItem($programId, $mediaId)
         || !RADIO_isBroadcastAvailable($media)) {
         return false;
     }
-    $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
-    $sort = ((int) $max) + 10;
+
+    $items = RADIO_getProgramItems($programId);
+    $sort = 10;
+
+    if ($afterItemId > 0 && count($items) > 0) {
+        $currentIndex = -1;
+        for ($i = 0; $i < count($items); $i++) {
+            if ((int) $items[$i]['item_id'] === $afterItemId) {
+                $currentIndex = $i;
+                break;
+            }
+        }
+
+        if ($currentIndex >= 0) {
+            $currentSort = (int) $items[$currentIndex]['sort_order'];
+            if ($currentIndex + 1 < count($items)) {
+                $nextSort = (int) $items[$currentIndex + 1]['sort_order'];
+                if (($nextSort - $currentSort) < 2) {
+                    if (!RADIO_normalizeProgramItemOrder($programId)) {
+                        return false;
+                    }
+                    $items = RADIO_getProgramItems($programId);
+                    for ($i = 0; $i < count($items); $i++) {
+                        if ((int) $items[$i]['item_id'] === $afterItemId) {
+                            $currentIndex = $i;
+                            break;
+                        }
+                    }
+                    $currentSort = (int) $items[$currentIndex]['sort_order'];
+                    $nextSort = $currentIndex + 1 < count($items)
+                        ? (int) $items[$currentIndex + 1]['sort_order']
+                        : $currentSort + 10;
+                }
+                $sort = (int) floor(($currentSort + $nextSort) / 2);
+            } else {
+                $sort = $currentSort + 10;
+            }
+        } else {
+            $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
+            $sort = ((int) $max) + 10;
+        }
+    } else {
+        $max = DB_getItem($_TABLES['radio_program_items'], 'MAX(sort_order)', 'program_id=' . $programId);
+        $sort = ((int) $max) + 10;
+    }
+
     DB_query(
         "INSERT INTO {$_TABLES['radio_program_items']} (program_id,media_id,sort_order) VALUES ("
         . $programId . "," . $mediaId . "," . $sort . ")"
