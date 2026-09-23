@@ -51,6 +51,29 @@ Programme editors can now open **Listen to programme** from the administration p
 - provides global progress and chapter navigation;
 - remains restricted to authenticated Radio scheduling/editing access.
 
+## Rotation order and transitions
+
+Automatic rotation now generates a fresh shuffled order for every new protected cycle rather than reusing one date-based order throughout the day. Once created, the cycle remains frozen until it ends, preserving synchronized playback. **Rebuild rotation now** also produces a new order immediately.
+
+Crossfade timing is now transition-aware:
+
+- music → music uses the full configured crossfade;
+- jingle → music starts the music early using approximately half of the configured crossfade;
+- music → jingle remains un-overlapped so the jingle attack is preserved;
+- other editorial transitions remain non-overlapped unless explicitly supported.
+
+## Adaptive audio buffering
+
+The live home player, dynamic block player and detached persistent player now prepare two upcoming media items:
+
+- N+1 starts preloading immediately;
+- the player measures the browser's real buffered time with `HTMLMediaElement.buffered`;
+- N+2 begins preloading after N+1 has accumulated a useful buffer;
+- a crossfade waits for sufficient N+1 buffer instead of starting blindly;
+- if the connection is too slow for the planned overlap, playback falls back to a continuous non-overlapped handoff rather than forcing a fragile mix.
+
+Programme preview and Studio use the same N+1/N+2 strategy. Studio displays whether the next track is still loading, ready, or whether the reserve track is also prepared.
+
 ## Manual rotation rebuild
 
 Automatic rotation cycles remain protected from normal media and configuration changes until the next cycle. Administrators can now explicitly choose **Rebuild rotation now** from the Rotation page. This CSRF-protected action invalidates the protected snapshot and starts a fresh cycle immediately using current media and settings.
