@@ -239,6 +239,31 @@ radio_contract_require(
     'Radio 0.4.0 must provide category, collection and tag classification with combined media-library filters.'
 );
 
+$programAdmin = file_get_contents($root . '/admin/programs.php');
+$rotationAdmin = file_get_contents($root . '/admin/rotation.php');
+$programPickerTemplate = file_get_contents($root . '/templates/admin/program-media-picker.thtml');
+$programResultTemplate = file_get_contents($root . '/templates/admin/program-media-result.thtml');
+radio_contract_require(
+    strpos($programAdmin, 'RADIO_adminRenderProgramMediaPicker') !== false
+        && strpos($programAdmin, "RADIO_getMediaList(100, false, 'title', 'asc', \$pickerQuery)") !== false
+        && strpos($programAdmin, '<select name="media_id">') === false
+        && strpos($programPickerTemplate, 'name="picker_q"') !== false
+        && strpos($programPickerTemplate, 'name="picker_category"') !== false
+        && strpos($programPickerTemplate, 'name="picker_collection"') !== false
+        && strpos($programPickerTemplate, 'name="picker_tag"') !== false
+        && strpos($programResultTemplate, 'name="add_program_item"') !== false
+        && strpos($programResultTemplate, '>+</button>') !== false,
+    'Radio programme editing must use the searchable media picker with one-click add controls instead of the legacy media select.'
+);
+
+radio_contract_require(
+    strpos($functions, 'function RADIO_rebuildRotationNow') !== false
+        && strpos($rotationAdmin, "name=\"rebuild_rotation\"") !== false
+        && strpos($rotationAdmin, 'SEC_checkToken()') !== false
+        && strpos($rotationAdmin, 'RADIO_rebuildRotationNow(time())') !== false,
+    'Radio rotation administration must provide an explicit CSRF-protected immediate rebuild control.'
+);
+
 radio_contract_require(
     strpos($functions, 'function RADIO_rotationSnapshotSignature') !== false
         && strpos($functions, 'function RADIO_loadRotationSnapshot') !== false
