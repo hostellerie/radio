@@ -841,6 +841,12 @@
                 });
 
                 progress.addEventListener('input', function () {
+                    if (current) {
+                        current.textContent = formatTime(progress.value);
+                    }
+                });
+
+                progress.addEventListener('change', function () {
                     seekGlobal(progress.value, !audio.paused);
                 });
 
