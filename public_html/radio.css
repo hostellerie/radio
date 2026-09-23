@@ -365,3 +365,119 @@
         min-height: 0;
     }
 }
+
+
+.radio-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.radio-replay__player {
+    max-width: 860px;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    border: 1px solid rgba(127, 127, 127, .22);
+    border-radius: .9rem;
+    background: var(--eclipse-surface, #fff);
+}
+
+.radio-replay__controls {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    margin-bottom: .8rem;
+}
+
+.radio-replay__play {
+    flex: 0 0 auto;
+    min-width: 6.5rem;
+    padding: .55rem .8rem;
+    cursor: pointer;
+}
+
+.radio-replay__now {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.radio-replay__progress-label {
+    display: block;
+}
+
+.radio-replay__progress-label input[type="range"] {
+    width: 100%;
+}
+
+.radio-replay__time {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: .3rem;
+    font-variant-numeric: tabular-nums;
+    font-size: .88rem;
+    opacity: .72;
+}
+
+.radio-replay__chapters {
+    list-style: none;
+    margin: .75rem 0 0;
+    padding: 0;
+    border-top: 1px solid rgba(127, 127, 127, .16);
+}
+
+.radio-replay__chapters li {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid rgba(127, 127, 127, .12);
+}
+
+.radio-replay__chapter {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: .75rem;
+    width: 100%;
+    padding: .7rem .25rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.radio-replay__chapter:hover,
+.radio-replay__chapter:focus,
+.radio-replay__chapter.is-active {
+    background: rgba(127, 127, 127, .08);
+}
+
+.radio-replay__chapter.is-active {
+    font-weight: 700;
+}
+
+.radio-replay__chapter-time {
+    font-variant-numeric: tabular-nums;
+    opacity: .65;
+}
+
+.radio-replay__chapter-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+    .radio-replay__controls {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .radio-replay__chapter {
+        grid-template-columns: 4.75rem minmax(0, 1fr);
+    }
+}
