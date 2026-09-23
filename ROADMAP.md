@@ -40,14 +40,14 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.3.2
+## Implementation status snapshot — 0.4.0
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
 Current state:
 
 - **Foundation / storage / installer:** substantially implemented; remaining work is mainly compatibility testing and security audit.
-- **Local media / public player:** implemented for core upload, metadata editing, covers, ACL, controlled delivery and HTML5 playback; drag-and-drop, full codec inspection and richer tags/categories remain open.
+- **Local media / public player:** implemented for core upload, metadata editing, covers, ACL, controlled delivery, HTML5 playback, categories, collections, tags and combined library filtering; full codec inspection remains open.
 - **Programmes / scheduling / synchronized radio:** core model, recurrence, weekly schedule, deterministic fallback rotation, now-playing and synchronized offset are implemented.
 - **Replay / podcast:** replay, RSS podcast generation, podcast metadata and listening/download statistics are implemented; richer per-programme download policies remain open.
 - **External sources:** direct remote references, live stream references, bounded RSS/Atom preview/import and controlled feed synchronization are implemented experimentally; provider allowlists, credentialed providers and deeper MIME/content validation remain open.
@@ -103,7 +103,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 - [ ] Extract available audio metadata such as title, artist, album, duration and embedded artwork.
 - [x] Let administrators correct or override extracted metadata.
 - [ ] Support at least the formats that can be played reliably by current browsers; document the accepted format matrix.
-- [ ] Store title, author/artist, description, category, tags, duration, file size, publication state and dates.
+- [x] Store title, author/artist, description, category, collection, tags, duration, file size, publication state and dates.
 - [x] Support a media subtype such as:
   - music;
   - podcast;
