@@ -247,6 +247,11 @@ function RADIO_adminAvailabilityHtml($row)
             . htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8')
             . '</span>';
     }
+    if (!array_key_exists('automatic_rotation', $row) || !empty($row['automatic_rotation'])) {
+        $items[] = '<span class="radio-admin__badge">'
+            . htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8')
+            . '</span>';
+    }
 
     return empty($items) ? '<span class="radio-admin__muted">—</span>' : implode('', $items);
 }
