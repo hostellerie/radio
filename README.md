@@ -29,6 +29,8 @@ Programme editing reuses the same classification approach: search and filter bro
 
 Programme editors can also open a private **Listen to programme** preview before broadcast. It plays the full programme continuously with the same chapter navigation used by replay, including broadcast-only media that is not available on demand.
 
+That preview also provides a **Studio** workflow: while one item keeps playing, editors can search the media library, append a result with **+**, or choose **Play next** to insert it immediately after the active programme item. Queue changes are synchronized without reloading the current audio, and Studio listening is excluded from public audience statistics.
+
 Automatic rotation stays protected during its active cycle, but administrators can explicitly rebuild it immediately from the Rotation page when they intentionally want current media or configuration changes to take effect at once.
 
 ## Compatibility
