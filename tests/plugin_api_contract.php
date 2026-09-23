@@ -194,12 +194,28 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.3.1") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.3.2") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
+        && strpos($updatesFile, "'0.3.1' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.3.2'") !== false
+        && strpos($updatesFile, 'radio_update_0_3_1_to_0_3_2') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.3.1 must provide a real 0.3.0 upgrade path that reconciles new configuration settings.'
+    'Radio 0.3.2 must preserve the 0.3.0 configuration upgrade and add the 0.3.1 automatic-rotation schema migration.'
+);
+
+$mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
+$mediaEditTemplate = file_get_contents($root . '/templates/admin/media-edit.thtml');
+$mediaUploadTemplate = file_get_contents($root . '/templates/admin/media-upload.thtml');
+radio_contract_require(
+    strpos($mysqlInstall, 'automatic_rotation tinyint(1) unsigned NOT NULL default \'1\'') !== false
+        && strpos($functions, "RADIO_mediaAvailabilitySql('automatic_rotation', '')") !== false
+        && strpos($functions, "['automatic_rotation']") !== false
+        && strpos($functions, "\$reasons[] = 'automatic_rotation'") !== false
+        && strpos($mediaEditTemplate, 'name="automatic_rotation"') !== false
+        && strpos($mediaUploadTemplate, 'name="automatic_rotation"') !== false,
+    'Radio 0.3.2 must let broadcast media opt out of automatic rotation while remaining usable in programmes.'
 );
 
 radio_contract_require(
