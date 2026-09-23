@@ -52,19 +52,6 @@ if (isset($_POST['delete_program'])) {
     }
 }
 
-if (isset($_POST['add_program_item']) && SEC_checkToken()) {
-    RADIO_addProgramItem($selectedId, isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0);
-}
-if (isset($_POST['remove_program_item']) && SEC_checkToken()) {
-    RADIO_removeProgramItem(isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0, $selectedId);
-}
-if (isset($_POST['move_up']) && SEC_checkToken()) {
-    RADIO_moveProgramItem(isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0, $selectedId, 'up');
-}
-if (isset($_POST['move_down']) && SEC_checkToken()) {
-    RADIO_moveProgramItem(isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0, $selectedId, 'down');
-}
-
 $programs = array_values(array_filter(RADIO_getPrograms(100, false), function ($row) {
     return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
 }));
@@ -73,33 +60,6 @@ if ($selected !== false && !RADIO_hasReadAccess($selected) && !RADIO_hasEditAcce
     $selected = false;
     $selectedId = 0;
 }
-$items = $selected ? RADIO_getProgramItems($selectedId) : array();
-
-$pickerFilters = array();
-foreach (array('picker_q','picker_type','picker_category','picker_collection','picker_tag') as $key) {
-    $pickerFilters[$key] = isset($_GET[$key]) ? trim((string) $_GET[$key]) : '';
-}
-
-$pickerQuery = array(
-    'q' => $pickerFilters['picker_q'],
-    'type' => $pickerFilters['picker_type'],
-    'category' => $pickerFilters['picker_category'],
-    'collection' => $pickerFilters['picker_collection'],
-    'tag' => $pickerFilters['picker_tag'],
-    'status' => 'published',
-    'broadcast' => '1'
-);
-
-$classificationOptions = RADIO_mediaClassificationOptions();
-$media = $selected
-    ? array_values(array_filter(
-        RADIO_getMediaList(100, false, 'title', 'asc', $pickerQuery),
-        function ($row) {
-            return RADIO_hasReadAccess($row) && RADIO_isBroadcastAvailable($row);
-        }
-    ))
-    : array();
-
 $token = SEC_createToken();
 
 $content = '';
@@ -152,48 +112,18 @@ if ($selected) {
 $content .= '</form>';
 
 if ($selected) {
-    $programDuration = RADIO_programDuration($selectedId);
     $content .= '<div class="radio-admin__toolbar">'
         . '<a class="radio-admin__button radio-admin__button--secondary" href="'
-        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/preview.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
-        . '">▶ ' . htmlspecialchars($LANG_RADIO['program_preview_button'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
+        . '">▶ ' . htmlspecialchars($LANG_RADIO['open_studio'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '</div>';
-    $content .= '<h2>' . htmlspecialchars($LANG_RADIO['program_items'], ENT_QUOTES, 'UTF-8') . '</h2>';
-    $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['program_duration'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-        . gmdate('H:i:s', $programDuration) . '</p>';
-    if (count($items) === 0) {
-        $content .= '<p>' . htmlspecialchars($LANG_RADIO['program_items_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
-    } else {
-        $content .= '<ol class="radio-program-items">';
-        foreach ($items as $item) {
-            $content .= '<li class="radio-program-item"><span class="radio-program-item__label"><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
-                . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ')</small></span>'
-                . '<form method="post" action="" class="radio-program-item__actions">'
-                . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
-                . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
-                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
-                . '<button class="radio-program-item__action" type="submit" name="move_up" value="1" title="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '">↑</button>'
-                . '<button class="radio-program-item__action" type="submit" name="move_down" value="1" title="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '">↓</button>'
-                . '<button class="radio-program-item__action radio-program-item__action--remove" type="submit" name="remove_program_item" value="1" title="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '">−</button>'
-                . '</form></li>';
-        }
-        $content .= '</ol>';
-    }
-
-    $content .= RADIO_adminRenderProgramMediaPicker(
-        $selectedId,
-        $media,
-        $pickerFilters,
-        $classificationOptions,
-        $token
-    );
 }
 
 $content .= '</div></div>';
 $content = RADIO_adminRenderPage(
     'programs',
     $LANG_RADIO['programs'],
-    $LANG_RADIO['admin_programs_intro'],
+    $LANG_RADIO['admin_programs_metadata_intro'],
     $LANG_RADIO['admin_programs_help_title'],
     $LANG_RADIO['admin_programs_help_text'],
     $content,
