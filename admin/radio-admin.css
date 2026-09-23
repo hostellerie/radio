@@ -108,3 +108,10 @@
 .radio-program-picker__add:hover,.radio-program-picker__add:focus{font-weight:700}
 @media(max-width:900px){.radio-program-picker__filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.radio-program-picker__filter-grid{grid-template-columns:1fr}.radio-program-picker__item{grid-template-columns:minmax(0,1fr) auto}}
+
+
+.radio-studio{margin-top:1.5rem}
+.radio-studio .radio-program-picker__results{max-height:520px;overflow:auto}
+.radio-studio__result-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
+.radio-studio__result-actions .radio-admin__button{white-space:nowrap}
+@media(max-width:640px){.radio-studio__result-actions{justify-content:flex-start}}
