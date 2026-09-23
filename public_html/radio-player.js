@@ -132,22 +132,101 @@
 
     function createTransitionManager(audio, hooks) {
         var standby = new Audio();
+        var reserve = new Audio();
         standby.preload = 'auto';
+        reserve.preload = 'auto';
+
         var mode = 'hard';
         var seconds = 0;
         var slotDuration = 0;
+        var currentDuration = 0;
         var nextMedia = null;
+        var nextNextMedia = null;
         var preparedUrl = '';
+        var reserveUrl = '';
         var mixing = false;
         var fadeFrame = 0;
         var baseVolume = 1;
 
+        function bufferedAhead(element) {
+            if (!element || !element.buffered || element.buffered.length < 1) {
+                return 0;
+            }
+
+            var position = element.currentTime || 0;
+            var best = 0;
+            try {
+                for (var i = 0; i < element.buffered.length; i++) {
+                    var start = element.buffered.start(i);
+                    var end = element.buffered.end(i);
+                    if (position >= start && position <= end) {
+                        best = Math.max(best, end - position);
+                    } else if (position === 0 && start <= 0.25) {
+                        best = Math.max(best, end);
+                    }
+                }
+            } catch (error) {}
+            return Math.max(0, best);
+        }
+
+        function bufferTarget(item, minimum, maximum) {
+            var duration = item ? (parseInt(item.duration || 0, 10) || 0) : 0;
+            var target = duration > 0 ? Math.max(minimum, duration * 0.12) : minimum;
+            return Math.min(maximum, target);
+        }
+
+        function reportBuffer() {
+            if (!hooks || typeof hooks.bufferStatus !== 'function') {
+                return;
+            }
+            hooks.bufferStatus({
+                next_buffered: bufferedAhead(standby),
+                next_ready: standby.readyState >= 3,
+                reserve_ready: reserveUrl !== '' && (reserve.readyState >= 2 || bufferedAhead(reserve) > 0)
+            });
+        }
+
+        function clearElement(element) {
+            element.pause();
+            element.removeAttribute('src');
+            element.load();
+        }
+
         function clearStandby() {
-            standby.pause();
-            standby.removeAttribute('src');
-            standby.load();
+            clearElement(standby);
             preparedUrl = '';
         }
+
+        function clearReserve() {
+            clearElement(reserve);
+            reserveUrl = '';
+        }
+
+        function maybePrefetchReserve() {
+            reportBuffer();
+            if (!nextNextMedia || !nextNextMedia.stream_url || !nextMedia) {
+                clearReserve();
+                return;
+            }
+
+            var target = bufferTarget(nextMedia, 3, 12);
+            if (standby.readyState < 3 && bufferedAhead(standby) < target) {
+                return;
+            }
+
+            if (reserveUrl !== nextNextMedia.stream_url) {
+                clearReserve();
+                reserveUrl = nextNextMedia.stream_url;
+                reserve.src = reserveUrl;
+                reserve.preload = 'auto';
+                reserve.load();
+            }
+            reportBuffer();
+        }
+
+        standby.addEventListener('progress', maybePrefetchReserve);
+        standby.addEventListener('canplay', maybePrefetchReserve);
+        reserve.addEventListener('progress', reportBuffer);
 
         function prepare(data) {
             mode = data && data.transition_mode ? data.transition_mode : 'hard';
@@ -155,10 +234,16 @@
             slotDuration = data && data.current_media
                 ? (parseInt(data.current_media.slot_duration || data.current_media.duration || 0, 10) || 0)
                 : 0;
+            currentDuration = data && data.current_media
+                ? (parseInt(data.current_media.duration || 0, 10) || 0)
+                : 0;
             nextMedia = data && data.next_media ? data.next_media : null;
+            nextNextMedia = data && data.next_next_media ? data.next_next_media : null;
 
-            if (!nextMedia || mode === 'hard' || !nextMedia.stream_url) {
+            if (!nextMedia || !nextMedia.stream_url) {
                 clearStandby();
+                clearReserve();
+                reportBuffer();
                 return;
             }
 
@@ -169,6 +254,12 @@
                 standby.preload = 'auto';
                 standby.load();
             }
+
+            if (!nextNextMedia || reserveUrl !== nextNextMedia.stream_url) {
+                clearReserve();
+            }
+
+            maybePrefetchReserve();
         }
 
         function handoff(resumeAt) {
@@ -181,17 +272,32 @@
             var item = nextMedia;
             hooks.activate(item, Math.max(0, resumeAt || 0), function () {
                 clearStandby();
+                clearReserve();
                 audio.volume = baseVolume;
                 mixing = false;
             });
         }
 
         function maybeStart() {
+            maybePrefetchReserve();
+
             if (mode !== 'crossfade' || seconds < 1 || !nextMedia || mixing
                 || audio.paused || slotDuration < 1) {
                 return;
             }
             if (audio.currentTime + 0.08 < slotDuration) {
+                return;
+            }
+
+            var required = Math.max(1.25, seconds + 0.75);
+            var buffered = bufferedAhead(standby);
+            if (standby.readyState < 3 && buffered < required) {
+                reportBuffer();
+                return;
+            }
+
+            if (currentDuration > 0
+                && (currentDuration - audio.currentTime) < Math.max(0.35, seconds * 0.35)) {
                 return;
             }
 
@@ -241,7 +347,8 @@
             if (mixing) {
                 return true;
             }
-            if (mode === 'gapless' && nextMedia) {
+
+            if ((mode === 'gapless' || mode === 'crossfade') && nextMedia) {
                 baseVolume = Math.max(0, Math.min(1, audio.volume));
                 hooks.beforeTransition(nextMedia);
                 handoff(0);
@@ -258,7 +365,10 @@
             mixing = false;
             audio.volume = baseVolume;
             clearStandby();
+            clearReserve();
             nextMedia = null;
+            nextNextMedia = null;
+            reportBuffer();
         }
 
         return {
@@ -266,7 +376,14 @@
             maybeStart: maybeStart,
             handleEnded: handleEnded,
             reset: reset,
-            isMixing: function () { return mixing; }
+            isMixing: function () { return mixing; },
+            bufferState: function () {
+                return {
+                    next_buffered: bufferedAhead(standby),
+                    next_ready: standby.readyState >= 3,
+                    reserve_ready: reserveUrl !== '' && (reserve.readyState >= 2 || bufferedAhead(reserve) > 0)
+                };
+            }
         };
     }
 
