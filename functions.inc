@@ -2947,18 +2947,24 @@ function RADIO_programDuration($programId)
 function RADIO_resolveProgramPlayback($programId, $elapsed)
 {
     $elapsed = max(0, (int) $elapsed);
-    $items = RADIO_getProgramItems($programId);
-    $cursor = 0;
+    $rawItems = RADIO_getProgramItems($programId);
+    $items = array();
 
-    foreach ($items as $item) {
-        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)) {
+    foreach ($rawItems as $item) {
+        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)
+            || (int) $item['duration'] < 1) {
             continue;
         }
+        $items[] = $item;
+    }
+
+    $cursor = 0;
+    $count = count($items);
+    for ($i = 0; $i < $count; $i++) {
+        $item = $items[$i];
         $duration = (int) $item['duration'];
-        if ($duration < 1) {
-            continue;
-        }
         if ($elapsed < ($cursor + $duration)) {
+            $next = $i + 1 < $count ? $items[$i + 1] : false;
             return array(
                 'media_id' => (int) $item['media_id'],
                 'external_id' => RADIO_externalId('media', (int) $item['media_id']),
@@ -2966,10 +2972,23 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
                 'media_type' => $item['media_type'],
                 'source_kind' => RADIO_sourceKind($item),
                 'duration' => $duration,
+                'slot_duration' => $duration,
                 'offset' => $elapsed - $cursor,
                 'starts_after' => $cursor,
+                'transition_mode' => RADIO_transitionMode() === 'hard' ? 'hard' : 'gapless',
+                'transition_seconds' => 0,
                 'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
-                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id']))
+                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id'])),
+                'next_media' => $next === false ? false : array(
+                    'media_id' => (int) $next['media_id'],
+                    'external_id' => RADIO_externalId('media', (int) $next['media_id']),
+                    'title' => $next['title'],
+                    'media_type' => $next['media_type'],
+                    'source_kind' => RADIO_sourceKind($next),
+                    'duration' => (int) $next['duration'],
+                    'stream_url' => RADIO_mediaUrl((int) $next['media_id'], false),
+                    'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $next['media_id']))
+                )
             );
         }
         $cursor += $duration;
