@@ -153,6 +153,11 @@ $content .= '</form>';
 
 if ($selected) {
     $programDuration = RADIO_programDuration($selectedId);
+    $content .= '<div class="radio-admin__toolbar">'
+        . '<a class="radio-admin__button radio-admin__button--secondary" href="'
+        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/preview.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
+        . '">▶ ' . htmlspecialchars($LANG_RADIO['program_preview_button'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '</div>';
     $content .= '<h2>' . htmlspecialchars($LANG_RADIO['program_items'], ENT_QUOTES, 'UTF-8') . '</h2>';
     $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['program_duration'], ENT_QUOTES, 'UTF-8') . ':</strong> '
         . gmdate('H:i:s', $programDuration) . '</p>';
