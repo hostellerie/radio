@@ -49,8 +49,10 @@
         <label>{status_label} <select name="status">{status_options}</select></label>
         <input type="hidden" name="on_demand" value="0"><label><input type="checkbox" name="on_demand" value="1" checked> {on_demand_label}</label>
         <input type="hidden" name="broadcast" value="0"><label><input type="checkbox" name="broadcast" value="1" checked> {broadcast_label}</label>
+        <input type="hidden" name="automatic_rotation" value="0"><label><input type="checkbox" name="automatic_rotation" value="1" checked> {automatic_rotation_label}</label>
         <label><input type="checkbox" name="allow_download" value="1" checked> {allow_download_label}</label>
     </p>
+    <p class="radio-admin__muted">{automatic_rotation_help}</p>
 
     <fieldset>
         <legend>{permissions_label}</legend>
