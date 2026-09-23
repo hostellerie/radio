@@ -194,15 +194,18 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.3.2") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.4.0") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
         && strpos($updatesFile, "'0.3.1' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.2'") !== false
         && strpos($updatesFile, 'radio_update_0_3_1_to_0_3_2') !== false
+        && strpos($updatesFile, "'0.3.2' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.4.0'") !== false
+        && strpos($updatesFile, 'radio_update_0_3_2_to_0_4_0') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.3.2 must preserve the 0.3.0 configuration upgrade and add the 0.3.1 automatic-rotation schema migration.'
+    'Radio 0.4.0 must preserve the existing upgrade chain and add the media-classification migration.'
 );
 
 $mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
@@ -216,6 +219,24 @@ radio_contract_require(
         && strpos($mediaEditTemplate, 'name="automatic_rotation"') !== false
         && strpos($mediaUploadTemplate, 'name="automatic_rotation"') !== false,
     'Radio 0.3.2 must let broadcast media opt out of automatic rotation while remaining usable in programmes.'
+);
+
+$mediaFilterTemplate = file_get_contents($root . '/templates/admin/media-filters.thtml');
+radio_contract_require(
+    strpos($mysqlInstall, 'category varchar(128)') !== false
+        && strpos($mysqlInstall, 'collection_name varchar(255)') !== false
+        && strpos($mysqlInstall, 'tags text') !== false
+        && strpos($functions, 'function RADIO_normalizeTags') !== false
+        && strpos($functions, 'function RADIO_mediaClassificationOptions') !== false
+        && strpos($functions, 'function RADIO_mediaClassificationSchemaReady') !== false
+        && strpos($functions, "FIND_IN_SET('") !== false
+        && strpos($mediaEditTemplate, 'name="category"') !== false
+        && strpos($mediaEditTemplate, 'name="collection_name"') !== false
+        && strpos($mediaEditTemplate, 'name="tags"') !== false
+        && strpos($mediaFilterTemplate, 'name="category"') !== false
+        && strpos($mediaFilterTemplate, 'name="collection"') !== false
+        && strpos($mediaFilterTemplate, 'name="tag"') !== false,
+    'Radio 0.4.0 must provide category, collection and tag classification with combined media-library filters.'
 );
 
 radio_contract_require(
