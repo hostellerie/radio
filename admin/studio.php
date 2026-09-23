@@ -61,9 +61,7 @@ function radio_studio_state($programId)
     return array(
         'ok' => true,
         'items' => $items,
-        'version' => sha1(implode('|', $signature)),
-        'csrf_name' => CSRF_TOKEN,
-        'csrf_token' => SEC_createToken()
+        'version' => sha1(implode('|', $signature))
     );
 }
 
@@ -115,27 +113,8 @@ if ($action === 'search') {
 
     radio_studio_json(array(
         'ok' => true,
-        'results' => $results,
-        'csrf_name' => CSRF_TOKEN,
-        'csrf_token' => SEC_createToken()
+        'results' => $results
     ), 200);
-}
-
-if ($action === 'add') {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !SEC_checkToken()) {
-        radio_studio_json(array('ok' => false, 'error' => 'invalid_token'), 403);
-    }
-
-    $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
-    $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
-    $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
-    $afterItemId = $position === 'next' ? $currentItemId : 0;
-
-    if (!RADIO_addProgramItem($programId, $mediaId, $afterItemId)) {
-        radio_studio_json(array('ok' => false, 'error' => 'add_failed'), 400);
-    }
-
-    radio_studio_json(radio_studio_state($programId), 200);
 }
 
 radio_studio_json(array('ok' => false, 'error' => 'invalid_action'), 400);
