@@ -3455,7 +3455,7 @@ function RADIO_renderBlock()
     $state = RADIO_getLiveState(time());
     $scheduleUrl = rtrim($_CONF['site_url'], '/') . '/radio/schedule.php';
     $radioUrl = rtrim($_CONF['site_url'], '/') . '/radio/index.php';
-    $playerUrl = rtrim($_CONF['site_url'], '/') . '/radio/player.php';
+    $playerUrl = rtrim($_CONF['site_url'], '/') . '/radio/player.php?autoplay=1';
     $nowUrl = rtrim($_CONF['site_url'], '/') . '/radio/now.php';
     $eventUrl = rtrim($_CONF['site_url'], '/') . '/radio/event.php';
     $listenLabel = isset($LANG_RADIO['public_listen']) ? $LANG_RADIO['public_listen'] : 'Listen';
