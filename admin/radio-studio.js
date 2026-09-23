@@ -13,6 +13,7 @@
     var tokenValue = studio.getAttribute('data-radio-csrf-token') || '';
     var form = studio.querySelector('[data-radio-studio-search]');
     var results = studio.querySelector('[data-radio-studio-results]');
+    var queue = studio.querySelector('[data-radio-studio-queue]');
     var status = studio.querySelector('[data-radio-studio-status]');
     var bufferStatus = studio.querySelector('[data-radio-studio-buffer]');
     var version = '';
@@ -127,6 +128,50 @@
         badge.className = 'radio-admin__badge';
         badge.textContent = text;
         container.appendChild(badge);
+    }
+
+    function renderQueue(items) {
+        if (!queue) {
+            return;
+        }
+
+        queue.innerHTML = '';
+        if (!items || !items.length) {
+            var empty = document.createElement('p');
+            empty.className = 'radio-admin__muted';
+            empty.textContent = studio.getAttribute('data-queue-empty-label') || 'Empty programme';
+            queue.appendChild(empty);
+            return;
+        }
+
+        var list = document.createElement('ol');
+        list.className = 'radio-studio__queue';
+
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var li = document.createElement('li');
+            li.className = 'radio-studio__queue-item';
+            li.setAttribute('data-item-id', parseInt(item.item_id || 0, 10) || 0);
+
+            var title = document.createElement('span');
+            title.className = 'radio-studio__queue-title';
+            title.textContent = (item.author ? item.author + ' — ' : '') + (item.title || '');
+            li.appendChild(title);
+
+            var meta = document.createElement('span');
+            meta.className = 'radio-admin__muted';
+            if (item.playable === false || item.playable === 0) {
+                meta.textContent = studio.getAttribute('data-queue-not-ready-label') || 'Not playable';
+                li.classList.add('is-not-ready');
+            } else if (parseInt(item.duration || 0, 10) > 0) {
+                meta.textContent = resultMeta(item);
+            }
+            li.appendChild(meta);
+
+            list.appendChild(li);
+        }
+
+        queue.appendChild(list);
     }
 
     function renderResults(items) {
@@ -265,6 +310,7 @@
                     throw new Error(data.error || 'add_failed');
                 }
                 version = data.version || version;
+                renderQueue(data.items || []);
                 dispatchPlaylist(data.items || []);
                 setStatus(studio.getAttribute('data-added-label') || 'Added');
                 window.setTimeout(function () {
@@ -291,11 +337,16 @@
                 }
                 if (!version) {
                     version = data.version || '';
+                    renderQueue(data.items || []);
+                    dispatchPlaylist(data.items || []);
                     return;
                 }
                 if (data.version && data.version !== version) {
                     version = data.version;
+                    renderQueue(data.items || []);
                     dispatchPlaylist(data.items || []);
+                } else {
+                    renderQueue(data.items || []);
                 }
             })
             .catch(function () {});
