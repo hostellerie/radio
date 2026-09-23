@@ -25,6 +25,10 @@ Radio 0.4.0 adds three complementary organization layers without overloading the
 
 The administration library can combine text search with type, category, collection, tag, status, source and availability filters. Batch uploads apply category, collection and tags to the whole batch.
 
+Programme editing reuses the same classification approach: search and filter broadcast-eligible media, then append an item with a single **+** action before reordering the programme playlist if needed.
+
+Automatic rotation stays protected during its active cycle, but administrators can explicitly rebuild it immediately from the Rotation page when they intentionally want current media or configuration changes to take effect at once.
+
 ## Compatibility
 
 Current transition baseline:
