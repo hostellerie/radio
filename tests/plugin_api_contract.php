@@ -177,6 +177,28 @@ radio_contract_require(
         && strpos($persistentPlayer, 'fromEnded && nextMediaId !== endedMediaId && nextProgramId === programId') !== false,
     'Radio players must start the next item at zero after a natural end within the same broadcast context.'
 );
+
+$defaults = file_get_contents($root . '/install_defaults.php');
+$nowEndpoint = file_get_contents($root . '/public_html/now.php');
+radio_contract_require(
+    strpos($defaults, "'transition_mode' => 'gapless'") !== false
+        && strpos($defaults, "'crossfade_seconds' => 2") !== false
+        && strpos($functions, 'function RADIO_transitionOverlap') !== false
+        && strpos($functions, "\$current['media_type'] !== 'music'") !== false
+        && strpos($functions, "\$next['media_type'] !== 'music'") !== false
+        && strpos($nowEndpoint, "'next_media'") !== false
+        && strpos($nowEndpoint, "'transition_seconds'") !== false,
+    'Radio must expose configurable gapless/crossfade transitions and only overlap music-to-music rotation items.'
+);
+radio_contract_require(
+    strpos($publicPlayer, 'function createTransitionManager') !== false
+        && strpos($blockPlayer, 'function createTransitionManager') !== false
+        && strpos($persistentPlayer, 'function createTransitionManager') !== false
+        && strpos($publicPlayer, "mode !== 'crossfade'") !== false
+        && strpos($blockPlayer, "mode === 'gapless'") !== false
+        && strpos($persistentPlayer, "standby.preload = 'auto'") !== false,
+    'All Radio live players must preload and apply the configured transition mode.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
