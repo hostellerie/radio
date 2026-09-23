@@ -115,3 +115,5 @@
 .radio-studio__result-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
 .radio-studio__result-actions .radio-admin__button{white-space:nowrap}
 @media(max-width:640px){.radio-studio__result-actions{justify-content:flex-start}}
+
+.radio-studio__status-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;justify-content:flex-end}
