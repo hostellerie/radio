@@ -2980,15 +2980,16 @@ function RADIO_rotationSnapshotPath($date)
 function RADIO_rebuildRotationNow($timestamp)
 {
     $timestamp = $timestamp ? (int) $timestamp : time();
+    $date = date('Y-m-d', $timestamp);
     $dates = array(
-        date('Y-m-d', $timestamp),
+        $date,
         date('Y-m-d', $timestamp - 86400),
         date('Y-m-d', $timestamp + 86400)
     );
 
     $ok = true;
-    foreach (array_unique($dates) as $date) {
-        $path = RADIO_rotationSnapshotPath($date);
+    foreach (array_unique($dates) as $snapshotDate) {
+        $path = RADIO_rotationSnapshotPath($snapshotDate);
         if ($path !== '' && is_file($path) && !@unlink($path)) {
             $ok = false;
         }
@@ -2998,8 +2999,22 @@ function RADIO_rebuildRotationNow($timestamp)
         return false;
     }
 
-    // Force immediate reconstruction and persist the new cycle snapshot.
-    return RADIO_rotationCycleState(date('Y-m-d', $timestamp), $timestamp);
+    $sequence = RADIO_buildFreshRotationSequence($date);
+    if (count($sequence) === 0) {
+        return array(
+            'sequence' => array(),
+            'cycle_start' => $timestamp,
+            'cycle_duration' => 0,
+            'transition_mode' => RADIO_transitionMode(),
+            'crossfade_seconds' => RADIO_crossfadeSeconds()
+        );
+    }
+
+    if (!RADIO_saveRotationSnapshot($date, $sequence, $timestamp)) {
+        return false;
+    }
+
+    return RADIO_rotationCycleState($date, $timestamp);
 }
 
 function RADIO_loadRotationSnapshot($date, $timestamp, &$nextCycleStart)
