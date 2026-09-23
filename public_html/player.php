@@ -16,6 +16,7 @@ $siteUrl = rtrim($_CONF['site_url'], '/');
 $nowUrl = $siteUrl . '/radio/now.php';
 $eventUrl = $siteUrl . '/radio/event.php';
 $radioUrl = $siteUrl . '/radio/index.php';
+$autoplay = isset($_GET['autoplay']) && (int) $_GET['autoplay'] === 1;
 $cssPath = !empty($_CONF['path_html'])
     ? rtrim($_CONF['path_html'], '/\\') . '/radio/radio-player.css'
     : '';
@@ -48,7 +49,8 @@ header('Cache-Control: no-store, max-age=0');
       data-event-endpoint="<?php echo htmlspecialchars($eventUrl, ENT_QUOTES, 'UTF-8'); ?>"
       data-empty-label="<?php echo htmlspecialchars($LANG_RADIO['nothing_scheduled_now'], ENT_QUOTES, 'UTF-8'); ?>"
       data-listen-label="<?php echo htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8'); ?>"
-      data-pause-label="<?php echo htmlspecialchars($LANG_RADIO['public_pause'], ENT_QUOTES, 'UTF-8'); ?>">
+      data-pause-label="<?php echo htmlspecialchars($LANG_RADIO['public_pause'], ENT_QUOTES, 'UTF-8'); ?>"
+      data-autoplay="<?php echo $autoplay ? '1' : '0'; ?>">
     <header class="radio-persistent__header">
         <div>
             <div class="radio-persistent__brand"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></div>
