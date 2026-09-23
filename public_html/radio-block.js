@@ -14,16 +14,31 @@
                     return;
                 }
                 event.preventDefault();
+
                 var popup = window.open(
-                    href,
+                    '',
                     'radio-player',
                     'width=460,height=520,resizable=yes,scrollbars=yes'
                 );
-                if (popup) {
-                    popup.focus();
-                } else {
+                if (!popup) {
                     window.location.href = href;
+                    return;
                 }
+
+                var needsNavigation = true;
+                try {
+                    needsNavigation = !popup.location.href
+                        || popup.location.href === 'about:blank';
+                } catch (error) {}
+
+                if (needsNavigation) {
+                    var inlineAudio = document.querySelector('.radio-block__audio');
+                    if (inlineAudio && !inlineAudio.paused) {
+                        inlineAudio.pause();
+                    }
+                    popup.location.href = href;
+                }
+                popup.focus();
             });
         }
     }
