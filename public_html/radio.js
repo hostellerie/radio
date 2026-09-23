@@ -859,10 +859,117 @@
                 var started = false;
                 var listenStart = 0;
                 var listened = 0;
+                var queuePreload = new Audio();
+                var queueReserve = new Audio();
+                var queuePreloadUrl = '';
+                var queueReserveUrl = '';
+                queuePreload.preload = 'auto';
+                queueReserve.preload = 'auto';
 
                 function refreshChapterButtons() {
                     chapterButtons = qa('[data-radio-replay-chapter]', root);
                 }
+
+                function queueBufferedAhead(element) {
+                    if (!element || !element.buffered || element.buffered.length < 1) {
+                        return 0;
+                    }
+                    var position = element.currentTime || 0;
+                    var best = 0;
+                    try {
+                        for (var b = 0; b < element.buffered.length; b++) {
+                            var start = element.buffered.start(b);
+                            var end = element.buffered.end(b);
+                            if (position >= start && position <= end) {
+                                best = Math.max(best, end - position);
+                            } else if (position === 0 && start <= 0.25) {
+                                best = Math.max(best, end);
+                            }
+                        }
+                    } catch (error) {}
+                    return Math.max(0, best);
+                }
+
+                function emitQueueBufferStatus() {
+                    var detail = {
+                        next_buffered: queueBufferedAhead(queuePreload),
+                        next_ready: queuePreload.readyState >= 3,
+                        reserve_ready: queueReserveUrl !== ''
+                            && (queueReserve.readyState >= 2 || queueBufferedAhead(queueReserve) > 0)
+                    };
+                    var event;
+                    if (typeof CustomEvent === 'function') {
+                        event = new CustomEvent('radio:buffer-status', {detail: detail});
+                    } else {
+                        event = document.createEvent('CustomEvent');
+                        event.initCustomEvent('radio:buffer-status', false, false, detail);
+                    }
+                    root.dispatchEvent(event);
+                }
+
+                function clearQueueAudio(element) {
+                    element.pause();
+                    element.removeAttribute('src');
+                    element.load();
+                }
+
+                function maybePreloadQueueReserve() {
+                    var next = index + 1 < items.length ? items[index + 1] : null;
+                    var reserve = index + 2 < items.length ? items[index + 2] : null;
+                    if (!reserve || !reserve.stream_url || !next) {
+                        if (queueReserveUrl !== '') {
+                            clearQueueAudio(queueReserve);
+                            queueReserveUrl = '';
+                        }
+                        emitQueueBufferStatus();
+                        return;
+                    }
+
+                    var duration = parseInt(next.duration || 0, 10) || 0;
+                    var target = Math.min(12, Math.max(3, duration > 0 ? duration * 0.12 : 3));
+                    if (queuePreload.readyState < 3 && queueBufferedAhead(queuePreload) < target) {
+                        emitQueueBufferStatus();
+                        return;
+                    }
+
+                    if (queueReserveUrl !== reserve.stream_url) {
+                        clearQueueAudio(queueReserve);
+                        queueReserveUrl = reserve.stream_url;
+                        queueReserve.src = queueReserveUrl;
+                        queueReserve.preload = 'auto';
+                        queueReserve.load();
+                    }
+                    emitQueueBufferStatus();
+                }
+
+                function refreshQueuePreload() {
+                    var next = index + 1 < items.length ? items[index + 1] : null;
+                    if (!next || !next.stream_url) {
+                        if (queuePreloadUrl !== '') {
+                            clearQueueAudio(queuePreload);
+                            queuePreloadUrl = '';
+                        }
+                        if (queueReserveUrl !== '') {
+                            clearQueueAudio(queueReserve);
+                            queueReserveUrl = '';
+                        }
+                        emitQueueBufferStatus();
+                        return;
+                    }
+
+                    if (queuePreloadUrl !== next.stream_url) {
+                        clearQueueAudio(queuePreload);
+                        queuePreloadUrl = next.stream_url;
+                        queuePreload.src = queuePreloadUrl;
+                        queuePreload.preload = 'auto';
+                        queuePreload.load();
+                    }
+                    maybePreloadQueueReserve();
+                }
+
+                queuePreload.addEventListener('progress', maybePreloadQueueReserve);
+                queuePreload.addEventListener('canplay', maybePreloadQueueReserve);
+                queueReserve.addEventListener('progress', emitQueueBufferStatus);
 
                 function itemOffset(i) {
                     return items[i] ? (parseInt(items[i].offset || 0, 10) || 0) : 0;
@@ -955,6 +1062,7 @@
                         started = false;
                     }
                     index = nextIndex;
+                    refreshQueuePreload();
                     var item = items[index];
                     audio.src = item.stream_url || '';
                     audio.load();
@@ -1038,6 +1146,7 @@
                         updateProgressBounds();
                         audio.src = items[0].stream_url || '';
                         audio.load();
+                        refreshQueuePreload();
                         updateUi();
                         return;
                     }
@@ -1065,6 +1174,7 @@
                     root.setAttribute('data-radio-replay-items', JSON.stringify(items));
                     renderDynamicChapters();
                     updateProgressBounds();
+                    refreshQueuePreload();
                     updateUi();
                 }
 
@@ -1144,6 +1254,7 @@
 
                 window.addEventListener('pagehide', flush);
                 updateProgressBounds();
+                refreshQueuePreload();
                 updateUi();
             }(roots[r]));
         }
