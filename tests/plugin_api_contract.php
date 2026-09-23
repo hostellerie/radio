@@ -268,6 +268,27 @@ radio_contract_require(
     'Radio programme administration must provide a private continuous chaptered preview before broadcast.'
 );
 
+$studioEndpoint = file_get_contents($root . '/admin/studio.php');
+$studioJs = file_get_contents($root . '/admin/radio-studio.js');
+radio_contract_require(
+    strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
+        && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
+        && strpos($studioEndpoint, "if (\$action === 'state')") !== false
+        && strpos($studioEndpoint, "if (\$action === 'search')") !== false
+        && strpos($studioEndpoint, "if (\$action === 'add')") !== false
+        && strpos($studioEndpoint, "\$position === 'next' ? \$currentItemId : 0") !== false
+        && strpos($studioEndpoint, 'SEC_checkToken()') !== false
+        && strpos($studioJs, "body.set('current_item_id'") !== false
+        && strpos($studioJs, "addMedia(item.media_id, 'next')") !== false
+        && strpos($studioJs, "addMedia(item.media_id, 'end')") !== false
+        && strpos($studioJs, "window.setInterval(syncState, 3000)") !== false
+        && strpos($programPreview, 'data-radio-replay-dynamic=') !== false
+        && strpos($programPreview, 'data-radio-replay-track="0"') !== false
+        && strpos($publicPlayer, "root.addEventListener('radio:playlist-update'") !== false
+        && strpos($publicPlayer, 'data-radio-current-item-id') !== false,
+    'Radio Studio must update the upcoming programme queue without reloading the current audio and must not count admin preview listening as public audience.'
+);
+
 radio_contract_require(
     strpos($functions, 'function RADIO_rebuildRotationNow') !== false
         && strpos($rotationAdmin, "name=\"rebuild_rotation\"") !== false
