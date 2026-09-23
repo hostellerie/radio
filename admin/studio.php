@@ -20,13 +20,13 @@ function radio_studio_items($programId)
     $offset = 0;
 
     foreach ($items as $item) {
-        if (!RADIO_isBroadcastAvailable($item)
-            || !RADIO_hasReadAccess($item)
-            || (int) $item['duration'] < 1) {
+        if (!RADIO_hasReadAccess($item)) {
             continue;
         }
 
-        $duration = (int) $item['duration'];
+        $duration = max(0, (int) $item['duration']);
+        $playable = RADIO_isBroadcastAvailable($item) && $duration > 0;
+
         $playlist[] = array(
             'item_id' => (int) $item['item_id'],
             'media_id' => (int) $item['media_id'],
@@ -38,9 +38,13 @@ function radio_studio_items($programId)
             'tags' => isset($item['tags']) ? $item['tags'] : '',
             'duration' => $duration,
             'offset' => $offset,
-            'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false)
+            'playable' => $playable,
+            'stream_url' => $playable ? RADIO_mediaUrl((int) $item['media_id'], false) : ''
         );
-        $offset += $duration;
+
+        if ($playable) {
+            $offset += $duration;
+        }
     }
 
     return $playlist;
