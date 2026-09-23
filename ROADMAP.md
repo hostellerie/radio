@@ -40,7 +40,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.3.1
+## Implementation status snapshot — 0.3.2
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
@@ -117,6 +117,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 - [ ] Support draft, published, disabled and archived states.
 - [x] Support per-item download permission.
 - [x] Separate media publication from independent `on_demand` and `broadcast` availability.
+- [x] Separate scheduled broadcast eligibility from automatic rotation eligibility.
 
 ## Persistent storage
 
