@@ -24,6 +24,19 @@
         <input type="text" name="series_title" maxlength="255">
     </label></p>
 
+    <p><label>{category_label}<br>
+        <input type="text" name="category" maxlength="128">
+    </label></p>
+
+    <p><label>{collection_label}<br>
+        <input type="text" name="collection_name" maxlength="255">
+    </label></p>
+
+    <p><label>{tags_label}<br>
+        <input type="text" name="tags" maxlength="2048">
+    </label><br>
+    <small class="radio-admin__muted">{tags_help}</small></p>
+
     <p>
         <label>{season_number_label} <input type="number" name="season_number" min="0" value="0"></label>
         <label>{episode_number_label} <input type="number" name="episode_number" min="0" value="0"></label>
