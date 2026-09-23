@@ -3407,12 +3407,23 @@ function RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
 
     if ($mode !== 'crossfade'
         || !is_array($current) || !is_array($next)
-        || !isset($current['media_type']) || !isset($next['media_type'])
-        || $current['media_type'] !== 'music' || $next['media_type'] !== 'music') {
+        || !isset($current['media_type']) || !isset($next['media_type'])) {
         return 0;
     }
 
     if ($seconds < 1) {
+        return 0;
+    }
+
+    $currentType = (string) $current['media_type'];
+    $nextType = (string) $next['media_type'];
+    $overlap = 0;
+
+    if ($currentType === 'music' && $nextType === 'music') {
+        $overlap = $seconds;
+    } elseif ($currentType === 'jingle' && $nextType === 'music') {
+        $overlap = max(1, (int) round($seconds / 2));
+    } else {
         return 0;
     }
 
@@ -3422,7 +3433,7 @@ function RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
         return 0;
     }
 
-    return min($seconds, $currentDuration - 1, $nextDuration - 1);
+    return min($overlap, $currentDuration - 1, $nextDuration - 1);
 }
 
 function RADIO_transitionOverlap($current, $next)
