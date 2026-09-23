@@ -1136,7 +1136,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
 
     $title = isset($metadata['title']) ? trim((string) $metadata['title']) : '';
     if ($title === '') {
-        $title = pathinfo($validated['original_name'], PATHINFO_FILENAME);
+        $title = RADIO_cleanImportedTitle($validated['original_name']);
     }
     $title = DB_escapeString(substr($title, 0, 255));
     $description = DB_escapeString(isset($metadata['description']) ? trim((string) $metadata['description']) : '');
@@ -1270,6 +1270,68 @@ function RADIO_isBroadcastAvailable($row)
         && (!array_key_exists('broadcast', $row) || !empty($row['broadcast']));
 }
 
+function RADIO_cleanImportedTitle($value)
+{
+    $title = rawurldecode((string) $value);
+    $title = pathinfo($title, PATHINFO_FILENAME);
+    $title = str_replace(array('_', "	"), array(' ', ' '), $title);
+    $title = preg_replace('/\s+/', ' ', $title);
+
+    // Remove common video-platform noise only when it appears as a trailing label.
+    $noise = array(
+        'official video',
+        'official music video',
+        'official audio',
+        'lyric video',
+        'lyrics',
+        'audio',
+        'video',
+        'visualizer',
+        'visualiser'
+    );
+    $noisePattern = implode('|', array_map(function ($item) {
+        return preg_quote($item, '/');
+    }, $noise));
+    $title = preg_replace(
+        '/\s*[\(\[]\s*(?:' . $noisePattern . ')\s*[\)\]]\s*$/i',
+        '',
+        $title
+    );
+
+    // YouTube-style filenames often end with _XXXXXXXXXXX or -XXXXXXXXXXX.
+    if (preg_match('/(?:_|-)([A-Za-z0-9_-]{11})$/', rawurldecode((string) $value))) {
+        $title = preg_replace('/\s*[-_]?[A-Za-z0-9_-]{11}\s*$/', '', $title);
+    }
+
+    $title = trim(preg_replace('/\s+/', ' ', $title));
+    return $title;
+}
+
+function RADIO_normalizeImportedMediaTitle($row)
+{
+    if (!is_array($row) || !isset($row['title'])) {
+        return $row;
+    }
+
+    $title = trim((string) $row['title']);
+    $original = isset($row['original_name']) ? (string) $row['original_name'] : '';
+    if ($title === '' || $original === '') {
+        return $row;
+    }
+
+    $originalStem = pathinfo($original, PATHINFO_FILENAME);
+    $decodedStem = pathinfo(rawurldecode($original), PATHINFO_FILENAME);
+
+    if ($title === $originalStem || $title === $decodedStem) {
+        $clean = RADIO_cleanImportedTitle($original);
+        if ($clean !== '') {
+            $row['title'] = $clean;
+        }
+    }
+
+    return $row;
+}
+
 function RADIO_getMedia($id, $publishedOnly)
 {
     global $_TABLES;
@@ -1285,7 +1347,7 @@ function RADIO_getMedia($id, $publishedOnly)
     if (DB_numRows($result) < 1) {
         return false;
     }
-    $row = DB_fetchArray($result);
+    $row = RADIO_normalizeImportedMediaTitle(DB_fetchArray($result));
     if ($publishedOnly && !RADIO_hasReadAccess($row)) {
         return false;
     }
@@ -1332,7 +1394,7 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
     );
     $items = array();
     while ($row = DB_fetchArray($result)) {
-        $items[] = $row;
+        $items[] = RADIO_normalizeImportedMediaTitle($row);
     }
     return $items;
 }
