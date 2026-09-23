@@ -2782,64 +2782,78 @@ function RADIO_loadRotationSnapshot($date, $timestamp, &$nextCycleStart)
     $raw = @file_get_contents($path);
     $data = is_string($raw) ? json_decode($raw, true) : null;
     if (!is_array($data)
-        || !isset($data['signature']) || $data['signature'] !== RADIO_rotationSnapshotSignature()
         || !isset($data['cycle_start']) || !isset($data['cycle_duration'])
-        || empty($data['media_ids']) || !is_array($data['media_ids'])) {
+        || !isset($data['transition_mode']) || !isset($data['crossfade_seconds'])
+        || empty($data['items']) || !is_array($data['items'])) {
         return false;
     }
 
     $cycleStart = (int) $data['cycle_start'];
-    $cycleDuration = max(1, (int) $data['cycle_duration']);
-    $cycleEnd = $cycleStart + $cycleDuration;
+    $storedCycleDuration = max(1, (int) $data['cycle_duration']);
+    $cycleEnd = $cycleStart + $storedCycleDuration;
 
     if ($timestamp >= $cycleEnd) {
         $nextCycleStart = $cycleEnd;
         return false;
     }
 
+    $items = array();
     $ids = array();
-    foreach ($data['media_ids'] as $id) {
-        $id = (int) $id;
-        if ($id > 0) {
-            $ids[] = $id;
+    foreach ($data['items'] as $item) {
+        if (!is_array($item) || empty($item['media_id'])) {
+            continue;
         }
+        $id = (int) $item['media_id'];
+        if ($id < 1) {
+            continue;
+        }
+        $items[$id] = $item;
+        $ids[] = $id;
     }
     if (count($ids) === 0) {
-        return array(
-            'sequence' => array(),
-            'cycle_start' => $cycleStart,
-            'cycle_duration' => $cycleDuration
-        );
+        return false;
     }
 
+    // Only deletion or leaving the published state may alter the active cycle.
     $result = DB_query(
-        "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id IN ("
+        "SELECT media_id,status FROM {$_TABLES['radio_media']} WHERE media_id IN ("
         . implode(',', $ids) . ")"
     );
-    $rows = array();
+    $published = array();
     while ($row = DB_fetchArray($result)) {
-        $rows[(int) $row['media_id']] = $row;
+        if (isset($row['status']) && $row['status'] === 'published') {
+            $published[(int) $row['media_id']] = true;
+        }
     }
 
     $sequence = array();
-    foreach ($ids as $id) {
-        if (!isset($rows[$id])) {
-            continue;
+    foreach ($data['items'] as $item) {
+        $id = isset($item['media_id']) ? (int) $item['media_id'] : 0;
+        if ($id > 0 && isset($published[$id])) {
+            $sequence[] = $item;
         }
-        $row = $rows[$id];
-        if ($row['status'] !== 'published'
-            || (array_key_exists('broadcast', $row) && empty($row['broadcast']))
-            || (int) $row['duration'] < 1
-            || !RADIO_hasReadAccess($row)) {
-            continue;
-        }
-        $sequence[] = $row;
+    }
+
+    $mode = (string) $data['transition_mode'];
+    $seconds = (int) $data['crossfade_seconds'];
+    $activeDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
+
+    if ($activeDuration < 1) {
+        return array(
+            'sequence' => array(),
+            'cycle_start' => $cycleStart,
+            'cycle_duration' => 0,
+            'transition_mode' => $mode,
+            'crossfade_seconds' => $seconds
+        );
     }
 
     return array(
         'sequence' => $sequence,
         'cycle_start' => $cycleStart,
-        'cycle_duration' => $cycleDuration
+        'cycle_duration' => $activeDuration,
+        'transition_mode' => $mode,
+        'crossfade_seconds' => $seconds
     );
 }
 
@@ -2864,6 +2878,17 @@ function RADIO_purgeRotationSnapshots($keepDays)
     }
 }
 
+function RADIO_rotationSnapshotItem($item)
+{
+    return array(
+        'media_id' => isset($item['media_id']) ? (int) $item['media_id'] : 0,
+        'title' => isset($item['title']) ? (string) $item['title'] : '',
+        'media_type' => isset($item['media_type']) ? (string) $item['media_type'] : 'music',
+        'source_kind' => RADIO_sourceKind($item),
+        'duration' => isset($item['duration']) ? max(0, (int) $item['duration']) : 0
+    );
+}
+
 function RADIO_saveRotationSnapshot($date, $sequence, $cycleStart)
 {
     $path = RADIO_rotationSnapshotPath($date);
@@ -2871,14 +2896,17 @@ function RADIO_saveRotationSnapshot($date, $sequence, $cycleStart)
         return false;
     }
 
-    $ids = array();
+    $items = array();
     foreach ($sequence as $item) {
-        if (isset($item['media_id']) && (int) $item['media_id'] > 0) {
-            $ids[] = (int) $item['media_id'];
+        $snapshotItem = RADIO_rotationSnapshotItem($item);
+        if ($snapshotItem['media_id'] > 0 && $snapshotItem['duration'] > 0) {
+            $items[] = $snapshotItem;
         }
     }
 
-    $cycleDuration = RADIO_rotationDuration($sequence);
+    $mode = RADIO_transitionMode();
+    $seconds = RADIO_crossfadeSeconds();
+    $cycleDuration = RADIO_rotationDuration($items, $mode, $seconds);
     if ($cycleDuration < 1) {
         return false;
     }
@@ -2890,7 +2918,9 @@ function RADIO_saveRotationSnapshot($date, $sequence, $cycleStart)
         'signature' => RADIO_rotationSnapshotSignature(),
         'cycle_start' => (int) $cycleStart,
         'cycle_duration' => $cycleDuration,
-        'media_ids' => $ids
+        'transition_mode' => $mode,
+        'crossfade_seconds' => $seconds,
+        'items' => $items
     ));
     if (!is_string($payload)) {
         return false;
@@ -2910,12 +2940,16 @@ function RADIO_rotationCycleState($date, $timestamp)
     }
 
     $sequence = RADIO_buildFreshRotationSequence($date);
-    $cycleDuration = RADIO_rotationDuration($sequence);
+    $mode = RADIO_transitionMode();
+    $seconds = RADIO_crossfadeSeconds();
+    $cycleDuration = RADIO_rotationDuration($sequence, $mode, $seconds);
     if ($cycleDuration < 1) {
         return array(
             'sequence' => array(),
             'cycle_start' => $timestamp,
-            'cycle_duration' => 0
+            'cycle_duration' => 0,
+            'transition_mode' => $mode,
+            'crossfade_seconds' => $seconds
         );
     }
 
@@ -2933,9 +2967,11 @@ function RADIO_rotationCycleState($date, $timestamp)
     RADIO_saveRotationSnapshot($date, $sequence, $cycleStart);
 
     return array(
-        'sequence' => $sequence,
+        'sequence' => array_map('RADIO_rotationSnapshotItem', $sequence),
         'cycle_start' => $cycleStart,
-        'cycle_duration' => $cycleDuration
+        'cycle_duration' => $cycleDuration,
+        'transition_mode' => $mode,
+        'crossfade_seconds' => $seconds
     );
 }
 
@@ -3028,16 +3064,18 @@ function RADIO_crossfadeSeconds()
         : 2;
 }
 
-function RADIO_transitionOverlap($current, $next)
+function RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
 {
-    if (RADIO_transitionMode() !== 'crossfade'
+    $mode = strtolower(trim((string) $mode));
+    $seconds = max(0, min(10, (int) $seconds));
+
+    if ($mode !== 'crossfade'
         || !is_array($current) || !is_array($next)
         || !isset($current['media_type']) || !isset($next['media_type'])
         || $current['media_type'] !== 'music' || $next['media_type'] !== 'music') {
         return 0;
     }
 
-    $seconds = RADIO_crossfadeSeconds();
     if ($seconds < 1) {
         return 0;
     }
@@ -3051,7 +3089,17 @@ function RADIO_transitionOverlap($current, $next)
     return min($seconds, $currentDuration - 1, $nextDuration - 1);
 }
 
-function RADIO_rotationDuration($sequence)
+function RADIO_transitionOverlap($current, $next)
+{
+    return RADIO_transitionOverlapFor(
+        $current,
+        $next,
+        RADIO_transitionMode(),
+        RADIO_crossfadeSeconds()
+    );
+}
+
+function RADIO_rotationDuration($sequence, $mode = null, $seconds = null)
 {
     $duration = 0;
     $count = count($sequence);
@@ -3059,10 +3107,18 @@ function RADIO_rotationDuration($sequence)
         return 0;
     }
 
+    if ($mode === null) {
+        $mode = RADIO_transitionMode();
+    }
+    if ($seconds === null) {
+        $seconds = RADIO_crossfadeSeconds();
+    }
+
     for ($i = 0; $i < $count; $i++) {
         $item = $sequence[$i];
         $next = $sequence[($i + 1) % $count];
-        $slot = max(0, (int) $item['duration']) - RADIO_transitionOverlap($item, $next);
+        $slot = max(0, (int) $item['duration'])
+            - RADIO_transitionOverlapFor($item, $next, $mode, $seconds);
         $duration += max(1, $slot);
     }
     return $duration;
@@ -3083,6 +3139,8 @@ function RADIO_getRotationState($timestamp)
     $count = count($sequence);
     $cycleDuration = isset($cycle['cycle_duration']) ? (int) $cycle['cycle_duration'] : 0;
     $cycleStart = isset($cycle['cycle_start']) ? (int) $cycle['cycle_start'] : $timestamp;
+    $transitionMode = isset($cycle['transition_mode']) ? $cycle['transition_mode'] : RADIO_transitionMode();
+    $crossfadeSeconds = isset($cycle['crossfade_seconds']) ? (int) $cycle['crossfade_seconds'] : RADIO_crossfadeSeconds();
     if ($count === 0 || $cycleDuration < 1) {
         return false;
     }
@@ -3101,7 +3159,7 @@ function RADIO_getRotationState($timestamp)
             continue;
         }
 
-        $overlap = RADIO_transitionOverlap($item, $next);
+        $overlap = RADIO_transitionOverlapFor($item, $next, $transitionMode, $crossfadeSeconds);
         $slotDuration = max(1, $duration - $overlap);
 
         if ($cycleOffset < ($cursor + $slotDuration)) {
@@ -3119,7 +3177,7 @@ function RADIO_getRotationState($timestamp)
                 'duration' => $duration,
                 'slot_duration' => $slotDuration,
                 'offset' => $cycleOffset - $cursor,
-                'transition_mode' => RADIO_transitionMode(),
+                'transition_mode' => $transitionMode,
                 'transition_seconds' => $overlap,
                 'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
                 'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id'])),
