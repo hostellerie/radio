@@ -1,0 +1,14 @@
+<article class="radio-program-picker__item">
+    <div class="radio-program-picker__info">
+        <strong>{title}</strong>
+        <div class="radio-admin__muted">{meta}</div>
+        <div class="radio-admin__classification">{classification}</div>
+    </div>
+    <form method="post" action="{post_url}" class="radio-program-picker__add-form">
+        <input type="hidden" name="program_id" value="{program_id}">
+        <input type="hidden" name="media_id" value="{media_id}">
+        <input type="hidden" name="{csrf_name}" value="{csrf_token}">
+        <button class="radio-program-picker__add" type="submit" name="add_program_item" value="1"
+                title="{add_title}" aria-label="{add_title}">+</button>
+    </form>
+</article>
