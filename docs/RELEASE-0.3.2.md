@@ -11,6 +11,7 @@ Radio 0.3.2 separates scheduled programme playback from automatic rotation.
 - The active rotation cycle remains protected: changing the new flag takes effect at the next cycle, while deleting a media item or returning it to draft still removes it from the active cycle immediately.
 - Shows Automatic rotation in upload, remote-media and edit forms and in the media-library availability badges.
 - Adds an explicit automatic-rotation exclusion reason to rotation diagnostics.
+- Reworks programme replays as one continuous chaptered player with a global progress bar and direct chapter navigation, without exposing individual media playback links.
 
 ## Special programme workflow
 
