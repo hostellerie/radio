@@ -256,6 +256,18 @@ radio_contract_require(
     'Radio programme editing must use the searchable media picker with one-click add controls instead of the legacy media select.'
 );
 
+$programPreview = file_get_contents($root . '/admin/preview.php');
+radio_contract_require(
+    strpos($programAdmin, '/plugins/radio/preview.php?program_id=') !== false
+        && strpos($programPreview, "SEC_hasRights('radio.schedule')") !== false
+        && strpos($programPreview, 'RADIO_getProgramItems') !== false
+        && strpos($programPreview, 'RADIO_isBroadcastAvailable') !== false
+        && strpos($programPreview, 'data-radio-replay-player') !== false
+        && strpos($programPreview, 'data-radio-replay-chapter') !== false
+        && strpos($programPreview, "RADIO_mediaUrl((int) \$item['media_id'], false)") !== false,
+    'Radio programme administration must provide a private continuous chaptered preview before broadcast.'
+);
+
 radio_contract_require(
     strpos($functions, 'function RADIO_rebuildRotationNow') !== false
         && strpos($rotationAdmin, "name=\"rebuild_rotation\"") !== false
