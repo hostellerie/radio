@@ -340,7 +340,7 @@ $LANG_confignames['radio'] = array(
     'fallback_type_weights' => 'Rotation type weights (example: music=5,podcast=2)',
     'fallback_min_repeat_minutes' => 'Target minimum repeat interval (minutes)',
     'transition_mode' => 'Audio transition mode',
-    'crossfade_seconds' => 'Music-to-music crossfade duration (seconds)'
+    'crossfade_seconds' => 'Music-to-music crossfade duration (seconds)',
     'whatsnew_enabled' => 'Show Radio content in What’s New?',
     'whatsnew_interval' => 'What’s New period (seconds)',
     'whatsnew_limit' => 'Maximum Radio items in What’s New',
