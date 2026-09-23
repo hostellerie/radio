@@ -1377,6 +1377,31 @@ function RADIO_getMedia($id, $publishedOnly)
     return $row;
 }
 
+function RADIO_mediaClassificationSchemaReady()
+{
+    static $ready = null;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    global $_TABLES;
+
+    $ready = true;
+    foreach (array('category','collection_name','tags') as $column) {
+        $result = DB_query(
+            "SHOW COLUMNS FROM {$_TABLES['radio_media']} LIKE '"
+            . DB_escapeString($column) . "'"
+        );
+        if (DB_numRows($result) < 1) {
+            $ready = false;
+            break;
+        }
+    }
+
+    return $ready;
+}
+
 function RADIO_normalizeClassificationValue($value, $maxLength)
 {
     $value = trim((string) $value);
@@ -1423,6 +1448,10 @@ function RADIO_mediaClassificationOptions()
         'collections' => array(),
         'tags' => array()
     );
+
+    if (!RADIO_mediaClassificationSchemaReady()) {
+        return $options;
+    }
 
     $result = DB_query(
         "SELECT category,collection_name,tags FROM {$_TABLES['radio_media']} "
@@ -1481,24 +1510,25 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
         $filters = array();
     }
 
+    $classificationReady = RADIO_mediaClassificationSchemaReady();
     $query = isset($filters['q']) ? trim((string) $filters['q']) : '';
     if ($query !== '') {
         $safeQuery = DB_escapeString($query);
         $where .= " AND (title LIKE '%" . $safeQuery . "%'"
             . " OR author LIKE '%" . $safeQuery . "%'"
             . " OR series_title LIKE '%" . $safeQuery . "%'"
-            . " OR category LIKE '%" . $safeQuery . "%'"
-            . " OR collection_name LIKE '%" . $safeQuery . "%'"
-            . " OR tags LIKE '%" . $safeQuery . "%'"
+            . ($classificationReady
+                ? " OR category LIKE '%" . $safeQuery . "%'"
+                    . " OR collection_name LIKE '%" . $safeQuery . "%'"
+                    . " OR tags LIKE '%" . $safeQuery . "%'"
+                : '')
             . " OR original_name LIKE '%" . $safeQuery . "%')";
     }
 
     foreach (array(
         'type' => 'media_type',
         'status' => 'status',
-        'source' => 'source_kind',
-        'category' => 'category',
-        'collection' => 'collection_name'
+        'source' => 'source_kind'
     ) as $filterKey => $column) {
         if (isset($filters[$filterKey]) && trim((string) $filters[$filterKey]) !== '') {
             $where .= " AND " . $column . "='"
@@ -1506,9 +1536,21 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
         }
     }
 
-    if (isset($filters['tag']) && trim((string) $filters['tag']) !== '') {
-        $tag = DB_escapeString(RADIO_normalizeClassificationValue($filters['tag'], 64));
-        $where .= " AND FIND_IN_SET('" . $tag . "',tags)>0";
+    if ($classificationReady) {
+        foreach (array(
+            'category' => 'category',
+            'collection' => 'collection_name'
+        ) as $filterKey => $column) {
+            if (isset($filters[$filterKey]) && trim((string) $filters[$filterKey]) !== '') {
+                $where .= " AND " . $column . "='"
+                    . DB_escapeString(trim((string) $filters[$filterKey])) . "'";
+            }
+        }
+
+        if (isset($filters['tag']) && trim((string) $filters['tag']) !== '') {
+            $tag = DB_escapeString(RADIO_normalizeClassificationValue($filters['tag'], 64));
+            $where .= " AND FIND_IN_SET('" . $tag . "',tags)>0";
+        }
     }
 
     foreach (array('on_demand','broadcast','automatic_rotation') as $flag) {
@@ -1529,7 +1571,8 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
         'size' => 'file_size',
         'modified' => 'modified'
     );
-    if (!isset($sortColumns[$sort])) {
+    if (!isset($sortColumns[$sort])
+        || (!$classificationReady && ($sort === 'category' || $sort === 'collection'))) {
         $sort = 'modified';
     }
     $direction = strtolower((string) $direction) === 'asc' ? 'ASC' : 'DESC';
