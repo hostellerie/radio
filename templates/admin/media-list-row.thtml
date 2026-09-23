@@ -2,6 +2,7 @@
     <td class="radio-admin__media-title">
         <strong class="radio-admin__ellipsis" title="{title_full}">{title}</strong>
         <div class="radio-admin__muted radio-admin__ellipsis" title="{filename_full}">{filename}</div>
+        <div class="radio-admin__classification">{classification}</div>
     </td>
     <td class="radio-admin__nowrap">{media_type}</td>
     <td class="radio-admin__nowrap">{status}</td>
