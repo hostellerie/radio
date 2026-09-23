@@ -27,6 +27,8 @@ The administration library can combine text search with type, category, collecti
 
 Programme editing reuses the same classification approach: search and filter broadcast-eligible media, then append an item with a single **+** action before reordering the programme playlist if needed.
 
+Programme editors can also open a private **Listen to programme** preview before broadcast. It plays the full programme continuously with the same chapter navigation used by replay, including broadcast-only media that is not available on demand.
+
 Automatic rotation stays protected during its active cycle, but administrators can explicitly rebuild it immediately from the Rotation page when they intentionally want current media or configuration changes to take effect at once.
 
 ## Compatibility
