@@ -1,0 +1,40 @@
+<form class="radio-admin-filters" method="get" action="">
+    <div class="radio-admin-filters__grid">
+        <label>{search_label}
+            <input type="search" name="q" value="{search_value}" placeholder="{search_placeholder}">
+        </label>
+        <label>{type_label}
+            <select name="type">{type_options}</select>
+        </label>
+        <label>{category_label}
+            <select name="category">{category_options}</select>
+        </label>
+        <label>{collection_label}
+            <select name="collection">{collection_options}</select>
+        </label>
+        <label>{tag_label}
+            <select name="tag">{tag_options}</select>
+        </label>
+        <label>{status_label}
+            <select name="status">{status_options}</select>
+        </label>
+        <label>{source_label}
+            <select name="source">{source_options}</select>
+        </label>
+        <label>{on_demand_label}
+            <select name="on_demand">{on_demand_options}</select>
+        </label>
+        <label>{broadcast_label}
+            <select name="broadcast">{broadcast_options}</select>
+        </label>
+        <label>{automatic_rotation_label}
+            <select name="automatic_rotation">{automatic_rotation_options}</select>
+        </label>
+    </div>
+    <input type="hidden" name="sort" value="{sort}">
+    <input type="hidden" name="direction" value="{direction}">
+    <div class="radio-admin__toolbar">
+        <button class="radio-admin__button radio-admin__button--primary" type="submit">{filter_label}</button>
+        <a class="radio-admin__button" href="{reset_url}">{reset_label}</a>
+    </div>
+</form>
