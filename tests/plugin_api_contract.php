@@ -269,6 +269,12 @@ radio_contract_require(
     'Radio programme administration must provide a private continuous chaptered preview before broadcast.'
 );
 
+radio_contract_require(
+    strpos($functions, '<script id="radio-public-js" defer src="') !== false
+        && strpos($programPreview, '<script defer src="') !== false,
+    'Radio preview and Studio scripts must be deferred so player controls are bound after the DOM exists.'
+);
+
 $studioEndpoint = file_get_contents($root . '/admin/studio.php');
 $studioJs = file_get_contents($root . '/admin/radio-studio.js');
 radio_contract_require(
