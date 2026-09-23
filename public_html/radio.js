@@ -717,9 +717,14 @@
                 var toggle = q('[data-radio-replay-toggle]', root);
                 var progress = q('[data-radio-replay-progress]', root);
                 var current = q('[data-radio-replay-current]', root);
+                var total = q('[data-radio-replay-total]', root);
                 var now = q('[data-radio-replay-now]', root);
+                var chapterList = q('.radio-replay__chapters', root);
                 var chapterButtons = qa('[data-radio-replay-chapter]', root);
                 var programId = intAttr(root, 'data-radio-program-id');
+                var trackingEnabled = root.getAttribute('data-radio-replay-track') !== '0';
+                var trackingSource = root.getAttribute('data-radio-replay-source') || 'replay';
+                var dynamicPlaylist = root.getAttribute('data-radio-replay-dynamic') === '1';
                 var raw = root.getAttribute('data-radio-replay-items') || '[]';
                 var items = [];
 
@@ -738,17 +743,47 @@
                 var listenStart = 0;
                 var listened = 0;
 
+                function refreshChapterButtons() {
+                    chapterButtons = qa('[data-radio-replay-chapter]', root);
+                }
+
                 function itemOffset(i) {
                     return items[i] ? (parseInt(items[i].offset || 0, 10) || 0) : 0;
+                }
+
+                function totalDuration() {
+                    if (!items.length) {
+                        return 0;
+                    }
+                    var last = items[items.length - 1];
+                    return (parseInt(last.offset || 0, 10) || 0)
+                        + (parseInt(last.duration || 0, 10) || 0);
                 }
 
                 function totalPosition() {
                     return itemOffset(index) + (audio.currentTime || 0);
                 }
 
+                function activeItemId() {
+                    return items[index] ? (parseInt(items[index].item_id || 0, 10) || 0) : 0;
+                }
+
+                function updateProgressBounds() {
+                    var duration = totalDuration();
+                    progress.max = Math.max(0, duration);
+                    if (total) {
+                        total.textContent = formatTime(duration);
+                    }
+                }
+
                 function updateActiveChapter() {
+                    var activeId = activeItemId();
+                    root.setAttribute('data-radio-current-item-id', activeId || 0);
                     for (var i = 0; i < chapterButtons.length; i++) {
-                        if (parseInt(chapterButtons[i].getAttribute('data-radio-replay-chapter') || '-1', 10) === index) {
+                        var buttonItemId = parseInt(chapterButtons[i].getAttribute('data-radio-replay-item-id') || '0', 10) || 0;
+                        var buttonIndex = parseInt(chapterButtons[i].getAttribute('data-radio-replay-chapter') || '-1', 10);
+                        var active = activeId > 0 ? buttonItemId === activeId : buttonIndex === index;
+                        if (active) {
                             chapterButtons[i].classList.add('is-active');
                             chapterButtons[i].setAttribute('aria-current', 'true');
                         } else {
@@ -774,6 +809,11 @@
                 }
 
                 function flush() {
+                    if (!trackingEnabled) {
+                        listenStart = 0;
+                        listened = 0;
+                        return;
+                    }
                     if (listenStart) {
                         listened += (Date.now() - listenStart) / 1000;
                         listenStart = 0;
@@ -784,7 +824,7 @@
                             parseInt(items[index].media_id || 0, 10) || 0,
                             programId,
                             'listen',
-                            'replay',
+                            trackingSource,
                             listened
                         );
                         listened = 0;
@@ -835,6 +875,70 @@
                     setItem(nextIndex, seconds - itemOffset(nextIndex), shouldPlay);
                 }
 
+                function renderDynamicChapters() {
+                    if (!dynamicPlaylist || !chapterList) {
+                        return;
+                    }
+
+                    chapterList.innerHTML = '';
+                    for (var i = 0; i < items.length; i++) {
+                        var item = items[i];
+                        var li = document.createElement('li');
+                        var button = document.createElement('button');
+                        var time = document.createElement('span');
+                        var title = document.createElement('span');
+
+                        button.type = 'button';
+                        button.className = 'radio-replay__chapter';
+                        button.setAttribute('data-radio-replay-chapter', i);
+                        button.setAttribute('data-radio-replay-item-id', parseInt(item.item_id || 0, 10) || 0);
+                        button.setAttribute('data-radio-replay-offset', parseInt(item.offset || 0, 10) || 0);
+
+                        time.className = 'radio-replay__chapter-time';
+                        time.textContent = formatTime(parseInt(item.offset || 0, 10) || 0);
+
+                        title.className = 'radio-replay__chapter-title';
+                        title.textContent = (item.author ? item.author + ' — ' : '') + (item.title || '');
+
+                        button.appendChild(time);
+                        button.appendChild(title);
+                        li.appendChild(button);
+                        chapterList.appendChild(li);
+                    }
+                    refreshChapterButtons();
+                }
+
+                function replacePlaylist(nextItems) {
+                    if (!nextItems || !nextItems.length) {
+                        return;
+                    }
+
+                    var currentId = activeItemId();
+                    var currentMediaId = items[index] ? parseInt(items[index].media_id || 0, 10) || 0 : 0;
+                    var nextIndex = -1;
+                    for (var i = 0; i < nextItems.length; i++) {
+                        var sameItem = currentId > 0
+                            && (parseInt(nextItems[i].item_id || 0, 10) || 0) === currentId;
+                        var sameLegacyMedia = currentId === 0 && currentMediaId > 0
+                            && (parseInt(nextItems[i].media_id || 0, 10) || 0) === currentMediaId;
+                        if (sameItem || sameLegacyMedia) {
+                            nextIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (nextIndex < 0) {
+                        return;
+                    }
+
+                    items = nextItems;
+                    index = nextIndex;
+                    root.setAttribute('data-radio-replay-items', JSON.stringify(items));
+                    renderDynamicChapters();
+                    updateProgressBounds();
+                    updateUi();
+                }
+
                 toggle.addEventListener('click', function () {
                     if (audio.paused) {
                         audio.play().catch(function () {});
@@ -853,26 +957,42 @@
                     seekGlobal(progress.value, !audio.paused);
                 });
 
-                for (var i = 0; i < chapterButtons.length; i++) {
-                    chapterButtons[i].addEventListener('click', function () {
-                        var target = parseInt(this.getAttribute('data-radio-replay-offset') || '0', 10) || 0;
-                        seekGlobal(target, true);
+                if (chapterList) {
+                    chapterList.addEventListener('click', function (event) {
+                        var target = event.target;
+                        while (target && target !== chapterList
+                            && !target.hasAttribute('data-radio-replay-chapter')) {
+                            target = target.parentNode;
+                        }
+                        if (!target || target === chapterList) {
+                            return;
+                        }
+                        var seconds = parseInt(target.getAttribute('data-radio-replay-offset') || '0', 10) || 0;
+                        seekGlobal(seconds, true);
                     });
                 }
 
+                root.addEventListener('radio:playlist-update', function (event) {
+                    if (event && event.detail && event.detail.items) {
+                        replacePlaylist(event.detail.items);
+                    }
+                });
+
                 audio.addEventListener('play', function () {
-                    if (!started && items[index]) {
+                    if (trackingEnabled && !started && items[index]) {
                         started = true;
                         postEvent(
                             eventEndpoint,
                             parseInt(items[index].media_id || 0, 10) || 0,
                             programId,
                             'play',
-                            'replay',
+                            trackingSource,
                             0
                         );
                     }
-                    listenStart = Date.now();
+                    if (trackingEnabled) {
+                        listenStart = Date.now();
+                    }
                     updateUi();
                 });
 
@@ -894,6 +1014,7 @@
                 });
 
                 window.addEventListener('pagehide', flush);
+                updateProgressBounds();
                 updateUi();
             }(roots[r]));
         }
