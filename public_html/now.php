@@ -30,16 +30,37 @@ if ($state['program'] !== false) {
 
 if ($state['media'] !== false) {
     $media = $state['media'];
+    $payload['transition_mode'] = isset($media['transition_mode'])
+        ? $media['transition_mode']
+        : RADIO_transitionMode();
+    $payload['transition_seconds'] = isset($media['transition_seconds'])
+        ? (int) $media['transition_seconds']
+        : 0;
     $payload['current_media'] = array(
         'media_id' => $media['external_id'],
         'title' => $media['title'],
         'media_type' => $media['media_type'],
         'source_kind' => isset($media['source_kind']) ? $media['source_kind'] : 'local',
         'duration' => (int) $media['duration'],
+        'slot_duration' => isset($media['slot_duration']) ? (int) $media['slot_duration'] : (int) $media['duration'],
         'offset' => (int) $media['offset'],
         'stream_url' => $media['stream_url'],
         'url' => $media['item_url']
     );
+    if (!empty($media['next_media']) && is_array($media['next_media'])) {
+        $next = $media['next_media'];
+        $payload['next_media'] = array(
+            'media_id' => $next['external_id'],
+            'title' => $next['title'],
+            'media_type' => $next['media_type'],
+            'source_kind' => isset($next['source_kind']) ? $next['source_kind'] : 'local',
+            'duration' => (int) $next['duration'],
+            'stream_url' => $next['stream_url'],
+            'url' => $next['item_url']
+        );
+    } else {
+        $payload['next_media'] = false;
+    }
 }
 
 foreach ($upcoming as $item) {
