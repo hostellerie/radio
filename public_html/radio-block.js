@@ -6,7 +6,7 @@
     }
 
     function bindPersistentPlayerLinks() {
-        var links = document.querySelectorAll('[data-radio-persistent-player]');
+        var links = document.querySelectorAll('.radio-block [data-radio-persistent-player]');
         for (var i = 0; i < links.length; i++) {
             links[i].addEventListener('click', function (event) {
                 var href = this.getAttribute('href');
