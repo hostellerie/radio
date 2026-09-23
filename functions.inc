@@ -3455,6 +3455,7 @@ function RADIO_renderBlock()
     $state = RADIO_getLiveState(time());
     $scheduleUrl = rtrim($_CONF['site_url'], '/') . '/radio/schedule.php';
     $radioUrl = rtrim($_CONF['site_url'], '/') . '/radio/index.php';
+    $playerUrl = rtrim($_CONF['site_url'], '/') . '/radio/player.php';
     $nowUrl = rtrim($_CONF['site_url'], '/') . '/radio/now.php';
     $eventUrl = rtrim($_CONF['site_url'], '/') . '/radio/event.php';
     $listenLabel = isset($LANG_RADIO['public_listen']) ? $LANG_RADIO['public_listen'] : 'Listen';
@@ -3503,7 +3504,7 @@ function RADIO_renderBlock()
     $html .= '<div class="radio-block__links">'
         . '<a href="' . htmlspecialchars($radioUrl, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars(isset($LANG_RADIO['listen_live']) ? $LANG_RADIO['listen_live'] : 'Listen live', ENT_QUOTES, 'UTF-8') . '</a>'
-        . '<a href="' . htmlspecialchars($radioUrl . '/player.php', ENT_QUOTES, 'UTF-8') . '"'
+        . '<a href="' . htmlspecialchars($playerUrl, ENT_QUOTES, 'UTF-8') . '"'
         . ' data-radio-persistent-player>'
         . htmlspecialchars(isset($LANG_RADIO['persistent_listen']) ? $LANG_RADIO['persistent_listen'] : 'Keep listening', ENT_QUOTES, 'UTF-8') . '</a>'
         . '<a href="' . htmlspecialchars($scheduleUrl, ENT_QUOTES, 'UTF-8') . '">'
