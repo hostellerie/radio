@@ -234,6 +234,18 @@ radio_contract_require(
         && strpos($functions, 'RADIO_buildFreshRotationSequence') !== false,
     'Radio automatic rotation must freeze the active cycle and only let deletion or leaving published state affect it before the next cycle.'
 );
+$replayPage = file_get_contents($root . '/public_html/replay.php');
+radio_contract_require(
+    strpos($replayPage, 'data-radio-replay-player') !== false
+        && strpos($replayPage, 'data-radio-replay-items') !== false
+        && strpos($replayPage, 'data-radio-replay-progress') !== false
+        && strpos($replayPage, 'data-radio-replay-chapter') !== false
+        && strpos($publicPlayer, 'function initReplayPlayers') !== false
+        && strpos($publicPlayer, "audio.addEventListener('ended'") !== false
+        && strpos($publicPlayer, 'seekGlobal') !== false,
+    'Radio replay must play a programme continuously with global progress and chapter navigation.'
+);
+
 radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
