@@ -278,6 +278,14 @@ radio_contract_require(
 $studioEndpoint = file_get_contents($root . '/admin/studio.php');
 $studioJs = file_get_contents($root . '/admin/radio-studio.js');
 radio_contract_require(
+    strpos($studioEndpoint, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
+        && strpos($studioEndpoint, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
+        && strpos($studioJs, 'renderQueue(data.items || [])') !== false
+        && strpos($programPreview, 'data-radio-studio-queue') !== false,
+    'Radio Studio + and Play next actions must persist in radio_program_items and immediately refresh the visible saved programme queue.'
+);
+
+radio_contract_require(
     strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
         && strpos($studioEndpoint, "if (\$action === 'state')") !== false
