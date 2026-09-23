@@ -14,6 +14,7 @@
     var form = studio.querySelector('[data-radio-studio-search]');
     var results = studio.querySelector('[data-radio-studio-results]');
     var status = studio.querySelector('[data-radio-studio-status]');
+    var bufferStatus = studio.querySelector('[data-radio-studio-buffer]');
     var version = '';
     var pollTimer = 0;
 
@@ -22,6 +23,29 @@
             status.textContent = message || '';
         }
     }
+
+    function setBufferStatus(detail) {
+        if (!bufferStatus) {
+            return;
+        }
+        detail = detail || {};
+        var buffered = Math.max(0, Math.round(parseFloat(detail.next_buffered || 0) || 0));
+        var loadingLabel = studio.getAttribute('data-buffer-loading-label') || 'Buffering';
+        var readyLabel = studio.getAttribute('data-buffer-ready-label') || 'Ready';
+        var reserveLabel = studio.getAttribute('data-buffer-reserve-label') || 'Reserve ready';
+
+        if (detail.reserve_ready) {
+            bufferStatus.textContent = reserveLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
+        } else if (detail.next_ready || buffered >= 3) {
+            bufferStatus.textContent = readyLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
+        } else {
+            bufferStatus.textContent = loadingLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
+        }
+    }
+
+    player.addEventListener('radio:buffer-status', function (event) {
+        setBufferStatus(event && event.detail ? event.detail : {});
+    });
 
     function updateToken(data) {
         if (!data) {
