@@ -190,6 +190,17 @@ radio_contract_require(
         && strpos($nowEndpoint, "'transition_seconds'") !== false,
     'Radio must expose configurable gapless/crossfade transitions and only overlap music-to-music rotation items.'
 );
+
+$versionFile = file_get_contents($root . '/version.php');
+$updatesFile = file_get_contents($root . '/install_updates.php');
+radio_contract_require(
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.3.1") !== false
+        && strpos($updatesFile, "'0.3.0' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.3.1'") !== false
+        && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
+        && strpos($functions, 'RADIO_ensureConfig()') !== false,
+    'Radio 0.3.1 must provide a real 0.3.0 upgrade path that reconciles new configuration settings.'
+);
 radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
