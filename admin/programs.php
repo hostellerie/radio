@@ -184,8 +184,6 @@ if ($selected) {
     );
 }
 
-}
-
 $content .= '</div></div>';
 $content = RADIO_adminRenderPage(
     'programs',
