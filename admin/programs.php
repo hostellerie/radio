@@ -164,17 +164,17 @@ if ($selected) {
     if (count($items) === 0) {
         $content .= '<p>' . htmlspecialchars($LANG_RADIO['program_items_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
     } else {
-        $content .= '<ol>';
+        $content .= '<ol class="radio-program-items">';
         foreach ($items as $item) {
-            $content .= '<li style="margin:.5rem 0"><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
-                . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ')</small>'
-                . '<form method="post" action="" style="display:inline;margin-left:.5rem">'
+            $content .= '<li class="radio-program-item"><span class="radio-program-item__label"><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
+                . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ')</small></span>'
+                . '<form method="post" action="" class="radio-program-item__actions">'
                 . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
                 . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
-                . '<button type="submit" name="move_up" value="1">↑</button> '
-                . '<button type="submit" name="move_down" value="1">↓</button> '
-                . '<button type="submit" name="remove_program_item" value="1">' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '</button>'
+                . '<button class="radio-program-item__action" type="submit" name="move_up" value="1" title="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '">↑</button>'
+                . '<button class="radio-program-item__action" type="submit" name="move_down" value="1" title="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '">↓</button>'
+                . '<button class="radio-program-item__action radio-program-item__action--remove" type="submit" name="remove_program_item" value="1" title="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '">−</button>'
                 . '</form></li>';
         }
         $content .= '</ol>';
