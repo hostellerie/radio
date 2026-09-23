@@ -161,6 +161,14 @@ radio_contract_require(
     'Radio must expose a persistent detached player that follows live state across site navigation.'
 );
 radio_contract_require(
+    strpos($functions, 'function RADIO_cleanImportedTitle') !== false
+        && strpos($functions, 'rawurldecode') !== false
+        && strpos($functions, 'official video') !== false
+        && strpos($functions, '[A-Za-z0-9_-]{11}') !== false
+        && strpos($functions, 'RADIO_normalizeImportedMediaTitle') !== false,
+    'Radio must clean auto-generated imported track titles without rewriting manual editorial titles.'
+);
+radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
     'Radio home player must not reference undeclared live-page synchronization state.'
