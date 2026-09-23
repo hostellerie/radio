@@ -13,7 +13,7 @@ Radio 0.4.0 separates publication from the ways a media item can be used:
 
 These availability flags are independent. A published media item can therefore be reserved for a scheduled programme by enabling Broadcast while disabling both On demand and Automatic rotation.
 
-Existing installations upgraded from 0.2.5 keep both availability flags enabled so the upgrade does not silently remove existing content from public or broadcast use.
+Existing installations keep the availability flags enabled by default during upgrades so content is not silently removed from public, scheduled or automatic-rotation use.
 
 ## Media classification
 
