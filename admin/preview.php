@@ -183,7 +183,7 @@ if ($canEdit) {
     if ($studioPath === '' || !is_file($studioPath)) {
         $studioPath = rtrim($_CONF['path'], '/\\') . '/plugins/radio/admin/radio-studio.js';
     }
-    $studioScript = '<script src="'
+    $studioScript = '<script defer src="'
         . htmlspecialchars(rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-studio.js', ENT_QUOTES, 'UTF-8')
         . '?v=' . rawurlencode(RADIO_assetVersion($studioPath)) . '"></script>' . "\n";
 }
