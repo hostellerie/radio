@@ -2998,6 +2998,12 @@ function RADIO_buildFreshRotationSequence($date, $seed = null)
     $jingleIndex = 0;
     $announcementIndex = 0;
 
+    // Open every new fallback rotation cycle with a station jingle when one is available.
+    if (count($jingles) > 0) {
+        $sequence[] = $jingles[0];
+        $jingleIndex = 1;
+    }
+
     foreach ($regular as $item) {
         $sequence[] = $item;
         $regularCount++;
