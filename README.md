@@ -4,7 +4,7 @@ Modern audio and web radio plugin for Geeklog with media management, playlists, 
 
 ## Media availability model
 
-Radio 0.3.0 separates publication from the ways a media item can be used:
+Radio 0.3.1 separates publication from the ways a media item can be used:
 
 - **Published** — the media is active and may be used by Radio.
 - **On demand** — the media may be exposed individually to visitors in the public catalogue, item pages, podcast/feed collections and public playlists.
