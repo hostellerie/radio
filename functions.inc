@@ -2824,6 +2824,27 @@ function RADIO_loadRotationSnapshot($date)
     return $sequence;
 }
 
+function RADIO_purgeRotationSnapshots($keepDays)
+{
+    $base = RADIO_storageDir();
+    if ($base === '' || !is_dir($base)) {
+        return;
+    }
+
+    $keepDays = max(2, (int) $keepDays);
+    $cutoff = time() - ($keepDays * 86400);
+    $files = glob($base . 'rotation-*.json');
+    if (!is_array($files)) {
+        return;
+    }
+
+    foreach ($files as $file) {
+        if (is_file($file) && @filemtime($file) < $cutoff) {
+            @unlink($file);
+        }
+    }
+}
+
 function RADIO_saveRotationSnapshot($date, $sequence)
 {
     $path = RADIO_rotationSnapshotPath($date);
@@ -2837,6 +2858,8 @@ function RADIO_saveRotationSnapshot($date, $sequence)
             $ids[] = (int) $item['media_id'];
         }
     }
+
+    RADIO_purgeRotationSnapshots(7);
 
     $payload = json_encode(array(
         'date' => (string) $date,
