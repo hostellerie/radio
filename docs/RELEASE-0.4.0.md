@@ -27,6 +27,16 @@ Programme editing no longer uses a long media select. It now provides the same c
 
 The existing programme playlist remains available underneath for reordering and removal.
 
+## Private programme preview
+
+Programme editors can now open **Listen to programme** from the administration page before any broadcast. The private preview:
+
+- reuses the continuous chaptered programme player;
+- follows the exact programme item order;
+- includes broadcast-eligible media even when on-demand listening is disabled;
+- provides global progress and chapter navigation;
+- remains restricted to authenticated Radio scheduling/editing access.
+
 ## Manual rotation rebuild
 
 Automatic rotation cycles remain protected from normal media and configuration changes until the next cycle. Administrators can now explicitly choose **Rebuild rotation now** from the Rotation page. This CSRF-protected action invalidates the protected snapshot and starts a fresh cycle immediately using current media and settings.
