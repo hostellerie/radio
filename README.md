@@ -4,7 +4,7 @@ Modern audio and web radio plugin for Geeklog with media management, playlists, 
 
 ## Media availability model
 
-Radio 0.3.2 separates publication from the ways a media item can be used:
+Radio 0.4.0 separates publication from the ways a media item can be used:
 
 - **Published** — the media is active and may be used by Radio.
 - **On demand** — the media may be exposed individually to visitors in the public catalogue, item pages, podcast/feed collections and public playlists.
@@ -14,6 +14,16 @@ Radio 0.3.2 separates publication from the ways a media item can be used:
 These availability flags are independent. A published media item can therefore be reserved for a scheduled programme by enabling Broadcast while disabling both On demand and Automatic rotation.
 
 Existing installations upgraded from 0.2.5 keep both availability flags enabled so the upgrade does not silently remove existing content from public or broadcast use.
+
+## Media classification
+
+Radio 0.4.0 adds three complementary organization layers without overloading the technical media type:
+
+- **Category** — the primary editorial classification.
+- **Collection** — a deliberate grouping such as a special programme, station package or thematic set.
+- **Tags** — multiple free keywords for transversal characteristics such as genre, mood, language, season or usage.
+
+The administration library can combine text search with type, category, collection, tag, status, source and availability filters. Batch uploads apply category, collection and tags to the whole batch.
 
 ## Compatibility
 
