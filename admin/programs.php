@@ -74,9 +74,32 @@ if ($selected !== false && !RADIO_hasReadAccess($selected) && !RADIO_hasEditAcce
     $selectedId = 0;
 }
 $items = $selected ? RADIO_getProgramItems($selectedId) : array();
-$media = array_values(array_filter(RADIO_getMediaList(200, false), function ($row) {
-    return RADIO_hasReadAccess($row) && RADIO_isBroadcastAvailable($row);
-}));
+
+$pickerFilters = array();
+foreach (array('picker_q','picker_type','picker_category','picker_collection','picker_tag') as $key) {
+    $pickerFilters[$key] = isset($_GET[$key]) ? trim((string) $_GET[$key]) : '';
+}
+
+$pickerQuery = array(
+    'q' => $pickerFilters['picker_q'],
+    'type' => $pickerFilters['picker_type'],
+    'category' => $pickerFilters['picker_category'],
+    'collection' => $pickerFilters['picker_collection'],
+    'tag' => $pickerFilters['picker_tag'],
+    'status' => 'published',
+    'broadcast' => '1'
+);
+
+$classificationOptions = RADIO_mediaClassificationOptions();
+$media = $selected
+    ? array_values(array_filter(
+        RADIO_getMediaList(100, false, 'title', 'asc', $pickerQuery),
+        function ($row) {
+            return RADIO_hasReadAccess($row) && RADIO_isBroadcastAvailable($row);
+        }
+    ))
+    : array();
+
 $token = SEC_createToken();
 
 $content = '';
@@ -152,18 +175,15 @@ if ($selected) {
         $content .= '</ol>';
     }
 
-    if (count($media) > 0) {
-        $content .= '<form method="post" action=""><p><label>' . htmlspecialchars($LANG_RADIO['add_media_to_program'], ENT_QUOTES, 'UTF-8')
-            . ' <select name="media_id">';
-        foreach ($media as $row) {
-            $content .= '<option value="' . (int) $row['media_id'] . '">'
-                . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . ' [' . htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8') . ']</option>';
-        }
-        $content .= '</select></label> '
-            . '<input type="hidden" name="program_id" value="' . (int) $selectedId . '">'
-            . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
-            . '<button type="submit" name="add_program_item" value="1">' . htmlspecialchars($LANG_RADIO['add'], ENT_QUOTES, 'UTF-8') . '</button></p></form>';
-    }
+    $content .= RADIO_adminRenderProgramMediaPicker(
+        $selectedId,
+        $media,
+        $pickerFilters,
+        $classificationOptions,
+        $token
+    );
+}
+
 }
 
 $content .= '</div></div>';
