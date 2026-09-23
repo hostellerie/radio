@@ -3501,6 +3501,7 @@ function RADIO_getRotationState($timestamp)
     for ($i = 0; $i < $count; $i++) {
         $item = $sequence[$i];
         $next = $sequence[($i + 1) % $count];
+        $nextNext = $sequence[($i + 2) % $count];
         $duration = (int) $item['duration'];
         if ($duration < 1) {
             continue;
@@ -3537,6 +3538,16 @@ function RADIO_getRotationState($timestamp)
                     'duration' => (int) $next['duration'],
                     'stream_url' => RADIO_mediaUrl((int) $next['media_id'], false),
                     'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $next['media_id']))
+                ),
+                'next_next_media' => array(
+                    'media_id' => (int) $nextNext['media_id'],
+                    'external_id' => RADIO_externalId('media', (int) $nextNext['media_id']),
+                    'title' => $nextNext['title'],
+                    'media_type' => $nextNext['media_type'],
+                    'source_kind' => RADIO_sourceKind($nextNext),
+                    'duration' => (int) $nextNext['duration'],
+                    'stream_url' => RADIO_mediaUrl((int) $nextNext['media_id'], false),
+                    'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $nextNext['media_id']))
                 )
             );
         }
@@ -3579,6 +3590,7 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
         $duration = (int) $item['duration'];
         if ($elapsed < ($cursor + $duration)) {
             $next = $i + 1 < $count ? $items[$i + 1] : false;
+            $nextNext = $i + 2 < $count ? $items[$i + 2] : false;
             return array(
                 'media_id' => (int) $item['media_id'],
                 'external_id' => RADIO_externalId('media', (int) $item['media_id']),
@@ -3602,6 +3614,16 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
                     'duration' => (int) $next['duration'],
                     'stream_url' => RADIO_mediaUrl((int) $next['media_id'], false),
                     'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $next['media_id']))
+                ),
+                'next_next_media' => $nextNext === false ? false : array(
+                    'media_id' => (int) $nextNext['media_id'],
+                    'external_id' => RADIO_externalId('media', (int) $nextNext['media_id']),
+                    'title' => $nextNext['title'],
+                    'media_type' => $nextNext['media_type'],
+                    'source_kind' => RADIO_sourceKind($nextNext),
+                    'duration' => (int) $nextNext['duration'],
+                    'stream_url' => RADIO_mediaUrl((int) $nextNext['media_id'], false),
+                    'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $nextNext['media_id']))
                 )
             );
         }
