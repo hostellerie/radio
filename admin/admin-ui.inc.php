@@ -256,7 +256,112 @@ function RADIO_adminAvailabilityHtml($row)
     return empty($items) ? '<span class="radio-admin__muted">—</span>' : implode('', $items);
 }
 
-function RADIO_adminSortHeader($key, $label, $sort, $direction)
+function RADIO_adminFilterSelectOptions($items, $selected, $allLabel)
+{
+    $html = '<option value="">' . htmlspecialchars($allLabel, ENT_QUOTES, 'UTF-8') . '</option>';
+    foreach ($items as $value => $label) {
+        if (is_int($value)) {
+            $value = $label;
+        }
+        $html .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"'
+            . ((string) $value === (string) $selected ? ' selected' : '') . '>'
+            . htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    return $html;
+}
+
+function RADIO_adminRenderMediaFilters($filters, $options, $sort, $direction)
+{
+    global $_CONF, $LANG_RADIO;
+
+    $filters = is_array($filters) ? $filters : array();
+    $options = is_array($options) ? $options : array();
+
+    $typeItems = array();
+    foreach (array('music','podcast','interview','show','chronicle','jingle','announcement','promo') as $type) {
+        $typeItems[$type] = $LANG_RADIO['type_' . $type];
+    }
+
+    $statusItems = array(
+        'draft' => $LANG_RADIO['draft'],
+        'published' => $LANG_RADIO['published']
+    );
+
+    $sourceItems = array(
+        'local' => $LANG_RADIO['source_local'],
+        'external' => $LANG_RADIO['source_external'],
+        'live' => $LANG_RADIO['source_live']
+    );
+
+    $flagItems = array(
+        '1' => $LANG_RADIO['yes'],
+        '0' => $LANG_RADIO['no']
+    );
+
+    $template = RADIO_adminTemplate('media-filters.thtml');
+    $template->set_var(array(
+        'search_label' => htmlspecialchars($LANG_RADIO['filter_search'], ENT_QUOTES, 'UTF-8'),
+        'search_placeholder' => htmlspecialchars($LANG_RADIO['filter_search_placeholder'], ENT_QUOTES, 'UTF-8'),
+        'search_value' => htmlspecialchars(isset($filters['q']) ? $filters['q'] : '', ENT_QUOTES, 'UTF-8'),
+        'type_label' => htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8'),
+        'type_options' => RADIO_adminFilterSelectOptions($typeItems, isset($filters['type']) ? $filters['type'] : '', $LANG_RADIO['filter_all']),
+        'category_label' => htmlspecialchars($LANG_RADIO['category'], ENT_QUOTES, 'UTF-8'),
+        'category_options' => RADIO_adminFilterSelectOptions(isset($options['categories']) ? $options['categories'] : array(), isset($filters['category']) ? $filters['category'] : '', $LANG_RADIO['filter_all']),
+        'collection_label' => htmlspecialchars($LANG_RADIO['collection'], ENT_QUOTES, 'UTF-8'),
+        'collection_options' => RADIO_adminFilterSelectOptions(isset($options['collections']) ? $options['collections'] : array(), isset($filters['collection']) ? $filters['collection'] : '', $LANG_RADIO['filter_all']),
+        'tag_label' => htmlspecialchars($LANG_RADIO['tags'], ENT_QUOTES, 'UTF-8'),
+        'tag_options' => RADIO_adminFilterSelectOptions(isset($options['tags']) ? $options['tags'] : array(), isset($filters['tag']) ? $filters['tag'] : '', $LANG_RADIO['filter_all']),
+        'status_label' => htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8'),
+        'status_options' => RADIO_adminFilterSelectOptions($statusItems, isset($filters['status']) ? $filters['status'] : '', $LANG_RADIO['filter_all']),
+        'source_label' => htmlspecialchars($LANG_RADIO['source_kind'], ENT_QUOTES, 'UTF-8'),
+        'source_options' => RADIO_adminFilterSelectOptions($sourceItems, isset($filters['source']) ? $filters['source'] : '', $LANG_RADIO['filter_all']),
+        'on_demand_label' => htmlspecialchars($LANG_RADIO['on_demand'], ENT_QUOTES, 'UTF-8'),
+        'on_demand_options' => RADIO_adminFilterSelectOptions($flagItems, isset($filters['on_demand']) ? $filters['on_demand'] : '', $LANG_RADIO['filter_all']),
+        'broadcast_label' => htmlspecialchars($LANG_RADIO['broadcast'], ENT_QUOTES, 'UTF-8'),
+        'broadcast_options' => RADIO_adminFilterSelectOptions($flagItems, isset($filters['broadcast']) ? $filters['broadcast'] : '', $LANG_RADIO['filter_all']),
+        'automatic_rotation_label' => htmlspecialchars($LANG_RADIO['automatic_rotation'], ENT_QUOTES, 'UTF-8'),
+        'automatic_rotation_options' => RADIO_adminFilterSelectOptions($flagItems, isset($filters['automatic_rotation']) ? $filters['automatic_rotation'] : '', $LANG_RADIO['filter_all']),
+        'sort' => htmlspecialchars($sort, ENT_QUOTES, 'UTF-8'),
+        'direction' => htmlspecialchars($direction, ENT_QUOTES, 'UTF-8'),
+        'filter_label' => htmlspecialchars($LANG_RADIO['filter_apply'], ENT_QUOTES, 'UTF-8'),
+        'reset_label' => htmlspecialchars($LANG_RADIO['filter_reset'], ENT_QUOTES, 'UTF-8'),
+        'reset_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8')
+    ));
+
+    return $template->finish($template->parse('output', 'page'));
+}
+
+function RADIO_adminClassificationHtml($row)
+{
+    global $LANG_RADIO;
+
+    $parts = array();
+    if (!empty($row['category'])) {
+        $parts[] = '<span class="radio-admin__badge">'
+            . htmlspecialchars($LANG_RADIO['category'] . ': ' . $row['category'], ENT_QUOTES, 'UTF-8')
+            . '</span>';
+    }
+    if (!empty($row['collection_name'])) {
+        $parts[] = '<span class="radio-admin__badge">'
+            . htmlspecialchars($LANG_RADIO['collection'] . ': ' . $row['collection_name'], ENT_QUOTES, 'UTF-8')
+            . '</span>';
+    }
+    if (!empty($row['tags'])) {
+        foreach (explode(',', (string) $row['tags']) as $tag) {
+            $tag = trim($tag);
+            if ($tag === '') {
+                continue;
+            }
+            $parts[] = '<span class="radio-admin__badge radio-admin__badge--muted">'
+                . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8')
+                . '</span>';
+        }
+    }
+
+    return implode('', $parts);
+}
+
+function RADIO_adminSortHeader($key, $label, $sort, $direction, $filters = array())
 {
     global $_CONF;
 
@@ -266,8 +371,17 @@ function RADIO_adminSortHeader($key, $label, $sort, $direction)
         $indicator = $direction === 'asc' ? ' ↑' : ' ↓';
     }
 
-    $url = $_CONF['site_admin_url'] . '/plugins/radio/index.php?sort='
-        . rawurlencode($key) . '&direction=' . rawurlencode($nextDirection);
+    $params = array(
+        'sort' => $key,
+        'direction' => $nextDirection
+    );
+    foreach (array('q','type','category','collection','tag','status','source','on_demand','broadcast','automatic_rotation') as $filterKey) {
+        if (isset($filters[$filterKey]) && (string) $filters[$filterKey] !== '') {
+            $params[$filterKey] = $filters[$filterKey];
+        }
+    }
+
+    $url = $_CONF['site_admin_url'] . '/plugins/radio/index.php?' . http_build_query($params, '', '&');
 
     return '<a class="radio-admin__sort" href="'
         . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
@@ -275,7 +389,7 @@ function RADIO_adminSortHeader($key, $label, $sort, $direction)
         . '</a>';
 }
 
-function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'desc')
+function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'desc', $filters = array())
 {
     global $_CONF, $LANG_RADIO;
 
@@ -295,6 +409,7 @@ function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'de
             'title_full' => htmlspecialchars(RADIO_adminDisplayName($row['title']), ENT_QUOTES, 'UTF-8'),
             'filename' => htmlspecialchars(RADIO_adminDisplayName($row['original_name']), ENT_QUOTES, 'UTF-8'),
             'filename_full' => htmlspecialchars(RADIO_adminDisplayName($row['original_name']), ENT_QUOTES, 'UTF-8'),
+            'classification' => RADIO_adminClassificationHtml($row),
             'media_type' => htmlspecialchars(RADIO_adminMediaTypeLabel($row['media_type']), ENT_QUOTES, 'UTF-8'),
             'status' => htmlspecialchars(RADIO_adminStatusLabel($row['status']), ENT_QUOTES, 'UTF-8'),
             'availability' => RADIO_adminAvailabilityHtml($row),
@@ -314,14 +429,14 @@ function RADIO_adminRenderMediaList($media, $sort = 'modified', $direction = 'de
 
     $table = RADIO_adminTemplate('media-list-table.thtml');
     $table->set_var(array(
-        'title_header' => RADIO_adminSortHeader('title', $LANG_RADIO['title'], $sort, $direction),
-        'type_header' => RADIO_adminSortHeader('type', $LANG_RADIO['type'], $sort, $direction),
-        'status_header' => RADIO_adminSortHeader('status', $LANG_RADIO['status'], $sort, $direction),
-        'availability_header' => RADIO_adminSortHeader('availability', $LANG_RADIO['availability'], $sort, $direction),
-        'source_header' => RADIO_adminSortHeader('source', $LANG_RADIO['source_kind'], $sort, $direction),
-        'duration_header' => RADIO_adminSortHeader('duration', $LANG_RADIO['admin_duration'], $sort, $direction),
-        'size_header' => RADIO_adminSortHeader('size', $LANG_RADIO['admin_size'], $sort, $direction),
-        'modified_header' => RADIO_adminSortHeader('modified', $LANG_RADIO['admin_modified'], $sort, $direction),
+        'title_header' => RADIO_adminSortHeader('title', $LANG_RADIO['title'], $sort, $direction, $filters),
+        'type_header' => RADIO_adminSortHeader('type', $LANG_RADIO['type'], $sort, $direction, $filters),
+        'status_header' => RADIO_adminSortHeader('status', $LANG_RADIO['status'], $sort, $direction, $filters),
+        'availability_header' => RADIO_adminSortHeader('availability', $LANG_RADIO['availability'], $sort, $direction, $filters),
+        'source_header' => RADIO_adminSortHeader('source', $LANG_RADIO['source_kind'], $sort, $direction, $filters),
+        'duration_header' => RADIO_adminSortHeader('duration', $LANG_RADIO['admin_duration'], $sort, $direction, $filters),
+        'size_header' => RADIO_adminSortHeader('size', $LANG_RADIO['admin_size'], $sort, $direction, $filters),
+        'modified_header' => RADIO_adminSortHeader('modified', $LANG_RADIO['admin_modified'], $sort, $direction, $filters),
         'actions_label' => htmlspecialchars($LANG_RADIO['admin_actions'], ENT_QUOTES, 'UTF-8'),
         'media_rows' => $rows
     ));
