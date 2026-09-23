@@ -302,6 +302,10 @@
             if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
                 offset = 0;
             }
+
+            if (fromEnded && nextMediaId !== endedMediaId && nextProgramId === programId) {
+                offset = 0;
+            }
             var changed = mediaId !== nextMediaId || audio.getAttribute('src') !== streamUrl;
 
             if (fromEnded && nextMediaId === endedMediaId
