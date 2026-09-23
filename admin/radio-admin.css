@@ -92,3 +92,19 @@
 .radio-admin-filters__grid input,.radio-admin-filters__grid select{width:100%;min-width:0}
 .radio-admin__classification{display:flex;flex-wrap:wrap;gap:.15rem;margin-top:.3rem;white-space:normal}
 .radio-admin__badge--muted{opacity:.72}
+
+
+.radio-program-picker{margin-top:1.5rem;padding:1rem;border:1px solid rgba(127,127,127,.3);border-radius:.5rem}
+.radio-program-picker__filters{margin:.75rem 0 1rem}
+.radio-program-picker__filter-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(4,minmax(130px,1fr));gap:.65rem}
+.radio-program-picker__filter-grid label{display:grid;gap:.25rem;min-width:0}
+.radio-program-picker__filter-grid input,.radio-program-picker__filter-grid select{width:100%;min-width:0}
+.radio-program-picker__results{display:grid;gap:.4rem}
+.radio-program-picker__item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.8rem;align-items:center;padding:.65rem .75rem;border:1px solid rgba(127,127,127,.22);border-radius:.4rem}
+.radio-program-picker__info{min-width:0}
+.radio-program-picker__info>strong{display:block;overflow-wrap:anywhere}
+.radio-program-picker__add-form{margin:0!important;padding:0!important;border:0!important}
+.radio-program-picker__add{display:inline-flex;align-items:center;justify-content:center;width:2.35rem;height:2.35rem;min-height:2.35rem!important;padding:0!important;border:1px solid rgba(127,127,127,.45);border-radius:999px;font-size:1.35rem;line-height:1;cursor:pointer}
+.radio-program-picker__add:hover,.radio-program-picker__add:focus{font-weight:700}
+@media(max-width:900px){.radio-program-picker__filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.radio-program-picker__filter-grid{grid-template-columns:1fr}.radio-program-picker__item{grid-template-columns:minmax(0,1fr) auto}}
