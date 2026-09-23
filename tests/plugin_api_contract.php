@@ -168,6 +168,15 @@ radio_contract_require(
         && strpos($functions, 'RADIO_normalizeImportedMediaTitle') !== false,
     'Radio must clean auto-generated imported track titles without rewriting manual editorial titles.'
 );
+$publicPlayer = file_get_contents($root . '/public_html/radio.js');
+$blockPlayer = file_get_contents($root . '/public_html/radio-block.js');
+$persistentPlayer = file_get_contents($root . '/public_html/radio-player.js');
+radio_contract_require(
+    strpos($publicPlayer, 'fromEnded && nextId !== endedMediaId && nextProgram === programId') !== false
+        && strpos($blockPlayer, 'fromEnded && nextMediaId !== endedMediaId && nextProgramId === programId') !== false
+        && strpos($persistentPlayer, 'fromEnded && nextMediaId !== endedMediaId && nextProgramId === programId') !== false,
+    'Radio players must start the next item at zero after a natural end within the same broadcast context.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
