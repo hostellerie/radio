@@ -4043,7 +4043,7 @@ function RADIO_publicScriptTag()
         $path = rtrim($_CONF['path'], '/\\') . '/plugins/radio/public_html/radio.js';
     }
 
-    return '<script id="radio-public-js" src="'
+    return '<script id="radio-public-js" defer src="'
         . htmlspecialchars(rtrim($_CONF['site_url'], '/') . '/radio/radio.js', ENT_QUOTES, 'UTF-8')
         . '?v=' . rawurlencode(RADIO_assetVersion($path)) . '"'
         . ' data-event-endpoint="'
