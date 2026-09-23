@@ -794,6 +794,9 @@
                 function setItem(nextIndex, localOffset, shouldPlay) {
                     nextIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
                     flush();
+                    if (nextIndex !== index) {
+                        started = false;
+                    }
                     index = nextIndex;
                     var item = items[index];
                     audio.src = item.stream_url || '';
