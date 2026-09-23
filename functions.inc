@@ -753,6 +753,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $onDemand = isset($metadata['on_demand']) ? (!empty($metadata['on_demand']) ? 1 : 0) : 1;
     $broadcast = isset($metadata['broadcast']) ? (!empty($metadata['broadcast']) ? 1 : 0) : 1;
+    $automaticRotation = isset($metadata['automatic_rotation']) ? (!empty($metadata['automatic_rotation']) ? 1 : 0) : 1;
     $duration = $sourceKind === 'live' ? 0 : max(0, (int) (isset($metadata['duration']) ? $metadata['duration'] : 0));
     $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
     $groupId = isset($metadata['group_id']) ? max(1, (int) $metadata['group_id']) : RADIO_defaultGroupId();
@@ -763,7 +764,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
         "INSERT INTO {$_TABLES['radio_media']} "
         . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,"
         . "source_kind,source_url,source_provider,source_external_id,source_attribution,source_license,"
-        . "storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,allow_download,hits,owner_id,"
+        . "storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,"
         . "group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . DB_escapeString(substr($title,0,255)) . "',"
         . "'" . DB_escapeString(isset($metadata['description']) ? trim((string)$metadata['description']) : '') . "',"
@@ -780,7 +781,7 @@ function RADIO_saveExternalMedia($metadata, &$error)
         . "'" . DB_escapeString(isset($metadata['source_attribution']) ? trim((string)$metadata['source_attribution']) : '') . "',"
         . "'" . DB_escapeString(substr(trim(isset($metadata['source_license']) ? (string)$metadata['source_license'] : ''),0,255)) . "',"
         . "'','',''," . $duration . ",0,"
-        . "'" . DB_escapeString($status) . "'," . $onDemand . "," . $broadcast . ",0,0,"
+        . "'" . DB_escapeString($status) . "'," . $onDemand . "," . $broadcast . "," . $automaticRotation . ",0,0,"
         . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
         . "'" . DB_escapeString($now) . "','" . DB_escapeString($now) . "')"
     );
@@ -1153,6 +1154,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $status = isset($metadata['status']) && $metadata['status'] === 'published' ? 'published' : 'draft';
     $onDemand = isset($metadata['on_demand']) ? (!empty($metadata['on_demand']) ? 1 : 0) : 1;
     $broadcast = isset($metadata['broadcast']) ? (!empty($metadata['broadcast']) ? 1 : 0) : 1;
+    $automaticRotation = isset($metadata['automatic_rotation']) ? (!empty($metadata['automatic_rotation']) ? 1 : 0) : 1;
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : 0;
     if ($duration < 1) {
@@ -1164,7 +1166,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
@@ -1177,6 +1179,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
         . "'" . DB_escapeString($status) . "',"
         . $onDemand . ","
         . $broadcast . ","
+        . $automaticRotation . ","
         . $allowDownload . ",0,"
         . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ","
         . "'" . DB_escapeString($now) . "',"
@@ -1214,35 +1217,37 @@ function RADIO_isDatabaseCurrent()
         && version_compare($installedVersion, RADIO_PLUGIN_VERSION, '>=');
 }
 
-function RADIO_mediaAvailabilitySchemaReady()
+function RADIO_mediaAvailabilityFieldReady($field)
 {
-    static $ready = null;
+    static $ready = array();
 
-    if ($ready !== null) {
-        return $ready;
+    if (!in_array($field, array('on_demand', 'broadcast', 'automatic_rotation'), true)) {
+        return false;
+    }
+    if (array_key_exists($field, $ready)) {
+        return $ready[$field];
     }
 
     global $_TABLES;
 
-    $ready = true;
-    foreach (array('on_demand', 'broadcast') as $column) {
-        $result = DB_query(
-            "SHOW COLUMNS FROM {$_TABLES['radio_media']} LIKE '"
-            . DB_escapeString($column) . "'"
-        );
-        if (DB_numRows($result) < 1) {
-            $ready = false;
-            break;
-        }
-    }
+    $result = DB_query(
+        "SHOW COLUMNS FROM {$_TABLES['radio_media']} LIKE '"
+        . DB_escapeString($field) . "'"
+    );
+    $ready[$field] = DB_numRows($result) > 0;
+    return $ready[$field];
+}
 
-    return $ready;
+function RADIO_mediaAvailabilitySchemaReady()
+{
+    return RADIO_mediaAvailabilityFieldReady('on_demand')
+        && RADIO_mediaAvailabilityFieldReady('broadcast')
+        && RADIO_mediaAvailabilityFieldReady('automatic_rotation');
 }
 
 function RADIO_mediaAvailabilitySql($field, $alias)
 {
-    if (!in_array($field, array('on_demand', 'broadcast'), true)
-        || !RADIO_mediaAvailabilitySchemaReady()) {
+    if (!RADIO_mediaAvailabilityFieldReady($field)) {
         return '';
     }
 
@@ -1268,6 +1273,12 @@ function RADIO_isBroadcastAvailable($row)
         && isset($row['status'])
         && $row['status'] === 'published'
         && (!array_key_exists('broadcast', $row) || !empty($row['broadcast']));
+}
+
+function RADIO_isAutomaticRotationAvailable($row)
+{
+    return RADIO_isBroadcastAvailable($row)
+        && (!array_key_exists('automatic_rotation', $row) || !empty($row['automatic_rotation']));
 }
 
 function RADIO_cleanImportedTitle($value)
@@ -1384,7 +1395,7 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
 
     $orderBy = $sortColumns[$sort] . ' ' . $direction;
     if ($sort === 'availability') {
-        $orderBy .= ', broadcast ' . $direction;
+        $orderBy .= ', broadcast ' . $direction . ', automatic_rotation ' . $direction;
     }
     $orderBy .= ', media_id DESC';
 
@@ -1431,6 +1442,9 @@ function RADIO_updateMedia($id, $metadata)
     $broadcast = isset($metadata['broadcast'])
         ? (!empty($metadata['broadcast']) ? 1 : 0)
         : (!empty($row['broadcast']) ? 1 : 0);
+    $automaticRotation = isset($metadata['automatic_rotation'])
+        ? (!empty($metadata['automatic_rotation']) ? 1 : 0)
+        : (!array_key_exists('automatic_rotation', $row) || !empty($row['automatic_rotation']) ? 1 : 0);
     $allowDownload = !empty($metadata['allow_download']) ? 1 : 0;
     $duration = isset($metadata['duration']) ? max(0, (int) $metadata['duration']) : (int) $row['duration'];
     if ($duration < 1 && RADIO_sourceKind($row) === 'local' && !empty($row['storage_name'])) {
@@ -1451,6 +1465,7 @@ function RADIO_updateMedia($id, $metadata)
         . "status='" . DB_escapeString($status) . "',"
         . "on_demand=" . $onDemand . ","
         . "broadcast=" . $broadcast . ","
+        . "automatic_rotation=" . $automaticRotation . ","
         . "allow_download=" . $allowDownload . ","
         . "duration=" . $duration . ","
         . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
@@ -2591,6 +2606,7 @@ function RADIO_getRotationMediaByTypes($types)
         "SELECT * FROM {$_TABLES['radio_media']} "
         . "WHERE status='published'"
         . RADIO_mediaAvailabilitySql('broadcast', '')
+        . RADIO_mediaAvailabilitySql('automatic_rotation', '')
         . " AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
         . RADIO_permissionSql('radio_media', 0) . " "
         . "ORDER BY media_id ASC"
@@ -3004,6 +3020,9 @@ function RADIO_rotationEligibilityDiagnostics()
         }
         if (array_key_exists('broadcast', $row) && empty($row['broadcast'])) {
             $reasons[] = 'broadcast';
+        }
+        if (array_key_exists('automatic_rotation', $row) && empty($row['automatic_rotation'])) {
+            $reasons[] = 'automatic_rotation';
         }
         if ((int) $row['duration'] < 1) {
             $reasons[] = 'duration';
@@ -3984,6 +4003,7 @@ function plugin_upgrade_radio()
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'source_license',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'on_demand',"tinyint(1) unsigned NOT NULL default '1'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'broadcast',"tinyint(1) unsigned NOT NULL default '1'") && $ok;
+    $ok = RADIO_ensureSchemaColumn($_TABLES['radio_media'],'automatic_rotation',"tinyint(1) unsigned NOT NULL default '1'") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'host',"varchar(255) NOT NULL default ''") && $ok;
     $ok = RADIO_ensureSchemaColumn($_TABLES['radio_programs'],'cover_name',"varchar(255) NOT NULL default ''") && $ok;
     foreach (array('radio_media','radio_programs') as $aclTable) {
