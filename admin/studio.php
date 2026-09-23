@@ -83,14 +83,6 @@ $content .= '<h1>' . htmlspecialchars($LANG_RADIO['studio_title'], ENT_QUOTES, '
 $content .= '<p class="radio-admin__muted">'
     . htmlspecialchars($LANG_RADIO['studio_page_help'], ENT_QUOTES, 'UTF-8') . '</p>';
 
-if (!empty($program['host'])) {
-    $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['host'], ENT_QUOTES, 'UTF-8') . ':</strong> '
-        . htmlspecialchars($program['host'], ENT_QUOTES, 'UTF-8') . '</p>';
-}
-if (!empty($program['description'])) {
-    $content .= '<p>' . nl2br(htmlspecialchars($program['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
-}
-
 $playlistJson = json_encode($playlist);
 $first = count($playlist) > 0 ? $playlist[0] : false;
 
@@ -150,9 +142,9 @@ if ($canEdit) {
         . ' data-buffer-ready-label="' . htmlspecialchars($LANG_RADIO['studio_buffer_ready'], ENT_QUOTES, 'UTF-8') . '"'
         . ' data-buffer-reserve-label="' . htmlspecialchars($LANG_RADIO['studio_buffer_reserve'], ENT_QUOTES, 'UTF-8') . '"'
         . ' data-queue-empty-label="' . htmlspecialchars($LANG_RADIO['studio_queue_empty'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-queue-not-ready-label="' . htmlspecialchars($LANG_RADIO['studio_queue_not_ready'], ENT_QUOTES, 'UTF-8') . '"
-        . ' data-move-up-label="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '"
-        . ' data-move-down-label="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '"
+        . ' data-queue-not-ready-label="' . htmlspecialchars($LANG_RADIO['studio_queue_not_ready'], ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-move-up-label="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-move-down-label="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '"'
         . ' data-remove-label="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '">'
         . '<div class="radio-admin__panel-heading"><h2>'
         . htmlspecialchars($LANG_RADIO['studio_title'], ENT_QUOTES, 'UTF-8') . '</h2>'
