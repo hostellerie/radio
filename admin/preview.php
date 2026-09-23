@@ -36,13 +36,13 @@ $chapters = '';
 $offset = 0;
 
 foreach ($items as $item) {
-    if (!RADIO_isBroadcastAvailable($item)
-        || !RADIO_hasReadAccess($item)
-        || (int) $item['duration'] < 1) {
+    if (!RADIO_hasReadAccess($item)) {
         continue;
     }
 
-    $duration = (int) $item['duration'];
+    $duration = max(0, (int) $item['duration']);
+    $playable = RADIO_isBroadcastAvailable($item) && $duration > 0;
+
     $playlist[] = array(
         'item_id' => (int) $item['item_id'],
         'media_id' => (int) $item['media_id'],
@@ -50,7 +50,8 @@ foreach ($items as $item) {
         'author' => isset($item['author']) ? $item['author'] : '',
         'duration' => $duration,
         'offset' => $offset,
-        'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false)
+        'playable' => $playable,
+        'stream_url' => $playable ? RADIO_mediaUrl((int) $item['media_id'], false) : ''
     );
 
     $chapterLabel = trim(
@@ -68,7 +69,9 @@ foreach ($items as $item) {
         . htmlspecialchars($chapterLabel, ENT_QUOTES, 'UTF-8')
         . '</span></button></li>';
 
-    $offset += $duration;
+    if ($playable) {
+        $offset += $duration;
+    }
 }
 
 $content = '<div class="radio-replay radio-program-preview">';
