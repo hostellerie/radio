@@ -148,6 +148,18 @@ radio_contract_require(
         && strpos($radioBlockCss, 'min-width: 0') !== false,
     'Radio block must stay responsive with long unbroken titles in narrow theme sidebars.'
 );
+$playerPhp = file_get_contents($root . '/public_html/player.php');
+$playerJs = file_get_contents($root . '/public_html/radio-player.js');
+$publicIndex = file_get_contents($root . '/public_html/index.php');
+radio_contract_require(
+    strpos($playerPhp, 'data-radio-player') !== false
+        && strpos($playerJs, "body.set('source', 'persistent')") !== false
+        && strpos($playerJs, 'data-autoplay') !== false
+        && strpos($publicIndex, 'data-radio-persistent-player') !== false
+        && strpos($functions, "'persistent'") !== false
+        && strpos($functions, '/radio/player.php?autoplay=1') !== false,
+    'Radio must expose a persistent detached player that follows live state across site navigation.'
+);
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
         && strpos($radioJs, 'intentVersion') === false,
