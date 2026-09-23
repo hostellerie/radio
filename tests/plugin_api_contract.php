@@ -278,11 +278,14 @@ radio_contract_require(
 $studioEndpoint = file_get_contents($root . '/admin/studio.php');
 $studioJs = file_get_contents($root . '/admin/radio-studio.js');
 radio_contract_require(
-    strpos($studioEndpoint, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
-        && strpos($studioEndpoint, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
+    strpos($programPreview, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
+        && strpos($programPreview, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
+        && strpos($programPreview, 'SEC_checkToken()') !== false
+        && strpos($studioJs, "body.set('studio_action', 'add')") !== false
+        && strpos($studioJs, 'mutationEndpoint || endpoint') !== false
         && strpos($studioJs, 'renderQueue(data.items || [])') !== false
         && strpos($programPreview, 'data-radio-studio-queue') !== false,
-    'Radio Studio + and Play next actions must persist in radio_program_items and immediately refresh the visible saved programme queue.'
+    'Radio Studio + and Play next actions must persist through the preview CSRF context and immediately refresh the saved programme queue.'
 );
 
 radio_contract_require(
@@ -290,9 +293,8 @@ radio_contract_require(
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
         && strpos($studioEndpoint, "if (\$action === 'state')") !== false
         && strpos($studioEndpoint, "if (\$action === 'search')") !== false
-        && strpos($studioEndpoint, "if (\$action === 'add')") !== false
-        && strpos($studioEndpoint, "\$position === 'next' ? \$currentItemId : 0") !== false
-        && strpos($studioEndpoint, 'SEC_checkToken()') !== false
+        && strpos($studioEndpoint, "if (\$action === 'add')") === false
+        && strpos($studioEndpoint, 'SEC_checkToken()') === false
         && strpos($studioJs, "body.set('current_item_id'") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'next')") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'end')") !== false
@@ -301,7 +303,7 @@ radio_contract_require(
         && strpos($programPreview, 'data-radio-replay-track="0"') !== false
         && strpos($publicPlayer, "root.addEventListener('radio:playlist-update'") !== false
         && strpos($publicPlayer, 'data-radio-current-item-id') !== false,
-    'Radio Studio must update the upcoming programme queue without reloading the current audio and must not count admin preview listening as public audience.'
+    'Radio Studio must keep state/search read-only while preview.php owns CSRF-protected queue mutations without reloading the current audio.'
 );
 
 radio_contract_require(
