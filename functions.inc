@@ -2688,7 +2688,7 @@ function RADIO_buildWeightedRegularSequence($date)
     return $sequence;
 }
 
-function RADIO_buildRotationSequence($date)
+function RADIO_buildFreshRotationSequence($date)
 {
     global $_RADIO_CONF;
 
@@ -2737,6 +2737,128 @@ function RADIO_buildRotationSequence($date)
         }
     }
 
+    return $sequence;
+}
+
+
+function RADIO_rotationSnapshotSignature()
+{
+    global $_RADIO_CONF;
+
+    $keys = array(
+        'fallback_type_weights',
+        'fallback_jingle_interval',
+        'fallback_announcement_interval',
+        'transition_mode',
+        'crossfade_seconds'
+    );
+    $parts = array();
+    foreach ($keys as $key) {
+        $parts[] = $key . '=' . (isset($_RADIO_CONF[$key]) ? (string) $_RADIO_CONF[$key] : '');
+    }
+    return sha1(implode('|', $parts));
+}
+
+function RADIO_rotationSnapshotPath($date)
+{
+    $base = RADIO_storageDir();
+    if ($base === '' || !RADIO_ensureStorage()) {
+        return '';
+    }
+    $safeDate = preg_replace('/[^0-9-]/', '', (string) $date);
+    return $base . 'rotation-' . $safeDate . '.json';
+}
+
+function RADIO_loadRotationSnapshot($date)
+{
+    global $_TABLES;
+
+    $path = RADIO_rotationSnapshotPath($date);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return false;
+    }
+
+    $raw = @file_get_contents($path);
+    $data = is_string($raw) ? json_decode($raw, true) : null;
+    if (!is_array($data)
+        || !isset($data['signature']) || $data['signature'] !== RADIO_rotationSnapshotSignature()
+        || empty($data['media_ids']) || !is_array($data['media_ids'])) {
+        return false;
+    }
+
+    $ids = array();
+    foreach ($data['media_ids'] as $id) {
+        $id = (int) $id;
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+    if (count($ids) === 0) {
+        return array();
+    }
+
+    $result = DB_query(
+        "SELECT * FROM {$_TABLES['radio_media']} WHERE media_id IN ("
+        . implode(',', $ids) . ")"
+    );
+    $rows = array();
+    while ($row = DB_fetchArray($result)) {
+        $rows[(int) $row['media_id']] = $row;
+    }
+
+    $sequence = array();
+    foreach ($ids as $id) {
+        if (!isset($rows[$id])) {
+            continue;
+        }
+        $row = $rows[$id];
+        if ($row['status'] !== 'published'
+            || (array_key_exists('broadcast', $row) && empty($row['broadcast']))
+            || (int) $row['duration'] < 1
+            || !RADIO_hasReadAccess($row)) {
+            continue;
+        }
+        $sequence[] = $row;
+    }
+
+    return $sequence;
+}
+
+function RADIO_saveRotationSnapshot($date, $sequence)
+{
+    $path = RADIO_rotationSnapshotPath($date);
+    if ($path === '') {
+        return false;
+    }
+
+    $ids = array();
+    foreach ($sequence as $item) {
+        if (isset($item['media_id']) && (int) $item['media_id'] > 0) {
+            $ids[] = (int) $item['media_id'];
+        }
+    }
+
+    $payload = json_encode(array(
+        'date' => (string) $date,
+        'signature' => RADIO_rotationSnapshotSignature(),
+        'media_ids' => $ids
+    ));
+    if (!is_string($payload)) {
+        return false;
+    }
+
+    return @file_put_contents($path, $payload, LOCK_EX) !== false;
+}
+
+function RADIO_buildRotationSequence($date)
+{
+    $snapshot = RADIO_loadRotationSnapshot($date);
+    if ($snapshot !== false) {
+        return $snapshot;
+    }
+
+    $sequence = RADIO_buildFreshRotationSequence($date);
+    RADIO_saveRotationSnapshot($date, $sequence);
     return $sequence;
 }
 
