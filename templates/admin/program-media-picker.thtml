@@ -1,0 +1,36 @@
+<section class="radio-program-picker">
+    <div class="radio-admin__panel-heading">
+        <h2>{picker_title}</h2>
+        <span class="radio-admin__muted">{result_count}</span>
+    </div>
+    <p class="radio-admin__muted">{picker_help}</p>
+
+    <form class="radio-program-picker__filters" method="get" action="">
+        <input type="hidden" name="program_id" value="{program_id}">
+        <div class="radio-program-picker__filter-grid">
+            <label>{search_label}
+                <input type="search" name="picker_q" value="{search_value}" placeholder="{search_placeholder}">
+            </label>
+            <label>{type_label}
+                <select name="picker_type">{type_options}</select>
+            </label>
+            <label>{category_label}
+                <select name="picker_category">{category_options}</select>
+            </label>
+            <label>{collection_label}
+                <select name="picker_collection">{collection_options}</select>
+            </label>
+            <label>{tag_label}
+                <select name="picker_tag">{tag_options}</select>
+            </label>
+        </div>
+        <div class="radio-admin__toolbar">
+            <button class="radio-admin__button radio-admin__button--primary" type="submit">{search_button}</button>
+            <a class="radio-admin__button" href="{reset_url}">{reset_button}</a>
+        </div>
+    </form>
+
+    <div class="radio-program-picker__results">
+        {media_results}
+    </div>
+</section>
