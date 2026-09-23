@@ -2801,11 +2801,64 @@ function RADIO_rotationDiagnostics($date)
     );
 }
 
+function RADIO_transitionMode()
+{
+    global $_RADIO_CONF;
+
+    $mode = isset($_RADIO_CONF['transition_mode'])
+        ? strtolower(trim((string) $_RADIO_CONF['transition_mode']))
+        : 'gapless';
+
+    return in_array($mode, array('hard', 'gapless', 'crossfade'), true)
+        ? $mode
+        : 'gapless';
+}
+
+function RADIO_crossfadeSeconds()
+{
+    global $_RADIO_CONF;
+
+    return isset($_RADIO_CONF['crossfade_seconds'])
+        ? max(0, min(10, (int) $_RADIO_CONF['crossfade_seconds']))
+        : 2;
+}
+
+function RADIO_transitionOverlap($current, $next)
+{
+    if (RADIO_transitionMode() !== 'crossfade'
+        || !is_array($current) || !is_array($next)
+        || !isset($current['media_type']) || !isset($next['media_type'])
+        || $current['media_type'] !== 'music' || $next['media_type'] !== 'music') {
+        return 0;
+    }
+
+    $seconds = RADIO_crossfadeSeconds();
+    if ($seconds < 1) {
+        return 0;
+    }
+
+    $currentDuration = isset($current['duration']) ? (int) $current['duration'] : 0;
+    $nextDuration = isset($next['duration']) ? (int) $next['duration'] : 0;
+    if ($currentDuration < 2 || $nextDuration < 2) {
+        return 0;
+    }
+
+    return min($seconds, $currentDuration - 1, $nextDuration - 1);
+}
+
 function RADIO_rotationDuration($sequence)
 {
     $duration = 0;
-    foreach ($sequence as $item) {
-        $duration += max(0, (int) $item['duration']);
+    $count = count($sequence);
+    if ($count === 0) {
+        return 0;
+    }
+
+    for ($i = 0; $i < $count; $i++) {
+        $item = $sequence[$i];
+        $next = $sequence[($i + 1) % $count];
+        $slot = max(0, (int) $item['duration']) - RADIO_transitionOverlap($item, $next);
+        $duration += max(1, $slot);
     }
     return $duration;
 }
@@ -2821,8 +2874,9 @@ function RADIO_getRotationState($timestamp)
     $timestamp = $timestamp ? (int) $timestamp : time();
     $date = date('Y-m-d', $timestamp);
     $sequence = RADIO_buildRotationSequence($date);
+    $count = count($sequence);
     $cycleDuration = RADIO_rotationDuration($sequence);
-    if ($cycleDuration < 1) {
+    if ($count === 0 || $cycleDuration < 1) {
         return false;
     }
 
@@ -2831,12 +2885,18 @@ function RADIO_getRotationState($timestamp)
     $cycleOffset = $elapsedDay % $cycleDuration;
     $cursor = 0;
 
-    foreach ($sequence as $item) {
+    for ($i = 0; $i < $count; $i++) {
+        $item = $sequence[$i];
+        $next = $sequence[($i + 1) % $count];
         $duration = (int) $item['duration'];
         if ($duration < 1) {
             continue;
         }
-        if ($cycleOffset < ($cursor + $duration)) {
+
+        $overlap = RADIO_transitionOverlap($item, $next);
+        $slotDuration = max(1, $duration - $overlap);
+
+        if ($cycleOffset < ($cursor + $slotDuration)) {
             return array(
                 'source' => 'rotation',
                 'date' => $date,
@@ -2848,12 +2908,25 @@ function RADIO_getRotationState($timestamp)
                 'media_type' => $item['media_type'],
                 'source_kind' => RADIO_sourceKind($item),
                 'duration' => $duration,
+                'slot_duration' => $slotDuration,
                 'offset' => $cycleOffset - $cursor,
+                'transition_mode' => RADIO_transitionMode(),
+                'transition_seconds' => $overlap,
                 'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
-                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id']))
+                'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id'])),
+                'next_media' => array(
+                    'media_id' => (int) $next['media_id'],
+                    'external_id' => RADIO_externalId('media', (int) $next['media_id']),
+                    'title' => $next['title'],
+                    'media_type' => $next['media_type'],
+                    'source_kind' => RADIO_sourceKind($next),
+                    'duration' => (int) $next['duration'],
+                    'stream_url' => RADIO_mediaUrl((int) $next['media_id'], false),
+                    'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $next['media_id']))
+                )
             );
         }
-        $cursor += $duration;
+        $cursor += $slotDuration;
     }
 
     return false;
