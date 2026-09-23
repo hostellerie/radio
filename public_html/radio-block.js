@@ -469,6 +469,10 @@
                 ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                 : 0;
 
+            if (transitionManager.isMixing() && data.source === 'rotation' && nextMediaId !== mediaId) {
+                return;
+            }
+
             if (expectedProgramId > 0 && nextProgramId !== expectedProgramId
                 && transitionRetryCount < 20) {
                 transitionRetryCount++;
