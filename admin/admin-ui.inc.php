@@ -259,8 +259,11 @@ function RADIO_adminAvailabilityHtml($row)
 function RADIO_adminFilterSelectOptions($items, $selected, $allLabel)
 {
     $html = '<option value="">' . htmlspecialchars($allLabel, ENT_QUOTES, 'UTF-8') . '</option>';
+    $keys = array_keys($items);
+    $isList = count($keys) === 0 || $keys === range(0, count($keys) - 1);
+
     foreach ($items as $value => $label) {
-        if (is_int($value)) {
+        if ($isList) {
             $value = $label;
         }
         $html .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"'
