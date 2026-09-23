@@ -141,6 +141,7 @@
         var emptyLabel = root.getAttribute('data-empty-label') || 'Nothing is on air right now.';
         var listenLabel = root.getAttribute('data-listen-label') || 'Listen';
         var pauseLabel = root.getAttribute('data-pause-label') || 'Pause';
+        var autoplayRequested = root.getAttribute('data-autoplay') === '1';
         var audio = q('[data-radio-player-audio]', root);
         var button = q('[data-radio-player-play]', root);
         var title = q('[data-radio-player-title]', root);
@@ -352,7 +353,8 @@
         }, 15000);
 
         wave.draw();
-        sync(false, false, 0);
+        wantedPlaying = autoplayRequested;
+        sync(autoplayRequested, false, 0);
         updateButton();
     }
 
