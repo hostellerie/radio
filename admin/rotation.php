@@ -12,6 +12,19 @@ if (!SEC_hasRights('radio.admin')) {
 
 global $LANG_RADIO, $_CONF, $_RADIO_CONF;
 
+$message = '';
+if (isset($_POST['rebuild_rotation'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['automatic_rotation']);
+    } else {
+        $rebuilt = RADIO_rebuildRotationNow(time());
+        $message = COM_showMessageText(
+            $rebuilt !== false ? $LANG_RADIO['rotation_rebuild_success'] : $LANG_RADIO['rotation_rebuild_failed'],
+            $LANG_RADIO['automatic_rotation']
+        );
+    }
+}
+
 $sequence = RADIO_buildRotationSequence(date('Y-m-d'));
 $totalDuration = RADIO_rotationDuration($sequence);
 $diagnostics = RADIO_rotationDiagnostics(date('Y-m-d'));
@@ -45,7 +58,14 @@ $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_enabled'], EN
     . '<strong>' . htmlspecialchars($LANG_RADIO['rotation_repeat_target'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . (int) $diagnostics['target_repeat_minutes'] . ' ' . htmlspecialchars($LANG_RADIO['admin_minutes_short'], ENT_QUOTES, 'UTF-8') . ' — '
     . htmlspecialchars($diagnostics['repeat_target_met'] ? $LANG_RADIO['rotation_repeat_ok'] : $LANG_RADIO['rotation_repeat_short'], ENT_QUOTES, 'UTF-8')
-    . '</p></section>';
+    . '</p>'
+    . '<form method="post" action="" class="radio-admin__config-form">'
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars(SEC_createToken(), ENT_QUOTES, 'UTF-8') . '">'
+    . '<button class="radio-admin__button radio-admin__button--secondary" type="submit" name="rebuild_rotation" value="1"'
+    . ' onclick="return confirm(' . htmlspecialchars(json_encode($LANG_RADIO['rotation_rebuild_confirm']), ENT_QUOTES, 'UTF-8') . ');">'
+    . htmlspecialchars($LANG_RADIO['rotation_rebuild_button'], ENT_QUOTES, 'UTF-8') . '</button>'
+    . '<span class="radio-admin__muted"> ' . htmlspecialchars($LANG_RADIO['rotation_rebuild_help'], ENT_QUOTES, 'UTF-8') . '</span>'
+    . '</form></section>';
 
 if ($current !== false) {
     $content .= '<p><strong>' . htmlspecialchars($LANG_RADIO['rotation_current'], ENT_QUOTES, 'UTF-8') . ':</strong> '
@@ -113,7 +133,7 @@ $content = RADIO_adminRenderPage(
     $LANG_RADIO['admin_rotation_help_title'],
     $LANG_RADIO['admin_rotation_help_text'],
     $content,
-    ''
+    $message
 );
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['automatic_rotation'],
