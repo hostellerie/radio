@@ -8,6 +8,7 @@
     }
 
     var endpoint = studio.getAttribute('data-radio-studio-endpoint') || '';
+    var mutationEndpoint = studio.getAttribute('data-radio-studio-mutation-endpoint') || '';
     var programId = parseInt(studio.getAttribute('data-radio-program-id') || '0', 10) || 0;
     var tokenName = studio.getAttribute('data-radio-csrf-name') || '';
     var tokenValue = studio.getAttribute('data-radio-csrf-token') || '';
@@ -301,7 +302,7 @@
     function addMedia(mediaId, position) {
         var body = new URLSearchParams();
         body.set('program_id', programId);
-        body.set('action', 'add');
+        body.set('studio_action', 'add');
         body.set('media_id', mediaId);
         body.set('position', position);
         body.set('current_item_id', player.getAttribute('data-radio-current-item-id') || '0');
@@ -311,7 +312,7 @@
 
         setStatus(studio.getAttribute('data-adding-label') || 'Adding…');
 
-        fetch(endpoint, {
+        fetch(mutationEndpoint || endpoint, {
             method: 'POST',
             body: body,
             credentials: 'same-origin',
