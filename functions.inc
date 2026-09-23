@@ -1272,12 +1272,19 @@ function RADIO_isBroadcastAvailable($row)
 
 function RADIO_cleanImportedTitle($value)
 {
-    $title = rawurldecode((string) $value);
-    $title = pathinfo($title, PATHINFO_FILENAME);
+    $decoded = rawurldecode((string) $value);
+    $title = pathinfo($decoded, PATHINFO_FILENAME);
+
+    // YouTube-style downloads commonly append an 11-character video ID.
+    if (preg_match('/(?:_|-)([A-Za-z0-9_-]{11})$/', $title)) {
+        $title = preg_replace('/(?:_|-)[A-Za-z0-9_-]{11}$/', '', $title);
+    }
+
+    // Treat filename separators as spaces after platform IDs have been removed.
     $title = str_replace(array('_', "	"), array(' ', ' '), $title);
     $title = preg_replace('/\s+/', ' ', $title);
 
-    // Remove common video-platform noise only when it appears as a trailing label.
+    // Remove common platform/video labels only when they are trailing metadata.
     $noise = array(
         'official video',
         'official music video',
@@ -1297,11 +1304,6 @@ function RADIO_cleanImportedTitle($value)
         '',
         $title
     );
-
-    // YouTube-style filenames often end with _XXXXXXXXXXX or -XXXXXXXXXXX.
-    if (preg_match('/(?:_|-)([A-Za-z0-9_-]{11})$/', rawurldecode((string) $value))) {
-        $title = preg_replace('/\s*[-_]?[A-Za-z0-9_-]{11}\s*$/', '', $title);
-    }
 
     $title = trim(preg_replace('/\s+/', ' ', $title));
     return $title;
