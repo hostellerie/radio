@@ -37,7 +37,8 @@ function RADIO_isEnabled()
 
 function RADIO_publicAccessAllowed()
 {
-    return RADIO_isEnabled() || SEC_hasRights('radio.admin');
+    return RADIO_isEnabled()
+        || SEC_hasRights('radio.admin,radio.upload,radio.schedule', 'OR');
 }
 
 function RADIO_requirePublicAccess($redirectToSite = false)
