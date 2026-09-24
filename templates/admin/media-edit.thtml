@@ -44,6 +44,8 @@
 
     {source_details}
 
+    {embedded_metadata_tools}
+
     <p>{file_label}: <code>{original_name}</code> · {mime_type} · {file_size}</p>
 
     <p><label>{duration_label}
