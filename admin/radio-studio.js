@@ -35,18 +35,37 @@
             return;
         }
         detail = detail || {};
-        var buffered = Math.max(0, Math.round(parseFloat(detail.next_buffered || 0) || 0));
-        var loadingLabel = studio.getAttribute('data-buffer-loading-label') || 'Buffering';
-        var readyLabel = studio.getAttribute('data-buffer-ready-label') || 'Ready';
-        var reserveLabel = studio.getAttribute('data-buffer-reserve-label') || 'Reserve ready';
 
-        if (detail.reserve_ready) {
-            bufferStatus.textContent = reserveLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
-        } else if (detail.next_ready || buffered >= 3) {
-            bufferStatus.textContent = readyLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
-        } else {
-            bufferStatus.textContent = loadingLabel + (buffered > 0 ? ' · ' + buffered + ' s' : '');
+        var nextBuffered = Math.max(0, Math.round(parseFloat(detail.next_buffered || 0) || 0));
+        var reserveBuffered = Math.max(0, Math.round(parseFloat(detail.reserve_buffered || 0) || 0));
+        var nextDuration = Math.max(0, parseInt(detail.next_duration || 0, 10) || 0);
+        var reserveDuration = Math.max(0, parseInt(detail.reserve_duration || 0, 10) || 0);
+        var nextLabel = studio.getAttribute('data-buffer-next-label') || 'Next';
+        var reserveLabel = studio.getAttribute('data-buffer-reserve-short-label') || 'Reserve';
+        var loadingLabel = studio.getAttribute('data-buffer-loading-label') || 'Buffering';
+
+        if (!detail.next_title && !detail.reserve_title) {
+            bufferStatus.textContent = loadingLabel;
+            return;
         }
+
+        var parts = [];
+        if (detail.next_title) {
+            var nextPart = nextLabel + ': '
+                + (detail.next_type ? detail.next_type + ' · ' : '')
+                + detail.next_title + ' · '
+                + nextBuffered + (nextDuration > 0 ? '/' + nextDuration : '') + ' s';
+            parts.push(nextPart);
+        }
+        if (detail.reserve_title) {
+            var reservePart = reserveLabel + ': '
+                + (detail.reserve_type ? detail.reserve_type + ' · ' : '')
+                + detail.reserve_title + ' · '
+                + reserveBuffered + (reserveDuration > 0 ? '/' + reserveDuration : '') + ' s';
+            parts.push(reservePart);
+        }
+
+        bufferStatus.textContent = parts.join(' | ');
     }
 
     player.addEventListener('radio:buffer-status', function (event) {
