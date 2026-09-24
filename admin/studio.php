@@ -256,7 +256,27 @@ if ($canEdit) {
         . ' data-radio-studio-broadcast>'
         . radio_studio_h($LANG_RADIO['studio_broadcast_start']) . '</button>'
         . '<strong class="radio-studio__broadcast-state" data-radio-studio-broadcast-state></strong>'
-        . '</div>';
+        . '</div>'
+        . '<section class="radio-studio__djfx" data-radio-studio-djfx>'
+        . '<strong class="radio-studio__djfx-title">' . radio_studio_h($LANG_RADIO['studio_djfx_title']) . '</strong>'
+        . '<div class="radio-studio__djfx-controls">'
+        . '<label><span>' . radio_studio_h($LANG_RADIO['studio_djfx_low']) . '</span>'
+        . '<input type="range" min="-12" max="12" value="0" step="1" data-radio-djfx="low"></label>'
+        . '<label><span>' . radio_studio_h($LANG_RADIO['studio_djfx_mid']) . '</span>'
+        . '<input type="range" min="-12" max="12" value="0" step="1" data-radio-djfx="mid"></label>'
+        . '<label><span>' . radio_studio_h($LANG_RADIO['studio_djfx_high']) . '</span>'
+        . '<input type="range" min="-12" max="12" value="0" step="1" data-radio-djfx="high"></label>'
+        . '<label><span>' . radio_studio_h($LANG_RADIO['studio_djfx_filter']) . '</span>'
+        . '<input type="range" min="-100" max="100" value="0" step="1" data-radio-djfx="filter"></label>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-button="echo" aria-pressed="false">'
+        . radio_studio_h($LANG_RADIO['studio_djfx_echo']) . '</button>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-button="horn">'
+        . radio_studio_h($LANG_RADIO['studio_djfx_horn']) . '</button>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-button="reset">'
+        . radio_studio_h($LANG_RADIO['studio_djfx_reset']) . '</button>'
+        . '</div>'
+        . '<small class="radio-admin__muted">' . radio_studio_h($LANG_RADIO['studio_djfx_help']) . '</small>'
+        . '</section>';
 }
 
 $content .= '<section class="radio-studio__queue-panel"><h2>'
