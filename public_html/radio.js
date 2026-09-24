@@ -894,6 +894,7 @@
                     var wet = null;
                     var master = null;
                     var ready = false;
+                    var samples = {};
 
                     function setup() {
                         if (ready) {
@@ -1000,43 +1001,73 @@
                         }
                     }
 
-                    function horn() {
-                        if (!setup()) {
+                    function ensureSample(pad) {
+                        pad = parseInt(pad || 0, 10) || 0;
+                        if (!pad) {
+                            return null;
+                        }
+
+                        if (!samples[pad]) {
+                            var sampleAudio = new Audio();
+                            sampleAudio.preload = 'auto';
+                            samples[pad] = {
+                                audio: sampleAudio,
+                                source: null,
+                                url: ''
+                            };
+                        }
+                        return samples[pad];
+                    }
+
+                    function assignSample(value) {
+                        value = value || {};
+                        var sample = ensureSample(value.pad);
+                        if (!sample) {
                             return;
                         }
 
-                        var nowTime = context.currentTime;
-                        var hornFilter = context.createBiquadFilter();
-                        var hornGain = context.createGain();
-                        var osc1 = context.createOscillator();
-                        var osc2 = context.createOscillator();
+                        var url = value.url || '';
+                        if (sample.url === url) {
+                            return;
+                        }
 
-                        hornFilter.type = 'lowpass';
-                        hornFilter.frequency.value = 700;
-                        hornFilter.Q.value = 1.5;
+                        sample.audio.pause();
+                        sample.url = url;
+                        if (!url) {
+                            sample.audio.removeAttribute('src');
+                            sample.audio.load();
+                            return;
+                        }
 
-                        hornGain.gain.setValueAtTime(0.0001, nowTime);
-                        hornGain.gain.exponentialRampToValueAtTime(0.28, nowTime + 0.04);
-                        hornGain.gain.exponentialRampToValueAtTime(0.18, nowTime + 0.7);
-                        hornGain.gain.exponentialRampToValueAtTime(0.0001, nowTime + 1.35);
+                        sample.audio.src = url;
+                        sample.audio.preload = 'auto';
+                        sample.audio.load();
+                    }
 
-                        osc1.type = 'sawtooth';
-                        osc1.frequency.setValueAtTime(112, nowTime);
-                        osc1.frequency.exponentialRampToValueAtTime(104, nowTime + 1.2);
+                    function playSample(value) {
+                        value = value || {};
+                        var sample = ensureSample(value.pad);
+                        if (!sample || !sample.url || !setup()) {
+                            return;
+                        }
 
-                        osc2.type = 'sine';
-                        osc2.frequency.setValueAtTime(168, nowTime);
-                        osc2.frequency.exponentialRampToValueAtTime(156, nowTime + 1.2);
+                        if (!sample.source) {
+                            try {
+                                sample.source = context.createMediaElementSource(sample.audio);
+                                sample.source.connect(master);
+                            } catch (error) {
+                                return;
+                            }
+                        }
 
-                        osc1.connect(hornFilter);
-                        osc2.connect(hornFilter);
-                        hornFilter.connect(hornGain);
-                        hornGain.connect(master);
+                        try {
+                            sample.audio.currentTime = 0;
+                        } catch (error) {}
 
-                        osc1.start(nowTime);
-                        osc2.start(nowTime);
-                        osc1.stop(nowTime + 1.4);
-                        osc2.stop(nowTime + 1.4);
+                        var promise = sample.audio.play();
+                        if (promise && typeof promise.catch === 'function') {
+                            promise.catch(function () {});
+                        }
                     }
 
                     function reset() {
@@ -1052,8 +1083,12 @@
 
                     return {
                         apply: function (control, value) {
-                            if (control === 'horn') {
-                                horn();
+                            if (control === 'sample-assign') {
+                                assignSample(value);
+                                return;
+                            }
+                            if (control === 'sample-play') {
+                                playSample(value);
                                 return;
                             }
                             if (!setup()) {
