@@ -20,6 +20,7 @@
     var broadcastButton = studio.querySelector('[data-radio-studio-broadcast]');
     var broadcastState = studio.querySelector('[data-radio-studio-broadcast-state]');
     var broadcastActive = false;
+    var broadcastCurrentItemId = 0;
     var version = '';
     var pollTimer = 0;
 
@@ -72,6 +73,7 @@
         }
 
         broadcastActive = !!data.broadcast_active;
+        broadcastCurrentItemId = parseInt(data.broadcast_current_item_id || 0, 10) || 0;
 
         if (broadcastButton) {
             broadcastButton.textContent = broadcastActive
@@ -483,7 +485,12 @@
         body.set('studio_action', 'add');
         body.set('media_id', mediaId);
         body.set('position', position);
-        body.set('current_item_id', player.getAttribute('data-radio-current-item-id') || '0');
+        body.set(
+            'current_item_id',
+            broadcastActive && broadcastCurrentItemId
+                ? broadcastCurrentItemId
+                : (player.getAttribute('data-radio-current-item-id') || '0')
+        );
 
         setStatus(studio.getAttribute('data-adding-label') || 'Adding…');
         mutate(body, studio.getAttribute('data-added-label') || 'Added');
