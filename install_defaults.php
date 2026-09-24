@@ -28,7 +28,7 @@ $_RADIO_DEFAULT = array(
     'block_order' => 50,
     'library_mode' => 'local',
     'shared_storage_path' => '',
-    'shared_library_table' => ''
+    'shared_media_sync_interval' => 300
 );
 
 function RADIO_configSortOrder()
@@ -57,7 +57,7 @@ function RADIO_configSortOrder()
         'block_order' => 180,
         'library_mode' => 190,
         'shared_storage_path' => 200,
-        'shared_library_table' => 210
+        'shared_media_sync_interval' => 210
     );
 }
 
