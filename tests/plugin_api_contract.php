@@ -628,7 +628,7 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, 'if ($isAdmin || $isRadioConfig)') !== false
         && strpos($functions, 'return RADIO_adminStylesheetLink();') !== false
-        && strpos($functions, "RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')") !== false
+        && strpos($functions, "RADIO_pathEndsWith(\$path, '/admin/plugins/radio/upload.php')") !== false
         && strpos($functions, 'RADIO_adminScriptTag()') !== false,
     'Radio admin CSS and JavaScript must remain available while public Radio is disabled.'
 );
