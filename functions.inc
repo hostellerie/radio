@@ -40,10 +40,18 @@ function RADIO_publicAccessAllowed()
     return RADIO_isEnabled() || SEC_hasRights('radio.admin');
 }
 
-function RADIO_requirePublicAccess()
+function RADIO_requirePublicAccess($redirectToSite = false)
 {
+    global $_CONF;
+
     if (RADIO_publicAccessAllowed()) {
         return;
+    }
+
+    header('Cache-Control: no-store, max-age=0');
+
+    if ($redirectToSite) {
+        COM_redirect(rtrim($_CONF['site_url'], '/') . '/');
     }
 
     if (function_exists('http_response_code')) {
@@ -51,7 +59,6 @@ function RADIO_requirePublicAccess()
     } else {
         header('HTTP/1.1 403 Forbidden');
     }
-    header('Cache-Control: no-store, max-age=0');
     exit;
 }
 
