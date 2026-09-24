@@ -457,6 +457,8 @@
         var transitionTimer = 0;
         var transitionProgramId = 0;
         var transitionRetryCount = 0;
+        var liveSource = '';
+        var syncTick = 0;
 
         function updateButton() {
             button.textContent = audio.paused ? listenLabel : pauseLabel;
@@ -476,7 +478,7 @@
                 transitionTimer = 0;
             }
             transitionProgramId = 0;
-            if (!data || data.source === 'schedule' || !data.upcoming || !data.upcoming.length) {
+            if (!data || (data.source === 'schedule' || data.source === 'semi-live') || !data.upcoming || !data.upcoming.length) {
                 return;
             }
             var serverNow = Date.parse(data.generated_at || '');
@@ -496,6 +498,7 @@
         }
 
         function apply(data, autoplay, fromEnded, expectedProgramId) {
+            liveSource = data && data.source ? data.source : '';
             scheduleTransition(data);
 
             if (!data.current_media) {
@@ -517,7 +520,7 @@
                 ? (parseInt(String(data.now_playing.program_id || '').replace('program:', ''), 10) || 0)
                 : 0;
 
-            if (transitionManager.isMixing() && data.source === 'rotation' && nextMediaId !== mediaId) {
+            if (transitionManager.isMixing() && (data.source === 'rotation' || data.source === 'semi-live') && nextMediaId !== mediaId) {
                 return;
             }
 
@@ -667,8 +670,11 @@
         }, 100);
 
         window.setInterval(function () {
-            sync(wantedPlaying && !audio.paused, false, 0);
-        }, 15000);
+            syncTick++;
+            if (liveSource === 'semi-live' || syncTick % 5 === 0) {
+                sync(wantedPlaying && !audio.paused, false, 0);
+            }
+        }, 3000);
 
         wave.draw();
         wantedPlaying = autoplayRequested;
