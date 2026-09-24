@@ -904,12 +904,20 @@
                 }
 
                 function emitQueueBufferStatus() {
+                    var nextItem = index + 1 < items.length ? items[index + 1] : null;
+                    var reserveItem = index + 2 < items.length ? items[index + 2] : null;
                     var detail = {
                         next_buffered: queueBufferedAhead(queuePreload),
                         next_ready: queuePreload.readyState >= 3,
+                        next_title: nextItem ? (nextItem.title || '') : '',
+                        next_type: nextItem ? (nextItem.media_type_label || nextItem.media_type || '') : '',
+                        next_duration: nextItem ? (parseInt(nextItem.duration || 0, 10) || 0) : 0,
                         reserve_buffered: queueBufferedAhead(queueReserve),
                         reserve_ready: queueReserveUrl !== ''
-                            && (queueReserve.readyState >= 2 || queueBufferedAhead(queueReserve) > 0)
+                            && (queueReserve.readyState >= 2 || queueBufferedAhead(queueReserve) > 0),
+                        reserve_title: reserveItem ? (reserveItem.title || '') : '',
+                        reserve_type: reserveItem ? (reserveItem.media_type_label || reserveItem.media_type || '') : '',
+                        reserve_duration: reserveItem ? (parseInt(reserveItem.duration || 0, 10) || 0) : 0
                     };
                     var event;
                     if (typeof CustomEvent === 'function') {
