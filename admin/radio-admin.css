@@ -140,3 +140,45 @@
 .radio-program-item__action:hover,.radio-program-item__action:focus{background:rgba(127,127,127,.1)}
 .radio-program-item__action--remove{font-size:1.15rem}
 @media(max-width:560px){.radio-program-item{align-items:flex-start;flex-wrap:wrap}.radio-program-item__actions{flex:0 0 auto}}
+
+
+/* Studio: one interactive queue replaces the duplicate visible chapter list. */
+.radio-studio__queue-item{align-items:center}
+.radio-studio__queue-title.radio-studio__queue-seek{
+    flex:1 1 auto;
+    min-width:0;
+    min-height:0;
+    padding:.15rem .25rem;
+    border:0;
+    border-radius:.25rem;
+    background:transparent;
+    color:inherit;
+    text-align:left;
+    font:inherit;
+    cursor:pointer
+}
+.radio-studio__queue-title.radio-studio__queue-seek:hover,
+.radio-studio__queue-title.radio-studio__queue-seek:focus{
+    background:rgba(127,127,127,.1);
+    color:inherit;
+    text-decoration:none
+}
+.radio-studio__queue-item .radio-program-item__actions{margin-left:auto}
+.radio-studio__queue-item .radio-program-item__action{
+    background:transparent;
+    color:inherit
+}
+.radio-studio__queue-item .radio-program-item__action:hover,
+.radio-studio__queue-item .radio-program-item__action:focus{
+    background:rgba(127,127,127,.12);
+    color:inherit
+}
+.radio-studio__queue-item .radio-program-item__action:disabled{
+    opacity:.3;
+    cursor:default;
+    background:transparent
+}
+.radio-replay__chapter:hover,
+.radio-replay__chapter:focus{
+    color:inherit
+}
