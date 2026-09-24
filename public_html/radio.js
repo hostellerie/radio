@@ -1100,6 +1100,21 @@
                     setItem(nextIndex, seconds - itemOffset(nextIndex), shouldPlay);
                 }
 
+                root.addEventListener('radio:seek-item', function (event) {
+                    var itemId = event && event.detail
+                        ? (parseInt(event.detail.item_id || 0, 10) || 0)
+                        : 0;
+                    if (!itemId) {
+                        return;
+                    }
+                    for (var seekIndex = 0; seekIndex < items.length; seekIndex++) {
+                        if ((parseInt(items[seekIndex].item_id || 0, 10) || 0) === itemId) {
+                            setItem(seekIndex, 0, !audio.paused);
+                            break;
+                        }
+                    }
+                });
+
                 function renderDynamicChapters() {
                     if (!dynamicPlaylist || !chapterList) {
                         return;
