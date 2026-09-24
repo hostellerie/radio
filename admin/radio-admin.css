@@ -380,3 +380,35 @@
         grid-template-columns:1fr 1fr
     }
 }
+
+
+.radio-studio__djfx-pads{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:.5rem;
+    margin-top:.7rem
+}
+.radio-studio__djfx-pad{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) max-content;
+    gap:.35rem;
+    align-items:center
+}
+.radio-studio__djfx-pad select{
+    width:100%;
+    min-width:0
+}
+.radio-studio__djfx-pad .radio-admin__button{
+    margin:0;
+    white-space:nowrap
+}
+@media(max-width:900px){
+    .radio-studio__djfx-pads{
+        grid-template-columns:repeat(2,minmax(0,1fr))
+    }
+}
+@media(max-width:560px){
+    .radio-studio__djfx-pads{
+        grid-template-columns:1fr
+    }
+}
