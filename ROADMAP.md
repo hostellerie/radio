@@ -40,7 +40,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.4.0
+## Implementation status snapshot — 0.5.1
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
@@ -54,7 +54,7 @@ Current state:
 - **Interoperability:** Item Info, lifecycle events, URL resolution, Search, What’s New, XML Sitemap, related items, capability declaration and bounded Geeklog services are implemented.
 - **Eclipse / Agent readiness:** structured dashboard, now-playing, upcoming, replay, source/sync and stats services are implemented. Agent/Eclipse integration still needs end-to-end testing against their current branches.
 - **Hub:** Radio exposes the contracts Hub can consume, but explicit Hub relationship workflows are not yet implemented/tested.
-- **Security / multisite / compatibility:** pre-release hardening is in progress. CSRF on remote fetches, RSS/Atom SSRF DNS pinning, upload signatures, media/download ACLs and PHP 5.6/8.1/8.3 syntax are now CI/audit covered. Geeklog 2.1.1/2.2.2 runtime tests and two-site isolation still remain open.
+- **Security / multisite / compatibility:** pre-release hardening is in progress. Shared media now supports independent per-site databases with one common audio directory, MP3 ID3 metadata synchronization and conflict-safe tag writes. CSRF on remote fetches, RSS/Atom SSRF DNS pinning, upload signatures, media/download ACLs and PHP 5.6/8.1/8.3 syntax are CI/audit covered. Geeklog 2.1.1/2.2.2 runtime tests and two-site isolation still remain open.
 
 # Phase 0 — Architecture and plugin skeleton
 
@@ -100,7 +100,7 @@ The final schema should be driven by stable domain objects rather than UI screen
 - [x] Validate extension, detected MIME type, lightweight audio file signature and configured size limits for local uploads.
 - [x] Generate filesystem-safe storage names independently from the uploaded filename.
 - [x] Keep the original human filename and metadata separately when useful.
-- [ ] Extract available audio metadata such as title, artist, album, duration and embedded artwork.
+- [x] Read/write shared MP3 ID3 metadata for title, artist, collection, category, tags, description and Radio classification; embedded artwork remains open.
 - [x] Let administrators correct or override extracted metadata.
 - [ ] Support at least the formats that can be played reliably by current browsers; document the accepted format matrix.
 - [x] Store title, author/artist, description, category, collection, tags, duration, file size, publication state and dates.
@@ -787,8 +787,8 @@ Before stable release:
 
 Follow `multisite-development-principles.md` and `plugin-shared-files-upgrade-safety.md`.
 
-- [ ] Test two sites with different `path_data`, URLs and table mappings. Static review confirms Radio derives storage from the active `path_data` and tables from the active `$_TABLES`; runtime isolation remains required.
-- [ ] Confirm site A cannot read/write site B Radio files, settings or database records.
+- [ ] Test two sites with different databases/users, URLs and local table mappings while both point to one Shared media directory. The 0.5.1 architecture no longer requires cross-database access; runtime isolation remains required.
+- [ ] Confirm site A cannot read/write site B settings or database records while shared audio files and embedded MP3 metadata remain intentionally common.
 - [x] Keep current feed synchronization state/database rows site-specific. Radio 0.2.0 stores no remote provider credentials yet; credential isolation must be re-audited if authenticated providers are added.
 - [x] Make schema/config migrations repeatable and idempotent.
 - [ ] Support staggered multisite upgrades when plugin files are shared.
