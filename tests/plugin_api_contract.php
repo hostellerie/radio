@@ -372,6 +372,14 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function forceQueueHandoffIfNeeded') !== false
+        && strpos($publicPlayer, 'window.setInterval(monitorQueueTransition, 100)') !== false
+        && strpos($publicPlayer, 'isFinite(audio.duration)') !== false
+        && strpos($publicPlayer, 'remaining > 0.18') !== false,
+    'Radio Studio must use decoded media duration plus a high-frequency transition watchdog to prevent end-of-track gaps when timeupdate is sparse or metadata duration differs.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function maintainQueueBuffers') !== false
         && strpos($publicPlayer, 'window.setInterval(maintainQueueBuffers, 10000)') !== false
         && strpos($publicPlayer, 'function advanceQueueAudioRole') !== false
