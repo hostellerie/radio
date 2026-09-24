@@ -1531,6 +1531,33 @@
                     startQueueCrossfade();
                 }
 
+                function finishQueueTransitionAtEnded(nextIndex) {
+                    if (nextIndex !== index + 1 || !items[nextIndex]
+                        || queuePreloadUrl !== (items[nextIndex].stream_url || '')
+                        || queuePreload.readyState < 2) {
+                        return false;
+                    }
+
+                    if (queueFadeFrame) {
+                        window.cancelAnimationFrame(queueFadeFrame);
+                        queueFadeFrame = 0;
+                    }
+
+                    queueMixing = false;
+                    audio.volume = 1;
+                    queuePreload.volume = 1;
+
+                    advanceQueueAudioRole(nextIndex);
+
+                    if (audio.paused) {
+                        var resumePromise = audio.play();
+                        if (resumePromise && typeof resumePromise.catch === 'function') {
+                            resumePromise.catch(function () {});
+                        }
+                    }
+                    return true;
+                }
+
                 function promoteQueuePreload(nextIndex) {
                     if (nextIndex !== index + 1 || !items[nextIndex]
                         || queuePreloadUrl !== (items[nextIndex].stream_url || '')
@@ -1548,11 +1575,20 @@
                 }
 
                 function onReplayEnded(event) {
-                    if (event.currentTarget !== audio || queueMixing) {
+                    if (event.currentTarget !== audio) {
                         return;
                     }
+
                     flush();
                     var followingIndex = nextPlayableIndex(index + 1);
+
+                    if (followingIndex >= 0 && queueMixing) {
+                        if (finishQueueTransitionAtEnded(followingIndex)) {
+                            return;
+                        }
+                        stopQueueFade();
+                    }
+
                     if (followingIndex >= 0) {
                         if (promoteQueuePreload(followingIndex)) {
                             return;
