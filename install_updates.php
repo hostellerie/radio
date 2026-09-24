@@ -23,6 +23,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.4.0' => array(
         'next' => '0.5.0',
         'callback' => 'radio_update_0_4_0_to_0_5_0'
+    ),
+    '0.5.0' => array(
+        'next' => '0.5.1',
+        'callback' => 'radio_update_0_5_0_to_0_5_1'
     )
 );
 
@@ -186,6 +190,28 @@ function radio_update_0_4_0_to_0_5_0()
     ) ENGINE=MyISAM");
 
     return !DB_error();
+}
+
+
+function radio_update_0_5_0_to_0_5_1()
+{
+    global $_TABLES;
+
+    $table = isset($_TABLES['radio_media_local'])
+        ? $_TABLES['radio_media_local']
+        : $_TABLES['radio_media'];
+
+    if (!radio_column_exists($table, 'metadata_mtime')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD metadata_mtime bigint(20) unsigned NOT NULL default '0' AFTER file_size"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    return radio_column_exists($table, 'metadata_mtime');
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
