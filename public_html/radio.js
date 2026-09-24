@@ -873,6 +873,9 @@
                 var queueReserveUrl = '';
                 var queueMixing = false;
                 var queueFadeFrame = 0;
+                var queueBufferTimer = 0;
+                var queuePreloadLastKick = 0;
+                var queueReserveLastKick = 0;
                 queuePreload.preload = 'auto';
                 queueReserve.preload = 'auto';
 
@@ -904,6 +907,7 @@
                     var detail = {
                         next_buffered: queueBufferedAhead(queuePreload),
                         next_ready: queuePreload.readyState >= 3,
+                        reserve_buffered: queueBufferedAhead(queueReserve),
                         reserve_ready: queueReserveUrl !== ''
                             && (queueReserve.readyState >= 2 || queueBufferedAhead(queueReserve) > 0)
                     };
@@ -923,6 +927,59 @@
                     element.load();
                 }
 
+                function queueBufferTarget(item, minimum, maximum) {
+                    var duration = item ? (parseInt(item.duration || 0, 10) || 0) : 0;
+                    if (duration > 0 && duration <= 20) {
+                        return Math.max(1, duration - 0.25);
+                    }
+                    var target = duration > 0 ? Math.max(minimum, duration * 0.12) : minimum;
+                    return Math.min(maximum, target);
+                }
+
+                function kickQueueBuffer(element, url, item, reserveSlot) {
+                    if (!element || !url || !item) {
+                        return;
+                    }
+
+                    var target = queueBufferTarget(item, reserveSlot ? 2 : 4, reserveSlot ? 8 : 15);
+                    if (queueBufferedAhead(element) >= target) {
+                        return;
+                    }
+
+                    if (element.networkState === 2) {
+                        return;
+                    }
+
+                    var nowTime = Date.now();
+                    var lastKick = reserveSlot ? queueReserveLastKick : queuePreloadLastKick;
+                    if (nowTime - lastKick < 12000) {
+                        return;
+                    }
+
+                    if (reserveSlot) {
+                        queueReserveLastKick = nowTime;
+                    } else {
+                        queuePreloadLastKick = nowTime;
+                    }
+
+                    element.preload = 'auto';
+                    element.load();
+                }
+
+                function maintainQueueBuffers() {
+                    var next = index + 1 < items.length ? items[index + 1] : null;
+                    var reserve = index + 2 < items.length ? items[index + 2] : null;
+
+                    if (next && queuePreloadUrl === (next.stream_url || '')) {
+                        kickQueueBuffer(queuePreload, queuePreloadUrl, next, false);
+                    }
+                    if (reserve && queueReserveUrl === (reserve.stream_url || '')) {
+                        kickQueueBuffer(queueReserve, queueReserveUrl, reserve, true);
+                    }
+                    maybePreloadQueueReserve();
+                    emitQueueBufferStatus();
+                }
+
                 function maybePreloadQueueReserve() {
                     var next = index + 1 < items.length ? items[index + 1] : null;
                     var reserve = index + 2 < items.length ? items[index + 2] : null;
@@ -935,8 +992,7 @@
                         return;
                     }
 
-                    var duration = parseInt(next.duration || 0, 10) || 0;
-                    var target = Math.min(12, Math.max(3, duration > 0 ? duration * 0.12 : 3));
+                    var target = queueBufferTarget(next, 4, 15);
                     if (queuePreload.readyState < 3 && queueBufferedAhead(queuePreload) < target) {
                         emitQueueBufferStatus();
                         return;
@@ -977,18 +1033,21 @@
                     maybePreloadQueueReserve();
                 }
 
-                function onQueuePreloadProgress(event) {
-                    if (event.currentTarget !== queuePreload) {
-                        return;
+                function onQueueBufferProgress(event) {
+                    if (event.currentTarget === queuePreload) {
+                        maybePreloadQueueReserve();
                     }
-                    maybePreloadQueueReserve();
+                    emitQueueBufferStatus();
                 }
 
-                queuePreload.addEventListener('progress', onQueuePreloadProgress);
-                queuePreload.addEventListener('canplay', onQueuePreloadProgress);
-                audio.addEventListener('progress', onQueuePreloadProgress);
-                audio.addEventListener('canplay', onQueuePreloadProgress);
-                queueReserve.addEventListener('progress', emitQueueBufferStatus);
+                audio.addEventListener('progress', onQueueBufferProgress);
+                audio.addEventListener('canplay', onQueueBufferProgress);
+                queuePreload.addEventListener('progress', onQueueBufferProgress);
+                queuePreload.addEventListener('canplay', onQueueBufferProgress);
+                queueReserve.addEventListener('progress', onQueueBufferProgress);
+                queueReserve.addEventListener('canplay', onQueueBufferProgress);
+
+                queueBufferTimer = window.setInterval(maintainQueueBuffers, 10000);
 
                 function itemOffset(i) {
                     return items[i] ? (parseInt(items[i].offset || 0, 10) || 0) : 0;
@@ -1042,6 +1101,32 @@
                     queuePreload.volume = 1;
                 }
 
+                function advanceQueueAudioRole(nextIndex) {
+                    var previousAudio = audio;
+                    var bufferedReserve = queueReserve;
+                    var bufferedReserveUrl = queueReserveUrl;
+
+                    audio = queuePreload;
+                    queuePreload = bufferedReserve;
+                    queuePreloadUrl = bufferedReserveUrl;
+                    queueReserve = previousAudio;
+                    queueReserveUrl = '';
+
+                    index = nextIndex;
+                    started = false;
+                    queueMixing = false;
+                    queueFadeFrame = 0;
+
+                    audio.volume = 1;
+                    queuePreload.volume = 1;
+                    queueReserve.pause();
+                    queueReserve.volume = 1;
+
+                    refreshQueuePreload();
+                    maintainQueueBuffers();
+                    updateUi();
+                }
+
                 function startQueueCrossfade() {
                     if (queueMixing || transitionMode !== 'crossfade' || audio.paused
                         || index + 1 >= items.length || !itemPlayable(index)
@@ -1092,30 +1177,13 @@
                             }
 
                             var nextIndex = index + 1;
-                            var previousAudio = audio;
 
                             /*
-                             * Do not reload or seek the next MP3 at handoff.
-                             * MP3 seeking can land on a neighbouring decoder
-                             * frame and creates the audible micro-jump reported
-                             * in Studio. Promote the already-playing preload to
-                             * the active player instead, and recycle the old
-                             * player as the next preload.
+                             * Promote N+1 and rotate the already-buffered N+2
+                             * into the preload slot. This avoids throwing away
+                             * reserve data after a long current track.
                              */
-                            audio = queuePreload;
-                            queuePreload = previousAudio;
-                            index = nextIndex;
-                            started = false;
-                            queueMixing = false;
-                            queueFadeFrame = 0;
-
-                            audio.volume = 1;
-                            queuePreload.pause();
-                            queuePreload.volume = 1;
-                            queuePreloadUrl = '';
-
-                            refreshQueuePreload();
-                            updateUi();
+                            advanceQueueAudioRole(nextIndex);
                         }
                         queueFadeFrame = window.requestAnimationFrame(fade);
                     }).catch(function () {
@@ -1460,21 +1528,7 @@
                         return false;
                     }
 
-                    var previousAudio = audio;
-                    audio = queuePreload;
-                    queuePreload = previousAudio;
-                    index = nextIndex;
-                    started = false;
-                    queueMixing = false;
-                    queueFadeFrame = 0;
-
-                    audio.volume = 1;
-                    queuePreload.pause();
-                    queuePreload.volume = 1;
-                    queuePreloadUrl = '';
-
-                    refreshQueuePreload();
-                    updateUi();
+                    advanceQueueAudioRole(nextIndex);
 
                     var playPromise = audio.play();
                     if (playPromise && typeof playPromise.catch === 'function') {
@@ -1508,8 +1562,15 @@
                 queuePreload.addEventListener('pause', onReplayPause);
                 queuePreload.addEventListener('timeupdate', onReplayTimeUpdate);
                 queuePreload.addEventListener('ended', onReplayEnded);
+                queueReserve.addEventListener('play', onReplayPlay);
+                queueReserve.addEventListener('pause', onReplayPause);
+                queueReserve.addEventListener('timeupdate', onReplayTimeUpdate);
+                queueReserve.addEventListener('ended', onReplayEnded);
 
                 window.addEventListener('pagehide', function () {
+                    if (queueBufferTimer) {
+                        window.clearInterval(queueBufferTimer);
+                    }
                     stopQueueFade();
                     flush();
                 });
