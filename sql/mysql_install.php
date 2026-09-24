@@ -95,6 +95,22 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_schedule']} (
 ) ENGINE=MyISAM;";
 
 
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_broadcast_sessions']} (
+  session_id int(10) unsigned NOT NULL auto_increment,
+  program_id int(10) unsigned NOT NULL,
+  current_item_id int(10) unsigned NOT NULL default '0',
+  state varchar(16) NOT NULL default 'active',
+  owner_id int(10) unsigned NOT NULL default '2',
+  started_at datetime NOT NULL,
+  item_started_at datetime NOT NULL,
+  stopped_at datetime default NULL,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY (session_id),
+  KEY state_updated (state,updated_at),
+  KEY program_state (program_id,state)
+) ENGINE=MyISAM;";
+
+
 $_SQL[] = "CREATE TABLE {$_TABLES['radio_events']} (
   event_id bigint(20) unsigned NOT NULL auto_increment,
   media_id int(10) unsigned NOT NULL default '0',
