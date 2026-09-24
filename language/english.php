@@ -396,9 +396,13 @@ $LANG_confignames['radio'] = array(
     'whatsnew_interval' => 'What’s New period (seconds)',
     'whatsnew_limit' => 'Maximum Radio items in What’s New',
     'stats_enabled' => 'Enable privacy-preserving listening statistics?',
-    'stats_retention_days' => 'Statistics retention (days)'
+    'stats_retention_days' => 'Statistics retention (days)',
+    'library_mode' => 'Media library mode',
+    'shared_storage_path' => 'Shared media storage path',
+    'shared_library_table' => 'Shared media catalogue table'
 );
 $LANG_configselects['radio'] = array(
     0 => array('Enabled' => 1, 'Disabled' => 0),
-    1 => array('Hard cut' => 'hard', 'Gapless' => 'gapless', 'Smart crossfade' => 'crossfade')
+    1 => array('Hard cut' => 'hard', 'Gapless' => 'gapless', 'Smart crossfade' => 'crossfade'),
+    2 => array('Local' => 'local', 'Shared storage' => 'shared_storage', 'Shared library' => 'shared_library')
 );
