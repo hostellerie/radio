@@ -170,9 +170,23 @@
                 li.classList.add('is-next');
             }
 
-            var title = document.createElement('span');
-            title.className = 'radio-studio__queue-title';
+            var title = document.createElement('button');
+            title.type = 'button';
+            title.className = 'radio-studio__queue-title radio-studio__queue-seek';
             title.textContent = (item.author ? item.author + ' — ' : '') + (item.title || '');
+            title.addEventListener('click', (function (id) {
+                return function () {
+                    var event;
+                    var detail = {item_id: id};
+                    if (typeof CustomEvent === 'function') {
+                        event = new CustomEvent('radio:seek-item', {detail: detail});
+                    } else {
+                        event = document.createEvent('CustomEvent');
+                        event.initCustomEvent('radio:seek-item', false, false, detail);
+                    }
+                    player.dispatchEvent(event);
+                };
+            }(itemId)));
             li.appendChild(title);
 
             var meta = document.createElement('span');
