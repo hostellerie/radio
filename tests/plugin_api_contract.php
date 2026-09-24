@@ -385,10 +385,12 @@ radio_contract_require(
         && strpos($studioPage, 'data-radio-djfx="mid"') !== false
         && strpos($studioPage, 'data-radio-djfx="high"') !== false
         && strpos($studioPage, 'data-radio-djfx="filter"') !== false
+        && strpos($studioPage, 'data-radio-djfx-value="low"') !== false
         && strpos($studioPage, 'data-radio-djfx-button="echo"') !== false
+        && strpos($studioPage, 'radio-studio__djfx-pad-trigger') !== false
         && strpos($studioPage, 'data-radio-djfx-pad-select="1"') !== false
         && strpos($studioPage, 'data-radio-djfx-pad-play="4"') !== false,
-    'Radio Studio must expose compact realtime DJ FX controls with assignable jingle pads.'
+    'Radio Studio must expose touch-friendly realtime DJ FX controls with live values and assignable jingle pads.'
 );
 
 radio_contract_require(
@@ -788,4 +790,12 @@ radio_contract_require(
         && strpos($publicCss, '.radio-schedule-grid') !== false
         && strpos($publicCss, '.radio-day-card--today') !== false,
     'Radio public stylesheet must include modern schedule navigation and day-card styles.'
+);
+
+
+radio_contract_require(
+    strpos($studioJs, 'function updateDjValue') !== false
+        && strpos($studioJs, "padButton.disabled = !mediaId || !url") !== false
+        && strpos($studioJs, "padLabel.textContent = mediaId && label ? label : 'PAD ' + pad") !== false,
+    'Radio Studio touch controls must expose immediate value feedback and large pad labels tied to the assigned jingle.'
 );
