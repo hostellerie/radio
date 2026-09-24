@@ -208,10 +208,16 @@ function radio_studio_state($programId)
         $signature[] = $item['item_id'] . ':' . $item['media_id'] . ':' . $item['duration'];
     }
 
+    $broadcast = RADIO_getActiveBroadcastSession();
+
     return array(
         'ok' => true,
         'items' => $items,
         'version' => sha1(implode('|', $signature)),
+        'broadcast_active' => $broadcast !== false
+            && (int) $broadcast['program_id'] === (int) $programId,
+        'broadcast_program_id' => $broadcast !== false ? (int) $broadcast['program_id'] : 0,
+        'broadcast_session_id' => $broadcast !== false ? (int) $broadcast['session_id'] : 0,
         'csrf_name' => CSRF_TOKEN,
         'csrf_token' => SEC_createToken()
     );
@@ -237,6 +243,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
 
     $studioAction = trim((string) $_POST['studio_action']);
     $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
+
+    if ($studioAction === 'broadcast_start') {
+        $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
+        if (!RADIO_startBroadcastSession($programId, $currentItemId)) {
+            radio_studio_json(array('ok' => false, 'error' => 'broadcast_start_failed'), 400);
+        }
+        radio_studio_json(radio_studio_state($programId), 200);
+    }
+
+    if ($studioAction === 'broadcast_stop') {
+        if (!RADIO_stopBroadcastSession($programId)) {
+            radio_studio_json(array('ok' => false, 'error' => 'broadcast_stop_failed'), 400);
+        }
+        radio_studio_json(radio_studio_state($programId), 200);
+    }
 
     if ($studioAction === 'add') {
         $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
