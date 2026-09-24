@@ -264,7 +264,7 @@ radio_contract_require(
         && strpos($studioPage, 'data-radio-replay-chapter') !== false
         && strpos($studioPage, 'data-radio-studio-queue') !== false
         && strpos($studioPage, 'data-radio-studio-search') !== false
-        && strpos($studioPage, "RADIO_mediaUrl((int) $item['media_id'], false)") !== false,
+        && strpos($studioPage, "RADIO_mediaUrl((int) \$item['media_id'], false)") !== false,
     'Radio Studio must provide private continuous chaptered preview plus playlist search and queue editing.'
 );
 
@@ -275,11 +275,11 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($studioApi, "if ($studioAction === 'add')") !== false
-        && strpos($studioApi, "$afterItemId = $position === 'next' ? $currentItemId : 0") !== false
+    strpos($studioApi, "if (\$studioAction === 'add')") !== false
+        && strpos($studioApi, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
         && strpos($studioApi, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
-        && strpos($studioApi, "if ($studioAction === 'remove')") !== false
-        && strpos($studioApi, "if ($studioAction === 'move_up' || $studioAction === 'move_down')") !== false
+        && strpos($studioApi, "if (\$studioAction === 'remove')") !== false
+        && strpos($studioApi, "if (\$studioAction === 'move_up' || \$studioAction === 'move_down')") !== false
         && strpos($studioApi, 'SEC_checkToken()') !== false
         && strpos($studioJs, "body.set('studio_action', 'add')") !== false
         && strpos($studioJs, "mutateItem('remove'") !== false
@@ -292,8 +292,8 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
-        && strpos($studioApi, "if ($action === 'state')") !== false
-        && strpos($studioApi, "if ($action === 'search')") !== false
+        && strpos($studioApi, "if (\$action === 'state')") !== false
+        && strpos($studioApi, "if (\$action === 'search')") !== false
         && strpos($studioJs, "body.set('current_item_id'") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'next')") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'end')") !== false
@@ -307,7 +307,7 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($legacyPreview, '/plugins/radio/studio.php') !== false
-        && strpos($legacyPreview, "header('Location: ' . $url, true, 302)") !== false,
+        && strpos($legacyPreview, "header('Location: ' . \$url, true, 302)") !== false,
     'Legacy preview.php URLs must redirect to the canonical Studio page.'
 );
 
