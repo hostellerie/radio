@@ -182,7 +182,9 @@ function radio_studio_items($programId)
     for ($i = 0; $i < count($items); $i++) {
         $items[$i]['offset'] = $offset;
         $overlap = 0;
-        if ($i + 1 < count($items)) {
+        if ($i + 1 < count($items)
+            && !empty($items[$i]['playable'])
+            && !empty($items[$i + 1]['playable'])) {
             $overlap = RADIO_transitionOverlapFor(
                 $items[$i],
                 $items[$i + 1],
