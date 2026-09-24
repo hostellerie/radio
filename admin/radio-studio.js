@@ -64,7 +64,7 @@
     }
 
     function dispatchPlaylist(items) {
-        if (!items || !items.length) {
+        if (!items) {
             return;
         }
         var event;
