@@ -10,7 +10,7 @@ if (!SEC_hasRights('radio.admin')) {
     exit;
 }
 
-global $LANG_RADIO, $_CONF;
+global $LANG_RADIO, $_CONF, $_TABLES;
 
 $id = isset($_REQUEST['media_id']) ? (int) $_REQUEST['media_id'] : 0;
 $row = RADIO_getMedia($id, false);
