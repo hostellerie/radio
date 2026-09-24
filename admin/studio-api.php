@@ -4,6 +4,17 @@ require_once dirname(__FILE__) . '/../../auth.inc.php';
 
 function radio_studio_json($data, $status)
 {
+    if (!is_array($data)) {
+        $data = array('ok' => false, 'error' => 'invalid_response');
+    }
+
+    if (!isset($data['csrf_name'])) {
+        $data['csrf_name'] = CSRF_TOKEN;
+    }
+    if (!isset($data['csrf_token'])) {
+        $data['csrf_token'] = SEC_createToken();
+    }
+
     if (function_exists('http_response_code')) {
         http_response_code((int) $status);
     }
@@ -79,7 +90,10 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     if (!SEC_checkToken()) {
-        radio_studio_json(array('ok' => false, 'error' => 'invalid_token'), 403);
+        radio_studio_json(array(
+            'ok' => false,
+            'error' => 'invalid_token'
+        ), 403);
     }
 
     $studioAction = trim((string) $_POST['studio_action']);
@@ -97,16 +111,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     }
 
     if ($studioAction === 'remove') {
-        if (!$itemId || !RADIO_removeProgramItem($itemId, $programId)) {
-            radio_studio_json(array('ok' => false, 'error' => 'remove_failed'), 400);
+        if (!$itemId) {
+            radio_studio_json(array('ok' => false, 'error' => 'missing_item_id'), 400);
+        }
+        if (!RADIO_removeProgramItem($itemId, $programId)) {
+            radio_studio_json(array(
+                'ok' => false,
+                'error' => 'remove_failed',
+                'item_id' => $itemId
+            ), 400);
         }
         radio_studio_json(radio_studio_state($programId), 200);
     }
 
     if ($studioAction === 'move_up' || $studioAction === 'move_down') {
+        if (!$itemId) {
+            radio_studio_json(array('ok' => false, 'error' => 'missing_item_id'), 400);
+        }
         $direction = $studioAction === 'move_up' ? 'up' : 'down';
-        if (!$itemId || !RADIO_moveProgramItem($itemId, $programId, $direction)) {
-            radio_studio_json(array('ok' => false, 'error' => 'move_failed'), 400);
+        if (!RADIO_moveProgramItem($itemId, $programId, $direction)) {
+            radio_studio_json(array(
+                'ok' => false,
+                'error' => 'move_failed',
+                'item_id' => $itemId,
+                'direction' => $direction
+            ), 400);
         }
         radio_studio_json(radio_studio_state($programId), 200);
     }
