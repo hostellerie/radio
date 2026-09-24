@@ -120,6 +120,7 @@ foreach ($items as $item) {
         'title' => $item['title'],
         'author' => isset($item['author']) ? $item['author'] : '',
         'media_type' => isset($item['media_type']) ? $item['media_type'] : '',
+        'source_kind' => RADIO_sourceKind($item),
         'duration' => $duration,
         'offset' => 0,
         'transition_overlap' => 0,
