@@ -35,6 +35,7 @@ function plugin_autoinstall_radio($pi_name)
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
+            'radio_broadcast_sessions',
             'radio_events',
             'radio_sources',
             'radio_source_sync_log'
@@ -83,6 +84,7 @@ function plugin_autouninstall_radio()
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
+            'radio_broadcast_sessions',
             'radio_events',
             'radio_sources',
             'radio_source_sync_log'
