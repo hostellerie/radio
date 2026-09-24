@@ -391,6 +391,16 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($studioPage, 'data-radio-transition-mode=') !== false
+        && strpos($studioPage, 'data-radio-crossfade-seconds=') !== false
+        && strpos($studioPage, "'transition_overlap'") !== false
+        && strpos($publicJs, 'function startQueueCrossfade') !== false
+        && strpos($publicJs, "transitionMode !== 'crossfade'") !== false
+        && strpos($publicJs, 'queuePreload.play()') !== false,
+    'Radio Studio preview must apply configured programme crossfade timing.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
         && strpos($persistentPlayer, 'function createTransitionManager') !== false
