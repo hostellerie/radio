@@ -399,10 +399,10 @@ $LANG_confignames['radio'] = array(
     'stats_retention_days' => 'Statistics retention (days)',
     'library_mode' => 'Media library mode',
     'shared_storage_path' => 'Shared media storage path',
-    'shared_library_table' => 'Shared media catalogue table'
+    'shared_media_sync_interval' => 'Shared media metadata sync interval (seconds)'
 );
 $LANG_configselects['radio'] = array(
     0 => array('Enabled' => 1, 'Disabled' => 0),
     1 => array('Hard cut' => 'hard', 'Gapless' => 'gapless', 'Smart crossfade' => 'crossfade'),
-    2 => array('Local' => 'local', 'Shared storage' => 'shared_storage', 'Shared library' => 'shared_library')
+    2 => array('Local' => 'local', 'Shared media' => 'shared_media')
 );
