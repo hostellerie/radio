@@ -195,7 +195,7 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.4.0") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.5.0") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
@@ -205,8 +205,11 @@ radio_contract_require(
         && strpos($updatesFile, "'0.3.2' => array(") !== false
         && strpos($updatesFile, "'next' => '0.4.0'") !== false
         && strpos($updatesFile, 'radio_update_0_3_2_to_0_4_0') !== false
+        && strpos($updatesFile, "'0.4.0' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.5.0'") !== false
+        && strpos($updatesFile, 'radio_update_0_4_0_to_0_5_0') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.4.0 must preserve the existing upgrade chain and add the media-classification migration.'
+    'Radio 0.5.0 must preserve the upgrade chain and add multisite shared-library support.'
 );
 
 $mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
@@ -492,6 +495,7 @@ foreach (array('english' => $english, 'french' => $french) as $languageName => $
 
 foreach (array(
     'radio_media',
+    'radio_site_media',
     'radio_programs',
     'radio_program_items',
     'radio_schedule',
@@ -504,6 +508,20 @@ foreach (array(
         'Autoinstall/uninstall contract is missing table ' . $table . '.'
     );
 }
+
+radio_contract_require(
+    strpos($functions, 'function RADIO_libraryMode') !== false
+        && strpos($functions, 'function RADIO_sharedLibraryEnabled') !== false
+        && strpos($functions, 'function RADIO_siteMediaState') !== false
+        && strpos($functions, 'function RADIO_saveSiteMediaState') !== false
+        && strpos($functions, 'function RADIO_libraryInfo') !== false
+        && strpos($functions, "RADIO_libraryMode() !== 'local'") !== false
+        && strpos($defaults, "'library_mode' => 'local'") !== false
+        && strpos($defaults, "'shared_storage_path' => ''") !== false
+        && strpos($defaults, "'shared_library_table' => ''") !== false
+        && strpos(file_get_contents($root . '/sql/mysql_install.php'), "radio_site_media") !== false,
+    'Radio multisite library modes must remain opt-in, preserve local mode, and provide site-specific shared media state.'
+);
 
 radio_contract_require(
     preg_match('/function\s+RADIO_detectAudioDuration\s*\(/', $functions) === 1,
