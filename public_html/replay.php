@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess(true);
 global $_CONF, $_RADIO_CONF, $LANG_RADIO;
 
 $scheduleId = isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : 0;
