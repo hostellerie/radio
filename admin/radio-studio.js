@@ -72,6 +72,56 @@
         setBufferStatus(event && event.detail ? event.detail : {});
     });
 
+
+    function dispatchDjFx(control, value) {
+        var event;
+        var detail = {control: control, value: value};
+        if (typeof CustomEvent === 'function') {
+            event = new CustomEvent('radio:djfx', {detail: detail});
+        } else {
+            event = document.createEvent('CustomEvent');
+            event.initCustomEvent('radio:djfx', false, false, detail);
+        }
+        player.dispatchEvent(event);
+    }
+
+    var djFx = studio.querySelector('[data-radio-studio-djfx]');
+    if (djFx) {
+        var djRanges = djFx.querySelectorAll('[data-radio-djfx]');
+        for (var djIndex = 0; djIndex < djRanges.length; djIndex++) {
+            djRanges[djIndex].addEventListener('input', function () {
+                dispatchDjFx(this.getAttribute('data-radio-djfx') || '', parseFloat(this.value || '0') || 0);
+            });
+        }
+
+        var djButtons = djFx.querySelectorAll('[data-radio-djfx-button]');
+        for (var djButtonIndex = 0; djButtonIndex < djButtons.length; djButtonIndex++) {
+            djButtons[djButtonIndex].addEventListener('click', function () {
+                var control = this.getAttribute('data-radio-djfx-button') || '';
+                if (control === 'echo') {
+                    var active = this.getAttribute('aria-pressed') !== 'true';
+                    this.setAttribute('aria-pressed', active ? 'true' : 'false');
+                    this.classList.toggle('is-active', active);
+                    dispatchDjFx('echo', active ? 1 : 0);
+                    return;
+                }
+
+                if (control === 'reset') {
+                    for (var resetIndex = 0; resetIndex < djRanges.length; resetIndex++) {
+                        djRanges[resetIndex].value = '0';
+                    }
+                    var echoButton = djFx.querySelector('[data-radio-djfx-button="echo"]');
+                    if (echoButton) {
+                        echoButton.setAttribute('aria-pressed', 'false');
+                        echoButton.classList.remove('is-active');
+                    }
+                }
+
+                dispatchDjFx(control, 1);
+            });
+        }
+    }
+
     function updateToken(data) {
         if (!data) {
             return;
