@@ -60,6 +60,21 @@ function RADIO_sharedLibraryEnabled()
         && RADIO_safeTableName(isset($_RADIO_CONF['shared_library_table']) ? $_RADIO_CONF['shared_library_table'] : '') !== '';
 }
 
+
+function RADIO_libraryInfo()
+{
+    global $_TABLES, $_RADIO_CONF;
+    return array(
+        'mode' => RADIO_libraryMode(),
+        'shared_library' => RADIO_sharedLibraryEnabled(),
+        'media_table' => isset($_TABLES['radio_media']) ? $_TABLES['radio_media'] : '',
+        'site_media_table' => isset($_TABLES['radio_site_media']) ? $_TABLES['radio_site_media'] : '',
+        'storage_path' => RADIO_storageDir(),
+        'configured_shared_table' => isset($_RADIO_CONF['shared_library_table'])
+            ? (string) $_RADIO_CONF['shared_library_table'] : ''
+    );
+}
+
 if (RADIO_sharedLibraryEnabled()) {
     $_TABLES['radio_media'] = RADIO_safeTableName($_RADIO_CONF['shared_library_table']);
 }
@@ -2145,7 +2160,7 @@ function RADIO_getProgramItems($programId)
     $result = DB_query($sql);
     $items = array();
     while ($row = DB_fetchArray($result)) {
-        $items[] = $row;
+        $items[] = RADIO_mergeSiteMediaState($row);
     }
     return $items;
 }
@@ -3010,18 +3025,28 @@ function RADIO_getRotationMediaByTypes($types)
         return array();
     }
 
+    $where = "WHERE duration>0 AND media_type IN (" . implode(',', $safe) . ") ";
+    if (!RADIO_sharedLibraryEnabled()) {
+        $where = "WHERE status='published'"
+            . RADIO_mediaAvailabilitySql('broadcast', '')
+            . RADIO_mediaAvailabilitySql('automatic_rotation', '')
+            . " AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
+            . RADIO_permissionSql('radio_media', 0) . " ";
+    }
+
     $result = DB_query(
         "SELECT * FROM {$_TABLES['radio_media']} "
-        . "WHERE status='published'"
-        . RADIO_mediaAvailabilitySql('broadcast', '')
-        . RADIO_mediaAvailabilitySql('automatic_rotation', '')
-        . " AND duration>0 AND media_type IN (" . implode(',', $safe) . ") "
-        . RADIO_permissionSql('radio_media', 0) . " "
+        . $where
         . "ORDER BY media_id ASC"
     );
 
     $items = array();
     while ($row = DB_fetchArray($result)) {
+        $row = RADIO_mergeSiteMediaState($row);
+        if (RADIO_sharedLibraryEnabled()
+            && (!RADIO_isAutomaticRotationAvailable($row) || !RADIO_hasReadAccess($row))) {
+            continue;
+        }
         $items[] = $row;
     }
     return $items;
