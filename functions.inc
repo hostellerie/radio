@@ -18,6 +18,7 @@ require_once $radioLanguageFile;
 
 require_once __DIR__ . '/autoinstall.php';
 require_once __DIR__ . '/lib/feed.inc.php';
+require_once __DIR__ . '/lib/id3.inc.php';
 require_once __DIR__ . '/services.inc.php';
 
 $_TABLES['radio_media_local'] = $_DB_table_prefix . 'radio_media';
@@ -43,42 +44,44 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
 function RADIO_libraryMode()
 {
     global $_RADIO_CONF;
-    $mode = isset($_RADIO_CONF['library_mode']) ? trim((string) $_RADIO_CONF['library_mode']) : 'local';
-    return in_array($mode, array('local','shared_storage','shared_library'), true) ? $mode : 'local';
+
+    $mode = isset($_RADIO_CONF['library_mode'])
+        ? trim((string) $_RADIO_CONF['library_mode'])
+        : 'local';
+
+    // 0.5.0 development aliases are intentionally folded into the simpler
+    // 0.5.1 shared-media model. No cross-database credentials are required.
+    if ($mode === 'shared_storage' || $mode === 'shared_library') {
+        $mode = 'shared_media';
+    }
+
+    return in_array($mode, array('local','shared_media'), true) ? $mode : 'local';
 }
 
-function RADIO_safeTableName($name)
+function RADIO_sharedMediaEnabled()
 {
-    $name = trim((string) $name);
-    return preg_match('/^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)?$/', $name) ? $name : '';
+    return RADIO_libraryMode() === 'shared_media';
 }
 
 function RADIO_sharedLibraryEnabled()
 {
-    global $_RADIO_CONF;
-    return RADIO_libraryMode() === 'shared_library'
-        && RADIO_safeTableName(isset($_RADIO_CONF['shared_library_table']) ? $_RADIO_CONF['shared_library_table'] : '') !== '';
+    // Compatibility shim for 0.5.0 development code. Shared catalogues were
+    // replaced by shared files + embedded metadata in 0.5.1.
+    return false;
 }
-
 
 function RADIO_libraryInfo()
 {
-    global $_TABLES, $_RADIO_CONF;
+    global $_TABLES;
+
     return array(
         'mode' => RADIO_libraryMode(),
-        'shared_library' => RADIO_sharedLibraryEnabled(),
-        'media_table' => isset($_TABLES['radio_media']) ? $_TABLES['radio_media'] : '',
-        'site_media_table' => isset($_TABLES['radio_site_media']) ? $_TABLES['radio_site_media'] : '',
+        'shared_media' => RADIO_sharedMediaEnabled(),
+        'media_table' => isset($_TABLES['radio_media_local']) ? $_TABLES['radio_media_local'] : '',
         'storage_path' => RADIO_storageDir(),
-        'configured_shared_table' => isset($_RADIO_CONF['shared_library_table'])
-            ? (string) $_RADIO_CONF['shared_library_table'] : ''
+        'embedded_metadata' => 'mp3-id3v2'
     );
 }
-
-if (RADIO_sharedLibraryEnabled()) {
-    $_TABLES['radio_media'] = RADIO_safeTableName($_RADIO_CONF['shared_library_table']);
-}
-
 
 
 
@@ -362,7 +365,7 @@ function RADIO_storageDir()
 {
     global $_CONF, $_RADIO_CONF;
 
-    if (RADIO_libraryMode() !== 'local') {
+    if (RADIO_sharedMediaEnabled()) {
         $shared = isset($_RADIO_CONF['shared_storage_path'])
             ? rtrim(trim((string) $_RADIO_CONF['shared_storage_path']), "/\\")
             : '';
@@ -849,21 +852,37 @@ function RADIO_saveExternalMedia($metadata, &$error)
     }
 
     $id = (int) DB_insertId();
-    if (RADIO_sharedLibraryEnabled() && !RADIO_saveSiteMediaState($id, $metadata, array(
-        'status' => $status,
-        'on_demand' => $onDemand,
-        'broadcast' => $broadcast,
-        'automatic_rotation' => $automaticRotation,
-        'allow_download' => isset($allowDownload) ? $allowDownload : 0,
-        'group_id' => $groupId,
-        'perm_owner' => $permOwner,
-        'perm_group' => $permGroup,
-        'perm_members' => $permMembers,
-        'perm_anon' => $permAnon
-    ))) {
-        $error = 'database_error';
-        return false;
+
+    if (RADIO_sharedMediaEnabled() && $validated['extension'] === 'mp3') {
+        $sharedRow = array(
+            'media_id' => $id,
+            'storage_name' => $storageName,
+            'original_name' => $validated['original_name'],
+            'source_kind' => 'local',
+            'title' => stripslashes($title),
+            'description' => stripslashes($description),
+            'author' => stripslashes($author),
+            'series_title' => stripslashes($seriesTitle),
+            'category' => stripslashes($category),
+            'collection_name' => stripslashes($collectionName),
+            'tags' => stripslashes($tags),
+            'season_number' => $seasonNumber,
+            'episode_number' => $episodeNumber,
+            'media_type' => $mediaType
+        );
+        $tagError = '';
+        if (RADIO_writeMediaMetadataToFile($sharedRow, $sharedRow, $tagError)) {
+            clearstatcache(true, $destination);
+            DB_query(
+                "UPDATE {$_TABLES['radio_media']} SET metadata_mtime="
+                . max(0, (int) @filemtime($destination))
+                . " WHERE media_id=" . $id
+            );
+        } else {
+            COM_errorLog('Radio: MP3 saved but shared ID3 metadata could not be written: ' . $tagError, 1);
+        }
     }
+
     if (function_exists('PLG_itemSaved')) {
         PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
     }
@@ -1241,7 +1260,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
     $now = date('Y-m-d H:i:s');
 
     $sql = "INSERT INTO {$_TABLES['radio_media']} "
-        . "(title,description,media_type,author,series_title,category,collection_name,tags,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
+        . "(title,description,media_type,author,series_title,category,collection_name,tags,season_number,episode_number,cover_name,storage_name,original_name,mime_type,duration,file_size,metadata_mtime,status,on_demand,broadcast,automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,created,modified) VALUES ("
         . "'" . $title . "',"
         . "'" . $description . "',"
         . "'" . DB_escapeString($mediaType) . "',"
@@ -1251,7 +1270,7 @@ function RADIO_saveUpload($file, $metadata, &$error)
         . "'" . DB_escapeString($validated['original_name']) . "',"
         . "'" . DB_escapeString($validated['mime']) . "',"
         . $duration . ","
-        . (int) $validated['size'] . ","
+        . (int) $validated['size'] . ",0,"
         . "'" . DB_escapeString($status) . "',"
         . $onDemand . ","
         . $broadcast . ","
@@ -1497,6 +1516,435 @@ function RADIO_saveSiteMediaState($mediaId, $data, $existing)
     return !DB_error();
 }
 
+function RADIO_metadataMtimeSchemaReady()
+{
+    static $ready = null;
+    global $_TABLES;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    $table = isset($_TABLES['radio_media_local'])
+        ? $_TABLES['radio_media_local']
+        : $_TABLES['radio_media'];
+    $result = DB_query(
+        "SHOW COLUMNS FROM " . $table . " LIKE 'metadata_mtime'"
+    );
+    $ready = !DB_error() && DB_numRows($result) > 0;
+    return $ready;
+}
+
+function RADIO_sharedMediaSyncInterval()
+{
+    global $_RADIO_CONF;
+    return isset($_RADIO_CONF['shared_media_sync_interval'])
+        ? max(30, min(86400, (int) $_RADIO_CONF['shared_media_sync_interval']))
+        : 300;
+}
+
+function RADIO_sharedMediaSyncMarkerPath()
+{
+    global $_CONF;
+    $base = isset($_CONF['path_data']) ? rtrim((string) $_CONF['path_data'], "/\\") : '';
+    return $base === '' ? '' : $base . DIRECTORY_SEPARATOR . 'radio-shared-media-sync.marker';
+}
+
+function RADIO_sharedMediaMetadataFields()
+{
+    return array(
+        'title',
+        'author',
+        'series_title',
+        'category',
+        'collection_name',
+        'tags',
+        'description',
+        'media_type',
+        'season_number',
+        'episode_number'
+    );
+}
+
+function RADIO_sharedMediaNormalizeMetadata($metadata, $fallback)
+{
+    $metadata = is_array($metadata) ? $metadata : array();
+    $fallback = is_array($fallback) ? $fallback : array();
+    $result = array();
+
+    foreach (RADIO_sharedMediaMetadataFields() as $field) {
+        $value = array_key_exists($field, $metadata)
+            ? $metadata[$field]
+            : (array_key_exists($field, $fallback) ? $fallback[$field] : '');
+
+        if ($field === 'season_number' || $field === 'episode_number') {
+            $value = max(0, (int) $value);
+        } elseif ($field === 'category') {
+            $value = RADIO_normalizeClassificationValue($value, 128);
+        } elseif ($field === 'collection_name') {
+            $value = RADIO_normalizeClassificationValue($value, 255);
+        } elseif ($field === 'tags') {
+            $value = RADIO_normalizeTags($value);
+        } elseif ($field === 'media_type') {
+            $allowed = array('music','podcast','interview','show','chronicle','jingle','announcement','promo');
+            $value = in_array((string) $value, $allowed, true) ? (string) $value : 'music';
+        } else {
+            $value = trim((string) $value);
+        }
+
+        $result[$field] = $value;
+    }
+
+    $result['original_name'] = array_key_exists('original_name', $metadata)
+        ? basename((string) $metadata['original_name'])
+        : (isset($fallback['original_name']) ? basename((string) $fallback['original_name']) : '');
+
+    return $result;
+}
+
+function RADIO_embeddedMetadataSupported($row)
+{
+    if (!RADIO_sharedMediaEnabled() || !is_array($row)
+        || RADIO_sourceKind($row) !== 'local' || empty($row['storage_name'])) {
+        return false;
+    }
+
+    return strtolower(pathinfo((string) $row['storage_name'], PATHINFO_EXTENSION)) === 'mp3';
+}
+
+function RADIO_readMediaMetadataFromFile($row)
+{
+    if (!RADIO_embeddedMetadataSupported($row)) {
+        return array();
+    }
+
+    $path = RADIO_storageDir() . basename($row['storage_name']);
+    if (!is_file($path) || !is_readable($path)) {
+        return array();
+    }
+
+    $tag = RADIO_id3ReadTag($path);
+    return isset($tag['metadata']) && is_array($tag['metadata'])
+        ? $tag['metadata']
+        : array();
+}
+
+function RADIO_writeMediaMetadataToFile($row, $metadata, &$error)
+{
+    $error = '';
+    if (!RADIO_embeddedMetadataSupported($row)) {
+        $error = 'metadata_format_unsupported';
+        return false;
+    }
+
+    $path = RADIO_storageDir() . basename($row['storage_name']);
+    $normalized = RADIO_sharedMediaNormalizeMetadata($metadata, $row);
+    if ($normalized['title'] === '') {
+        $normalized['title'] = isset($row['title']) ? (string) $row['title'] : '';
+    }
+    if ($normalized['original_name'] === '') {
+        $normalized['original_name'] = isset($row['original_name'])
+            ? (string) $row['original_name']
+            : basename((string) $row['storage_name']);
+    }
+
+    return RADIO_id3WriteMetadata($path, $normalized, $error);
+}
+
+function RADIO_syncMediaMetadataFromFile($row, $force)
+{
+    global $_TABLES;
+
+    if (!RADIO_embeddedMetadataSupported($row) || !RADIO_metadataMtimeSchemaReady()) {
+        return false;
+    }
+
+    $path = RADIO_storageDir() . basename($row['storage_name']);
+    if (!is_file($path) || !is_readable($path)) {
+        return false;
+    }
+
+    clearstatcache(true, $path);
+    $mtime = (int) @filemtime($path);
+    $knownMtime = isset($row['metadata_mtime']) ? (int) $row['metadata_mtime'] : 0;
+    if (!$force && $mtime > 0 && $knownMtime >= $mtime) {
+        return false;
+    }
+
+    $embedded = RADIO_readMediaMetadataFromFile($row);
+    $sets = array();
+
+    foreach (RADIO_sharedMediaMetadataFields() as $field) {
+        if (!array_key_exists($field, $embedded)) {
+            continue;
+        }
+        $normalized = RADIO_sharedMediaNormalizeMetadata(
+            array($field => $embedded[$field]),
+            $row
+        );
+        $value = $normalized[$field];
+
+        if ($field === 'season_number' || $field === 'episode_number') {
+            $sets[] = $field . '=' . (int) $value;
+        } else {
+            $sets[] = $field . "='" . DB_escapeString((string) $value) . "'";
+        }
+    }
+
+    if (!empty($embedded['original_name'])) {
+        $sets[] = "original_name='"
+            . DB_escapeString(basename((string) $embedded['original_name'])) . "'";
+    }
+
+    $sets[] = 'metadata_mtime=' . max(0, $mtime);
+    if (count($sets) === 1 && $mtime < 1) {
+        return false;
+    }
+
+    $table = isset($_TABLES['radio_media_local'])
+        ? $_TABLES['radio_media_local']
+        : $_TABLES['radio_media'];
+    DB_query(
+        "UPDATE " . $table . " SET " . implode(',', $sets)
+        . " WHERE media_id=" . (int) $row['media_id']
+    );
+
+    return !DB_error();
+}
+
+function RADIO_prepareSharedMediaUpdate($row, $metadata, &$error)
+{
+    $error = '';
+    if (!RADIO_embeddedMetadataSupported($row)) {
+        return $metadata;
+    }
+
+    $submitted = RADIO_sharedMediaNormalizeMetadata($metadata, $row);
+    $before = RADIO_sharedMediaNormalizeMetadata($row, $row);
+    $changed = array();
+
+    foreach (RADIO_sharedMediaMetadataFields() as $field) {
+        if ((string) $submitted[$field] !== (string) $before[$field]) {
+            $changed[$field] = $submitted[$field];
+        }
+    }
+
+    if (count($changed) === 0) {
+        return $metadata;
+    }
+
+    // Re-read the file immediately before writing. Only fields changed by the
+    // current form overwrite embedded metadata, preventing a stale site cache
+    // from reverting edits made by another site.
+    $current = RADIO_readMediaMetadataFromFile($row);
+    $merged = RADIO_sharedMediaNormalizeMetadata($current, $row);
+    foreach ($changed as $field => $value) {
+        $merged[$field] = $value;
+    }
+    $merged['original_name'] = isset($row['original_name'])
+        ? (string) $row['original_name']
+        : basename((string) $row['storage_name']);
+
+    if (!RADIO_writeMediaMetadataToFile($row, $merged, $error)) {
+        return false;
+    }
+
+    foreach (RADIO_sharedMediaMetadataFields() as $field) {
+        $metadata[$field] = $merged[$field];
+    }
+
+    $path = RADIO_storageDir() . basename($row['storage_name']);
+    clearstatcache(true, $path);
+    $metadata['_metadata_mtime'] = (int) @filemtime($path);
+    return $metadata;
+}
+
+function RADIO_registerSharedMediaFile($storageName)
+{
+    global $_TABLES, $_USER;
+
+    if (!RADIO_sharedMediaEnabled() || !RADIO_metadataMtimeSchemaReady()) {
+        return false;
+    }
+
+    $storageName = basename((string) $storageName);
+    $extension = strtolower(pathinfo($storageName, PATHINFO_EXTENSION));
+    if (!isset(RADIO_allowedAudio()[$extension])) {
+        return false;
+    }
+
+    $table = isset($_TABLES['radio_media_local'])
+        ? $_TABLES['radio_media_local']
+        : $_TABLES['radio_media'];
+    $exists = DB_getItem(
+        $table,
+        'media_id',
+        "storage_name='" . DB_escapeString($storageName) . "'"
+    );
+    if ((int) $exists > 0) {
+        return (int) $exists;
+    }
+
+    $path = RADIO_storageDir() . $storageName;
+    if (!is_file($path) || !is_readable($path)) {
+        return false;
+    }
+
+    $tag = $extension === 'mp3' ? RADIO_id3ReadTag($path) : array('metadata' => array());
+    $embedded = isset($tag['metadata']) && is_array($tag['metadata'])
+        ? $tag['metadata']
+        : array();
+    $original = !empty($embedded['original_name'])
+        ? basename((string) $embedded['original_name'])
+        : $storageName;
+    $metadata = RADIO_sharedMediaNormalizeMetadata($embedded, array(
+        'title' => RADIO_cleanImportedTitle($original),
+        'media_type' => 'music',
+        'original_name' => $original
+    ));
+    if ($metadata['title'] === '') {
+        $metadata['title'] = RADIO_cleanImportedTitle($storageName);
+    }
+
+    $duration = RADIO_detectAudioDuration($path, $extension);
+    $mime = RADIO_detectMime($path);
+    $size = (int) @filesize($path);
+    $mtime = (int) @filemtime($path);
+    $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
+    $groupId = RADIO_defaultGroupId();
+    $now = date('Y-m-d H:i:s');
+
+    DB_query(
+        "INSERT INTO " . $table . " "
+        . "(title,description,media_type,author,series_title,category,collection_name,tags,"
+        . "season_number,episode_number,cover_name,source_kind,source_url,source_provider,"
+        . "source_external_id,source_attribution,source_license,storage_name,original_name,"
+        . "mime_type,duration,file_size,metadata_mtime,status,on_demand,broadcast,"
+        . "automatic_rotation,allow_download,hits,owner_id,group_id,perm_owner,perm_group,"
+        . "perm_members,perm_anon,created,modified) VALUES ("
+        . "'" . DB_escapeString(substr($metadata['title'],0,255)) . "',"
+        . "'" . DB_escapeString($metadata['description']) . "',"
+        . "'" . DB_escapeString($metadata['media_type']) . "',"
+        . "'" . DB_escapeString(substr($metadata['author'],0,255)) . "',"
+        . "'" . DB_escapeString(substr($metadata['series_title'],0,255)) . "',"
+        . "'" . DB_escapeString($metadata['category']) . "',"
+        . "'" . DB_escapeString($metadata['collection_name']) . "',"
+        . "'" . DB_escapeString($metadata['tags']) . "',"
+        . (int) $metadata['season_number'] . "," . (int) $metadata['episode_number'] . ",'',"
+        . "'local','','','','','',"
+        . "'" . DB_escapeString($storageName) . "',"
+        . "'" . DB_escapeString($original) . "',"
+        . "'" . DB_escapeString($mime) . "',"
+        . max(0, $duration) . "," . max(0, $size) . "," . max(0, $mtime) . ","
+        . "'draft',1,1,1,0,0,"
+        . $owner . "," . $groupId . ",3,2,2,2,'"
+        . DB_escapeString($now) . "','" . DB_escapeString($now) . "')"
+    );
+
+    return DB_error() ? false : (int) DB_insertId();
+}
+
+function RADIO_syncSharedMediaLibrary($force)
+{
+    global $_TABLES;
+
+    $summary = array(
+        'enabled' => RADIO_sharedMediaEnabled(),
+        'scanned' => 0,
+        'imported' => 0,
+        'updated' => 0,
+        'errors' => 0,
+        'skipped' => false
+    );
+
+    if (!$summary['enabled'] || !RADIO_metadataMtimeSchemaReady()) {
+        return $summary;
+    }
+
+    $marker = RADIO_sharedMediaSyncMarkerPath();
+    if (!$force && $marker !== '' && is_file($marker)) {
+        $age = time() - (int) @filemtime($marker);
+        if ($age >= 0 && $age < RADIO_sharedMediaSyncInterval()) {
+            $summary['skipped'] = true;
+            return $summary;
+        }
+    }
+
+    $dir = RADIO_storageDir();
+    if ($dir === '' || !is_dir($dir) || !is_readable($dir)) {
+        $summary['errors']++;
+        return $summary;
+    }
+
+    $table = isset($_TABLES['radio_media_local'])
+        ? $_TABLES['radio_media_local']
+        : $_TABLES['radio_media'];
+    $known = array();
+    $result = DB_query(
+        "SELECT media_id,storage_name,source_kind,metadata_mtime,title,author,series_title,"
+        . "category,collection_name,tags,description,media_type,season_number,episode_number,"
+        . "original_name,status,on_demand,broadcast,automatic_rotation,allow_download,"
+        . "owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon "
+        . "FROM " . $table . " WHERE source_kind='local'"
+    );
+    while ($row = DB_fetchArray($result)) {
+        $known[basename((string) $row['storage_name'])] = $row;
+    }
+
+    $handle = @opendir($dir);
+    if (!$handle) {
+        $summary['errors']++;
+        return $summary;
+    }
+
+    while (($name = readdir($handle)) !== false) {
+        if ($name === '.' || $name === '..') {
+            continue;
+        }
+
+        $path = $dir . basename($name);
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!isset(RADIO_allowedAudio()[$extension])) {
+            continue;
+        }
+
+        $summary['scanned']++;
+        if (!isset($known[$name])) {
+            if (RADIO_registerSharedMediaFile($name) !== false) {
+                $summary['imported']++;
+            } else {
+                $summary['errors']++;
+            }
+            continue;
+        }
+
+        if ($extension !== 'mp3') {
+            continue;
+        }
+
+        clearstatcache(true, $path);
+        $mtime = (int) @filemtime($path);
+        if ($force || $mtime > (int) $known[$name]['metadata_mtime']) {
+            if (RADIO_syncMediaMetadataFromFile($known[$name], true)) {
+                $summary['updated']++;
+            } else {
+                $summary['errors']++;
+            }
+        }
+    }
+    closedir($handle);
+
+    if ($marker !== '') {
+        @touch($marker);
+    }
+
+    return $summary;
+}
+
 function RADIO_getMedia($id, $publishedOnly)
 {
     global $_TABLES;
@@ -1510,6 +1958,12 @@ function RADIO_getMedia($id, $publishedOnly)
         return false;
     }
     $row = RADIO_mergeSiteMediaState(RADIO_normalizeImportedMediaTitle(DB_fetchArray($result)));
+    if (RADIO_sharedMediaEnabled() && RADIO_syncMediaMetadataFromFile($row, false)) {
+        $refresh = DB_query("SELECT * FROM {$_TABLES['radio_media']} WHERE media_id=" . $id);
+        if (DB_numRows($refresh) > 0) {
+            $row = RADIO_mergeSiteMediaState(RADIO_normalizeImportedMediaTitle(DB_fetchArray($refresh)));
+        }
+    }
     if ($publishedOnly && ($row['status'] !== 'published'
         || empty($row['site_enabled'])
         || !RADIO_hasReadAccess($row))) {
@@ -1639,6 +2093,10 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
 {
     global $_TABLES;
 
+    if (RADIO_sharedMediaEnabled()) {
+        RADIO_syncSharedMediaLibrary(false);
+    }
+
     $limit = max(1, min(500, (int) $limit));
     $where = ($publishedOnly && !RADIO_sharedLibraryEnabled())
         ? " WHERE status='published'"
@@ -1754,6 +2212,18 @@ function RADIO_updateMedia($id, $metadata)
         return false;
     }
 
+    $metadataError = '';
+    $preparedMetadata = RADIO_prepareSharedMediaUpdate($row, $metadata, $metadataError);
+    if ($preparedMetadata === false) {
+        COM_errorLog(
+            'Radio: unable to write shared MP3 metadata for media '
+            . (int) $id . ': ' . $metadataError,
+            1
+        );
+        return false;
+    }
+    $metadata = $preparedMetadata;
+
     $title = trim(isset($metadata['title']) ? (string) $metadata['title'] : '');
     if ($title === '') {
         return false;
@@ -1793,10 +2263,6 @@ function RADIO_updateMedia($id, $metadata)
     list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, $row);
     $now = date('Y-m-d H:i:s');
 
-    if (RADIO_sharedLibraryEnabled() && !RADIO_saveSiteMediaState($id, $metadata, $row)) {
-        return false;
-    }
-
     DB_query(
         "UPDATE {$_TABLES['radio_media']} SET "
         . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
@@ -1816,6 +2282,9 @@ function RADIO_updateMedia($id, $metadata)
             . "allow_download=" . $allowDownload . ",")
         . "duration=" . $duration . ","
         . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
+        . (isset($metadata['_metadata_mtime'])
+            ? "metadata_mtime=" . max(0, (int) $metadata['_metadata_mtime']) . ","
+            : "")
         . "modified='" . DB_escapeString($now) . "' "
         . "WHERE media_id=" . (int) $id
     );
@@ -1837,16 +2306,6 @@ function RADIO_deleteMedia($id)
     }
 
     DB_query("DELETE FROM {$_TABLES['radio_program_items']} WHERE media_id=" . (int) $id);
-
-    if (RADIO_sharedLibraryEnabled()) {
-        if (!RADIO_saveSiteMediaState($id, array('site_enabled' => 0), $row)) {
-            return false;
-        }
-        if (function_exists('PLG_itemDeleted')) {
-            PLG_itemDeleted(RADIO_externalId('media', (int) $id), 'radio');
-        }
-        return true;
-    }
 
     DB_query("DELETE FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $id);
     if (DB_error()) {
