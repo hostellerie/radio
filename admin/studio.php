@@ -127,18 +127,6 @@ foreach ($items as $item) {
         'stream_url' => $playable ? RADIO_mediaUrl((int) $item['media_id'], false) : ''
     );
 
-    $chapterLabel = trim(
-        (!empty($item['author']) ? $item['author'] . ' — ' : '')
-        . $item['title']
-    );
-
-    $chapters .= '<li><button type="button" class="radio-replay__chapter"'
-        . ' data-radio-replay-chapter="' . (count($playlist) - 1) . '"'
-        . ' data-radio-replay-offset="' . $offset . '">'
-        . '<span class="radio-replay__chapter-time">' . gmdate('H:i:s', $offset) . '</span>'
-        . '<span class="radio-replay__chapter-title">' . radio_studio_h($chapterLabel) . '</span>'
-        . '</button></li>';
-
 }
 
 $transitionMode = RADIO_transitionMode();
@@ -156,7 +144,25 @@ for ($i = 0; $i < count($playlist); $i++) {
         );
     }
     $playlist[$i]['transition_overlap'] = $overlap;
-    $offset += max(0, (int) $playlist[$i]['duration'] - $overlap);
+    if (!empty($playlist[$i]['playable'])) {
+        $offset += max(0, (int) $playlist[$i]['duration'] - $overlap);
+    }
+}
+
+$chapters = '';
+foreach ($playlist as $chapterIndex => $chapterItem) {
+    $chapterLabel = trim(
+        (!empty($chapterItem['author']) ? $chapterItem['author'] . ' — ' : '')
+        . $chapterItem['title']
+    );
+    $chapterOffset = (int) $chapterItem['offset'];
+    $chapters .= '<li><button type="button" class="radio-replay__chapter"'
+        . ' data-radio-replay-chapter="' . $chapterIndex . '"'
+        . ' data-radio-replay-item-id="' . (int) $chapterItem['item_id'] . '"'
+        . ' data-radio-replay-offset="' . $chapterOffset . '">'
+        . '<span class="radio-replay__chapter-time">' . gmdate('H:i:s', $chapterOffset) . '</span>'
+        . '<span class="radio-replay__chapter-title">' . radio_studio_h($chapterLabel) . '</span>'
+        . '</button></li>';
 }
 
 $playlistJson = json_encode($playlist);
@@ -247,21 +253,23 @@ if (count($playlist) === 0) {
         $label = trim(($item['author'] !== '' ? $item['author'] . ' — ' : '') . $item['title']);
         $typeLabel = RADIO_adminMediaTypeLabel($item['media_type']);
 
+        $durationLabel = $item['duration'] > 0
+            ? gmdate('H:i:s', $item['duration'])
+            : '--:--';
+
         $content .= '<li class="radio-studio__queue-item'
             . (!$item['playable'] ? ' is-not-ready' : '') . '">'
-            . '<div class="radio-studio__queue-main">'
-            . '<button type="button" class="radio-studio__queue-title radio-studio__queue-seek"'
-            . ' data-radio-studio-seek-item="' . (int) $item['item_id'] . '">'
-            . radio_studio_h($label) . '</button>'
             . '<span class="radio-admin__badge radio-studio__queue-type">'
             . radio_studio_h($typeLabel) . '</span>'
-            . '</div>';
+            . '<span class="radio-studio__queue-duration">'
+            . radio_studio_h($durationLabel) . '</span>'
+            . '<button type="button" class="radio-studio__queue-title radio-studio__queue-seek"'
+            . ' data-radio-studio-seek-item="' . (int) $item['item_id'] . '">'
+            . radio_studio_h($label) . '</button>';
 
         if (!$item['playable']) {
-            $content .= '<span class="radio-admin__muted">'
+            $content .= '<span class="radio-admin__muted radio-studio__queue-state">'
                 . radio_studio_h($LANG_RADIO['studio_queue_not_ready']) . '</span>';
-        } elseif ($item['duration'] > 0) {
-            $content .= '<span class="radio-admin__muted">' . gmdate('H:i:s', $item['duration']) . '</span>';
         }
 
         if ($canEdit) {
