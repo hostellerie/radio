@@ -286,30 +286,28 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($studioPage, "isset(\$_POST['studio_action'])") !== false
-        && strpos($studioPage, 'SEC_checkToken()') !== false
-        && strpos($studioPage, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
-        && strpos($studioPage, 'RADIO_removeProgramItem($itemId, $programId)') !== false
-        && strpos($studioPage, 'RADIO_moveProgramItem(') !== false
-        && strpos($studioPage, 'name="studio_action" value="remove"') !== false
-        && strpos($studioPage, 'name="studio_action" value="move_up"') !== false
-        && strpos($studioPage, 'name="studio_action" value="move_down"') !== false
-        && strpos($studioPage, 'name="studio_action" value="add"') !== false
-        && strpos($studioPage, 'data-radio-current-item-input') !== false
-        && strpos($studioPage, 'data-radio-studio-endpoint') === false
-        && strpos($studioPage, 'radio-studio.js') === false,
-    'Radio Studio mutations must use native same-page Geeklog forms instead of the AJAX mutation layer.'
+    strpos($studioPage, 'data-radio-studio-endpoint') !== false
+        && strpos($studioPage, 'data-radio-studio-mutation-endpoint') !== false
+        && strpos($studioPage, 'data-radio-studio-queue') !== false
+        && strpos($studioPage, 'data-radio-studio-search') !== false
+        && strpos($studioPage, 'data-radio-studio-results') !== false
+        && strpos($studioPage, 'radio-studio.js') !== false
+        && strpos($studioApi, 'function radio_studio_check_token') !== false
+        && strpos($studioApi, "if (\$studioAction === 'remove')") !== false
+        && strpos($studioApi, "if (\$studioAction === 'move_up' || \$studioAction === 'move_down')") !== false
+        && strpos($studioJs, "body.set('studio_action', 'add')") !== false
+        && strpos($studioJs, "mutateItem('remove'") !== false,
+    'Radio Studio mutations must use live AJAX updates without reloading the playing Studio page.'
 );
 
 radio_contract_require(
     strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
-        && strpos($studioPage, "name=\"position\" value=\"next\"") !== false
-        && strpos($studioPage, "name=\"position\" value=\"end\"") !== false
-        && strpos($studioPage, "player.getAttribute('data-radio-current-item-id')") !== false
-        && strpos($studioPage, "radio:seek-item") !== false
+        && strpos($studioJs, "body.set('position', position)") !== false
+        && strpos($studioJs, "player.getAttribute('data-radio-current-item-id')") !== false
+        && strpos($studioJs, 'dispatchPlaylist(data.items || [])') !== false
         && strpos($publicPlayer, "root.addEventListener('radio:seek-item'") !== false,
-    'Radio Studio must preserve Play next and queue navigation with a minimal client helper while mutations stay server-side.'
+    'Radio Studio must preserve Play next and live queue navigation while audio keeps playing.'
 );
 
 radio_contract_require(
@@ -617,7 +615,7 @@ radio_contract_require(
         && strpos($publicProgram, 'RADIO_requirePublicAccess(true);') !== false
         && strpos($publicReplay, 'RADIO_requirePublicAccess(true);') !== false
         && strpos($publicSchedule, 'RADIO_requirePublicAccess(true);') !== false,
-    'Disabled Radio must redirect public HTML pages to the site index while allowing radio admins through.'
+    'Disabled Radio must redirect public HTML pages to the site index while allowing Radio administrative users through.'
 );
 
 radio_contract_require(
