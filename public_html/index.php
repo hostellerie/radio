@@ -1,6 +1,6 @@
 <?php
 require_once '../lib-common.php';
-RADIO_requirePublicAccess();
+RADIO_requirePublicAccess(true);
 global $_TABLES, $_CONF, $_RADIO_CONF, $LANG_RADIO;
 
 $title = isset($_RADIO_CONF['public_title']) ? $_RADIO_CONF['public_title'] : 'Radio';
