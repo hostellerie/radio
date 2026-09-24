@@ -880,6 +880,207 @@
                 queuePreload.preload = 'auto';
                 queueReserve.preload = 'auto';
 
+
+                var studioFx = (function () {
+                    var context = null;
+                    var low = null;
+                    var mid = null;
+                    var high = null;
+                    var lowPass = null;
+                    var highPass = null;
+                    var dry = null;
+                    var delay = null;
+                    var feedback = null;
+                    var wet = null;
+                    var master = null;
+                    var ready = false;
+
+                    function setup() {
+                        if (ready) {
+                            if (context && context.state === 'suspended') {
+                                context.resume().catch(function () {});
+                            }
+                            return true;
+                        }
+
+                        var AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (!AudioContext) {
+                            return false;
+                        }
+
+                        try {
+                            context = new AudioContext();
+
+                            low = context.createBiquadFilter();
+                            low.type = 'lowshelf';
+                            low.frequency.value = 160;
+
+                            mid = context.createBiquadFilter();
+                            mid.type = 'peaking';
+                            mid.frequency.value = 1000;
+                            mid.Q.value = 0.8;
+
+                            high = context.createBiquadFilter();
+                            high.type = 'highshelf';
+                            high.frequency.value = 6500;
+
+                            lowPass = context.createBiquadFilter();
+                            lowPass.type = 'lowpass';
+                            lowPass.frequency.value = 22000;
+                            lowPass.Q.value = 0.7;
+
+                            highPass = context.createBiquadFilter();
+                            highPass.type = 'highpass';
+                            highPass.frequency.value = 20;
+                            highPass.Q.value = 0.7;
+
+                            dry = context.createGain();
+                            dry.gain.value = 1;
+
+                            delay = context.createDelay(1.0);
+                            delay.delayTime.value = 0.32;
+
+                            feedback = context.createGain();
+                            feedback.gain.value = 0.32;
+
+                            wet = context.createGain();
+                            wet.gain.value = 0;
+
+                            master = context.createGain();
+                            master.gain.value = 1;
+
+                            var elements = [audio, queuePreload, queueReserve];
+                            for (var sourceIndex = 0; sourceIndex < elements.length; sourceIndex++) {
+                                context.createMediaElementSource(elements[sourceIndex]).connect(low);
+                            }
+
+                            low.connect(mid);
+                            mid.connect(high);
+                            high.connect(lowPass);
+                            lowPass.connect(highPass);
+
+                            highPass.connect(dry);
+                            dry.connect(master);
+
+                            highPass.connect(delay);
+                            delay.connect(feedback);
+                            feedback.connect(delay);
+                            delay.connect(wet);
+                            wet.connect(master);
+
+                            master.connect(context.destination);
+
+                            ready = true;
+                            if (context.state === 'suspended') {
+                                context.resume().catch(function () {});
+                            }
+                            return true;
+                        } catch (error) {
+                            ready = false;
+                            return false;
+                        }
+                    }
+
+                    function setFilter(value) {
+                        if (!setup()) {
+                            return;
+                        }
+                        value = Math.max(-100, Math.min(100, parseFloat(value || 0) || 0));
+                        if (value < 0) {
+                            var lowRatio = Math.abs(value) / 100;
+                            lowPass.frequency.value = 22000 * Math.pow(300 / 22000, lowRatio);
+                            highPass.frequency.value = 20;
+                        } else if (value > 0) {
+                            var highRatio = value / 100;
+                            lowPass.frequency.value = 22000;
+                            highPass.frequency.value = 20 * Math.pow(2200 / 20, highRatio);
+                        } else {
+                            lowPass.frequency.value = 22000;
+                            highPass.frequency.value = 20;
+                        }
+                    }
+
+                    function horn() {
+                        if (!setup()) {
+                            return;
+                        }
+
+                        var nowTime = context.currentTime;
+                        var hornFilter = context.createBiquadFilter();
+                        var hornGain = context.createGain();
+                        var osc1 = context.createOscillator();
+                        var osc2 = context.createOscillator();
+
+                        hornFilter.type = 'lowpass';
+                        hornFilter.frequency.value = 700;
+                        hornFilter.Q.value = 1.5;
+
+                        hornGain.gain.setValueAtTime(0.0001, nowTime);
+                        hornGain.gain.exponentialRampToValueAtTime(0.28, nowTime + 0.04);
+                        hornGain.gain.exponentialRampToValueAtTime(0.18, nowTime + 0.7);
+                        hornGain.gain.exponentialRampToValueAtTime(0.0001, nowTime + 1.35);
+
+                        osc1.type = 'sawtooth';
+                        osc1.frequency.setValueAtTime(112, nowTime);
+                        osc1.frequency.exponentialRampToValueAtTime(104, nowTime + 1.2);
+
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(168, nowTime);
+                        osc2.frequency.exponentialRampToValueAtTime(156, nowTime + 1.2);
+
+                        osc1.connect(hornFilter);
+                        osc2.connect(hornFilter);
+                        hornFilter.connect(hornGain);
+                        hornGain.connect(master);
+
+                        osc1.start(nowTime);
+                        osc2.start(nowTime);
+                        osc1.stop(nowTime + 1.4);
+                        osc2.stop(nowTime + 1.4);
+                    }
+
+                    function reset() {
+                        if (!setup()) {
+                            return;
+                        }
+                        low.gain.value = 0;
+                        mid.gain.value = 0;
+                        high.gain.value = 0;
+                        wet.gain.value = 0;
+                        setFilter(0);
+                    }
+
+                    return {
+                        apply: function (control, value) {
+                            if (control === 'horn') {
+                                horn();
+                                return;
+                            }
+                            if (!setup()) {
+                                return;
+                            }
+                            if (control === 'low') {
+                                low.gain.value = Math.max(-12, Math.min(12, value || 0));
+                            } else if (control === 'mid') {
+                                mid.gain.value = Math.max(-12, Math.min(12, value || 0));
+                            } else if (control === 'high') {
+                                high.gain.value = Math.max(-12, Math.min(12, value || 0));
+                            } else if (control === 'filter') {
+                                setFilter(value);
+                            } else if (control === 'echo') {
+                                wet.gain.value = value ? 0.28 : 0;
+                            } else if (control === 'reset') {
+                                reset();
+                            }
+                        }
+                    };
+                }());
+
+                root.addEventListener('radio:djfx', function (event) {
+                    var detail = event && event.detail ? event.detail : {};
+                    studioFx.apply(detail.control || '', detail.value);
+                });
+
                 function refreshChapterButtons() {
                     chapterButtons = qa('[data-radio-replay-chapter]', root);
                 }
