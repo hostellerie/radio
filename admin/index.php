@@ -13,6 +13,25 @@ if (!SEC_hasRights('radio.admin')) {
 global $LANG_RADIO;
 
 $message = '';
+
+if (isset($_POST['sync_shared_media'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
+    } elseif (RADIO_sharedMediaEnabled()) {
+        $syncSummary = RADIO_syncSharedMediaLibrary(true);
+        $message = COM_showMessageText(
+            sprintf(
+                $LANG_RADIO['shared_media_sync_result'],
+                (int) $syncSummary['scanned'],
+                (int) $syncSummary['imported'],
+                (int) $syncSummary['updated'],
+                (int) $syncSummary['errors']
+            ),
+            $LANG_RADIO['admin_title']
+        );
+    }
+}
+
 if (isset($_GET['updated']) && (int) $_GET['updated'] === 1) {
     $message = COM_showMessageText(
         $LANG_RADIO['media_saved'],
@@ -40,10 +59,28 @@ $ready = RADIO_ensureStorage();
 $classificationOptions = RADIO_mediaClassificationOptions();
 $media = RADIO_getMediaList(500, false, $sort, $direction, $filters);
 
-$content = '<section class="radio-admin__panel"><h2>'
+$libraryInfo = RADIO_libraryInfo();
+$storageDetails = '<section class="radio-admin__panel"><h2>'
     . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . '</h2><p><strong>'
     . htmlspecialchars($ready ? $LANG_RADIO['storage_ready'] : $LANG_RADIO['storage_unavailable'], ENT_QUOTES, 'UTF-8')
-    . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p></section>';
+    . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p>'
+    . '<p><strong>' . htmlspecialchars($LANG_RADIO['library_mode'], ENT_QUOTES, 'UTF-8') . ':</strong> '
+    . htmlspecialchars(
+        RADIO_sharedMediaEnabled() ? $LANG_RADIO['shared_media_mode'] : $LANG_RADIO['local_media_mode'],
+        ENT_QUOTES,
+        'UTF-8'
+    ) . '</p>';
+
+if (RADIO_sharedMediaEnabled()) {
+    $storageDetails .= '<form method="post" action="">'
+        . '<input type="hidden" name="' . CSRF_TOKEN . '" value="'
+        . htmlspecialchars(SEC_createToken(), ENT_QUOTES, 'UTF-8') . '">'
+        . '<button class="radio-admin__button" type="submit" name="sync_shared_media" value="1">'
+        . htmlspecialchars($LANG_RADIO['sync_shared_media'], ENT_QUOTES, 'UTF-8')
+        . '</button></form>';
+}
+
+$content = $storageDetails . '</section>';
 
 $content .= RADIO_adminQuickActions();
 $content .= RADIO_adminRenderMediaFilters($filters, $classificationOptions, $sort, $direction);
