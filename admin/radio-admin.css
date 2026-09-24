@@ -328,3 +328,55 @@
 .radio-program-preview.is-broadcasting .radio-studio__broadcast-state::before{
     content:"● ";
 }
+
+
+/* Studio live DJ FX: intentionally compact and immediate. */
+.radio-studio__djfx{
+    margin:0 0 1rem;
+    padding:.75rem;
+    border:1px solid rgba(127,127,127,.22);
+    border-radius:.4rem
+}
+.radio-studio__djfx-title{
+    display:block;
+    margin-bottom:.55rem
+}
+.radio-studio__djfx-controls{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(110px,1fr)) max-content max-content max-content;
+    gap:.6rem;
+    align-items:end
+}
+.radio-studio__djfx-controls label{
+    display:grid;
+    gap:.25rem;
+    min-width:0
+}
+.radio-studio__djfx-controls label>span{
+    font-size:.82rem;
+    font-weight:600
+}
+.radio-studio__djfx-controls input[type="range"]{
+    width:100%
+}
+.radio-studio__djfx-controls .radio-admin__button{
+    margin:0;
+    white-space:nowrap
+}
+.radio-studio__djfx-controls .radio-admin__button.is-active{
+    font-weight:700
+}
+.radio-studio__djfx small{
+    display:block;
+    margin-top:.45rem
+}
+@media(max-width:900px){
+    .radio-studio__djfx-controls{
+        grid-template-columns:repeat(2,minmax(130px,1fr)) repeat(3,max-content)
+    }
+}
+@media(max-width:560px){
+    .radio-studio__djfx-controls{
+        grid-template-columns:1fr 1fr
+    }
+}
