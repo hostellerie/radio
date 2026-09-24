@@ -1,6 +1,6 @@
 <?php
 require_once '../lib-common.php';
-RADIO_requirePublicAccess();
+RADIO_requirePublicAccess(true);
 global $_CONF, $_RADIO_CONF, $LANG_RADIO;
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
