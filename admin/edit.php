@@ -26,6 +26,45 @@ if ($row === false || !RADIO_hasEditAccess($row)) {
 
 $message = '';
 
+if (isset($_POST['sync_metadata_from_file'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
+    } elseif (!RADIO_embeddedMetadataSupported($row)) {
+        $message = COM_showMessageText($LANG_RADIO['metadata_format_unsupported'], $LANG_RADIO['admin_title']);
+    } elseif (RADIO_syncMediaMetadataFromFile($row, true)) {
+        $row = RADIO_getMedia($id, false);
+        $message = COM_showMessageText($LANG_RADIO['metadata_synced_from_file'], $LANG_RADIO['admin_title']);
+    } else {
+        $message = COM_showMessageText($LANG_RADIO['metadata_sync_failed'], $LANG_RADIO['admin_title']);
+    }
+}
+
+if (isset($_POST['write_metadata_to_file'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
+    } elseif (!RADIO_embeddedMetadataSupported($row)) {
+        $message = COM_showMessageText($LANG_RADIO['metadata_format_unsupported'], $LANG_RADIO['admin_title']);
+    } else {
+        $metadataError = '';
+        if (RADIO_writeMediaMetadataToFile($row, $row, $metadataError)) {
+            $path = RADIO_storageDir() . basename($row['storage_name']);
+            clearstatcache(true, $path);
+            if (RADIO_metadataMtimeSchemaReady()) {
+                DB_query(
+                    "UPDATE {$_TABLES['radio_media']} SET metadata_mtime="
+                    . max(0, (int) @filemtime($path))
+                    . " WHERE media_id=" . $id
+                );
+            }
+            $row = RADIO_getMedia($id, false);
+            $message = COM_showMessageText($LANG_RADIO['metadata_written_to_file'], $LANG_RADIO['admin_title']);
+        } else {
+            $key = isset($LANG_RADIO[$metadataError]) ? $metadataError : 'metadata_write_failed';
+            $message = COM_showMessageText($LANG_RADIO[$key], $LANG_RADIO['admin_title']);
+        }
+    }
+}
+
 if (isset($_POST['save_media'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
@@ -147,6 +186,19 @@ $template->set_var(array(
     'csrf_name' => CSRF_TOKEN,
     'csrf_token' => htmlspecialchars($token, ENT_QUOTES, 'UTF-8'),
     'save_label' => htmlspecialchars($LANG_RADIO['save'], ENT_QUOTES, 'UTF-8'),
+    'embedded_metadata_tools' => RADIO_embeddedMetadataSupported($row)
+        ? '<div class="radio-admin__panel"><strong>'
+            . htmlspecialchars($LANG_RADIO['shared_metadata'], ENT_QUOTES, 'UTF-8')
+            . '</strong><p class="radio-admin__muted">'
+            . htmlspecialchars($LANG_RADIO['shared_metadata_help'], ENT_QUOTES, 'UTF-8')
+            . '</p><div class="radio-admin__toolbar">'
+            . '<button class="radio-admin__button" type="submit" name="sync_metadata_from_file" value="1">'
+            . htmlspecialchars($LANG_RADIO['sync_from_file'], ENT_QUOTES, 'UTF-8')
+            . '</button>'
+            . '<button class="radio-admin__button" type="submit" name="write_metadata_to_file" value="1">'
+            . htmlspecialchars($LANG_RADIO['write_to_file'], ENT_QUOTES, 'UTF-8')
+            . '</button></div></div>'
+        : '',
     'back_url' => htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/index.php', ENT_QUOTES, 'UTF-8'),
     'back_label' => htmlspecialchars($LANG_RADIO['back_to_library_admin'], ENT_QUOTES, 'UTF-8'),
     'delete_label' => htmlspecialchars($LANG_RADIO['delete'], ENT_QUOTES, 'UTF-8'),
