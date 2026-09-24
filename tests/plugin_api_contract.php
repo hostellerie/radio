@@ -6,6 +6,11 @@ $english = file_get_contents($root . '/language/english.php');
 $french = file_get_contents($root . '/language/french.php');
 $defaults = file_get_contents($root . '/install_defaults.php');
 $publicIndex = file_get_contents($root . '/public_html/index.php');
+$publicProgram = file_get_contents($root . '/public_html/program.php');
+$publicReplay = file_get_contents($root . '/public_html/replay.php');
+$publicSchedule = file_get_contents($root . '/public_html/schedule.php');
+$publicPlayerPage = file_get_contents($root . '/public_html/player.php');
+$publicMediaEndpoint = file_get_contents($root . '/public_html/media.php');
 $nowEndpoint = file_get_contents($root . '/public_html/now.php');
 $publicJs = file_get_contents($root . '/public_html/radio.js');
 $publicCss = file_get_contents($root . '/public_html/radio.css');
@@ -602,6 +607,32 @@ radio_contract_require(
         && strpos($functions, 'radio.js') !== false
         && strpos($functions, 'radio-admin.js') !== false,
     'Radio versioned asset callbacks must reference the packaged asset files.'
+);
+
+radio_contract_require(
+    strpos($functions, 'function RADIO_isEnabled()') !== false
+        && strpos($functions, 'function RADIO_publicAccessAllowed()') !== false
+        && strpos($functions, 'function RADIO_requirePublicAccess($redirectToSite = false)') !== false
+        && strpos($publicIndex, 'RADIO_requirePublicAccess(true);') !== false
+        && strpos($publicProgram, 'RADIO_requirePublicAccess(true);') !== false
+        && strpos($publicReplay, 'RADIO_requirePublicAccess(true);') !== false
+        && strpos($publicSchedule, 'RADIO_requirePublicAccess(true);') !== false,
+    'Disabled Radio must redirect public HTML pages to the site index while allowing radio admins through.'
+);
+
+radio_contract_require(
+    strpos($publicPlayerPage, 'RADIO_requirePublicAccess();') !== false
+        && strpos($publicMediaEndpoint, 'RADIO_requirePublicAccess();') !== false
+        && strpos($nowEndpoint, 'RADIO_requirePublicAccess();') !== false,
+    'Disabled Radio must block public player, media and live API endpoints.'
+);
+
+radio_contract_require(
+    strpos($functions, 'if ($isAdmin || $isRadioConfig)') !== false
+        && strpos($functions, 'return RADIO_adminStylesheetLink();') !== false
+        && strpos($functions, "RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')") !== false
+        && strpos($functions, 'RADIO_adminScriptTag()') !== false,
+    'Radio admin CSS and JavaScript must remain available while public Radio is disabled.'
 );
 radio_contract_require(
     strpos($publicJs, 'function initHomePlayer') !== false
