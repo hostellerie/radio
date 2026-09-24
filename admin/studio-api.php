@@ -1,9 +1,67 @@
 <?php
+ob_start();
+
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
 
+$GLOBALS['_RADIO_STUDIO_WARNINGS'] = array();
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    if (in_array($severity, array(E_WARNING, E_NOTICE, E_USER_WARNING, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED), true)) {
+        $GLOBALS['_RADIO_STUDIO_WARNINGS'][] = array(
+            'severity' => (int) $severity,
+            'message' => (string) $message,
+            'file' => basename((string) $file),
+            'line' => (int) $line
+        );
+        error_log(
+            'Radio Studio API PHP warning: ' . $message
+            . ' @ ' . $file . ':' . (int) $line
+        );
+        return true;
+    }
+
+    return false;
+});
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if (!is_array($error)
+        || !in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR), true)) {
+        return;
+    }
+
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    if (!headers_sent()) {
+        if (function_exists('http_response_code')) {
+            http_response_code(500);
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+    }
+
+    echo json_encode(array(
+        'ok' => false,
+        'error' => 'php_fatal',
+        'message' => isset($error['message']) ? $error['message'] : '',
+        'file' => isset($error['file']) ? basename($error['file']) : '',
+        'line' => isset($error['line']) ? (int) $error['line'] : 0
+    ));
+});
+
 function radio_studio_json($data, $status)
 {
+    if (ob_get_level() > 0) {
+        @ob_clean();
+    }
+
     if (!is_array($data)) {
         $data = array('ok' => false, 'error' => 'invalid_response');
     }
@@ -13,6 +71,9 @@ function radio_studio_json($data, $status)
     }
     if (!isset($data['csrf_token'])) {
         $data['csrf_token'] = SEC_createToken();
+    }
+    if (!empty($GLOBALS['_RADIO_STUDIO_WARNINGS'])) {
+        $data['php_warnings'] = $GLOBALS['_RADIO_STUDIO_WARNINGS'];
     }
 
     if (function_exists('http_response_code')) {
