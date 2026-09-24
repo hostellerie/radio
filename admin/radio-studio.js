@@ -120,6 +120,72 @@
                 dispatchDjFx(control, 1);
             });
         }
+
+        var padStorageKey = 'radio.djfx.pads.' + programId;
+        var savedPads = {};
+        try {
+            savedPads = JSON.parse(window.localStorage.getItem(padStorageKey) || '{}') || {};
+        } catch (error) {
+            savedPads = {};
+        }
+
+        function savePads() {
+            try {
+                window.localStorage.setItem(padStorageKey, JSON.stringify(savedPads));
+            } catch (error) {}
+        }
+
+        function assignPad(select) {
+            var pad = parseInt(select.getAttribute('data-radio-djfx-pad-select') || '0', 10) || 0;
+            if (!pad) {
+                return;
+            }
+
+            var option = select.options[select.selectedIndex] || null;
+            var mediaId = parseInt(select.value || '0', 10) || 0;
+            var url = option ? (option.getAttribute('data-stream-url') || '') : '';
+            var label = option ? (option.textContent || '') : '';
+
+            savedPads[pad] = {
+                media_id: mediaId,
+                url: url,
+                label: label
+            };
+            savePads();
+            dispatchDjFx('sample-assign', {
+                pad: pad,
+                media_id: mediaId,
+                url: url,
+                label: label
+            });
+        }
+
+        var padSelects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
+        for (var padSelectIndex = 0; padSelectIndex < padSelects.length; padSelectIndex++) {
+            var padSelect = padSelects[padSelectIndex];
+            var padNumber = parseInt(padSelect.getAttribute('data-radio-djfx-pad-select') || '0', 10) || 0;
+            var savedPad = savedPads[padNumber] || null;
+
+            if (savedPad && savedPad.media_id) {
+                padSelect.value = String(savedPad.media_id);
+            }
+
+            padSelect.addEventListener('change', function () {
+                assignPad(this);
+            });
+
+            assignPad(padSelect);
+        }
+
+        var padButtons = djFx.querySelectorAll('[data-radio-djfx-pad-play]');
+        for (var padButtonIndex = 0; padButtonIndex < padButtons.length; padButtonIndex++) {
+            padButtons[padButtonIndex].addEventListener('click', function () {
+                var pad = parseInt(this.getAttribute('data-radio-djfx-pad-play') || '0', 10) || 0;
+                if (pad) {
+                    dispatchDjFx('sample-play', {pad: pad});
+                }
+            });
+        }
     }
 
     function updateToken(data) {
