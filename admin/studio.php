@@ -112,8 +112,7 @@ $content .= '<section class="radio-replay__player" data-radio-replay-player'
     . htmlspecialchars($LANG_RADIO['replay_progress'], ENT_QUOTES, 'UTF-8') . '"></label>'
     . '<div class="radio-replay__time"><span data-radio-replay-current>00:00:00</span>'
     . '<span data-radio-replay-total>' . gmdate('H:i:s', $offset) . '</span></div>'
-    . '<h2>' . htmlspecialchars($LANG_RADIO['replay_chapters'], ENT_QUOTES, 'UTF-8') . '</h2>'
-    . '<ol class="radio-replay__chapters">' . $chapters . '</ol>'
+    . '<ol class="radio-replay__chapters radio-visually-hidden" aria-hidden="true">' . $chapters . '</ol>'
     . '</section>';
 
 if ($canEdit) {
