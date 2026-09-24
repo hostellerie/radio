@@ -971,8 +971,17 @@
                     maybePreloadQueueReserve();
                 }
 
-                queuePreload.addEventListener('progress', maybePreloadQueueReserve);
-                queuePreload.addEventListener('canplay', maybePreloadQueueReserve);
+                function onQueuePreloadProgress(event) {
+                    if (event.currentTarget !== queuePreload) {
+                        return;
+                    }
+                    maybePreloadQueueReserve();
+                }
+
+                queuePreload.addEventListener('progress', onQueuePreloadProgress);
+                queuePreload.addEventListener('canplay', onQueuePreloadProgress);
+                audio.addEventListener('progress', onQueuePreloadProgress);
+                audio.addEventListener('canplay', onQueuePreloadProgress);
                 queueReserve.addEventListener('progress', emitQueueBufferStatus);
 
                 function itemOffset(i) {
@@ -1058,77 +1067,30 @@
                             }
 
                             var nextIndex = index + 1;
-                            var nextItem = items[nextIndex];
-                            var handoffAt = queuePreload.currentTime || overlap;
+                            var previousAudio = audio;
 
                             /*
-                             * Keep the already-playing preload alive until the
-                             * main player has loaded and started at the same
-                             * position. Stopping the preload first caused a
-                             * short gap / backwards-sounding jump while the
-                             * main <audio> reloaded the same file.
+                             * Do not reload or seek the next MP3 at handoff.
+                             * MP3 seeking can land on a neighbouring decoder
+                             * frame and creates the audible micro-jump reported
+                             * in Studio. Promote the already-playing preload to
+                             * the active player instead, and recycle the old
+                             * player as the next preload.
                              */
-                            audio.pause();
-                            audio.volume = 0;
-                            audio.src = nextItem.stream_url || '';
-                            audio.load();
+                            audio = queuePreload;
+                            queuePreload = previousAudio;
+                            index = nextIndex;
+                            started = false;
+                            queueMixing = false;
+                            queueFadeFrame = 0;
 
-                            function finishQueueHandoff() {
-                                var livePosition = Math.max(
-                                    handoffAt,
-                                    queuePreload.currentTime || 0
-                                );
+                            audio.volume = 1;
+                            queuePreload.pause();
+                            queuePreload.volume = 1;
+                            queuePreloadUrl = '';
 
-                                try {
-                                    audio.currentTime = livePosition;
-                                } catch (error) {}
-
-                                var mainPromise = audio.play();
-                                if (!mainPromise || typeof mainPromise.then !== 'function') {
-                                    queuePreload.pause();
-                                    queuePreload.volume = 1;
-                                    audio.volume = 1;
-                                    queueMixing = false;
-                                    queueFadeFrame = 0;
-                                    index = nextIndex;
-                                    started = false;
-                                    refreshQueuePreload();
-                                    updateUi();
-                                    return;
-                                }
-
-                                mainPromise.then(function () {
-                                    var currentLivePosition = queuePreload.currentTime || livePosition;
-                                    if (Math.abs((audio.currentTime || 0) - currentLivePosition) > 0.12) {
-                                        try {
-                                            audio.currentTime = currentLivePosition;
-                                        } catch (error) {}
-                                    }
-
-                                    audio.volume = 1;
-                                    queuePreload.pause();
-                                    queuePreload.volume = 1;
-                                    queueMixing = false;
-                                    queueFadeFrame = 0;
-                                    index = nextIndex;
-                                    started = false;
-                                    refreshQueuePreload();
-                                    updateUi();
-                                }).catch(function () {
-                                    audio.volume = 1;
-                                    queuePreload.volume = 1;
-                                    queueMixing = false;
-                                    queueFadeFrame = 0;
-                                });
-                            }
-
-                            if (audio.readyState >= 1) {
-                                finishQueueHandoff();
-                            } else {
-                                audio.addEventListener('loadedmetadata', function onceHandoff() {
-                                    audio.removeEventListener('loadedmetadata', onceHandoff);
-                                    finishQueueHandoff();
-                                });
+                            refreshQueuePreload();
+                            updateUi();
                             }
                         }
                         queueFadeFrame = window.requestAnimationFrame(fade);
@@ -1404,7 +1366,10 @@
                     }
                 });
 
-                audio.addEventListener('play', function () {
+                function onReplayPlay(event) {
+                    if (event.currentTarget !== audio) {
+                        return;
+                    }
                     if (trackingEnabled && !started && items[index]) {
                         started = true;
                         postEvent(
@@ -1420,20 +1385,26 @@
                         listenStart = Date.now();
                     }
                     updateUi();
-                });
+                }
 
-                audio.addEventListener('pause', function () {
+                function onReplayPause(event) {
+                    if (event.currentTarget !== audio) {
+                        return;
+                    }
                     flush();
                     updateUi();
-                });
+                }
 
-                audio.addEventListener('timeupdate', function () {
+                function onReplayTimeUpdate(event) {
+                    if (event.currentTarget !== audio) {
+                        return;
+                    }
                     updateUi();
                     startQueueCrossfade();
-                });
+                }
 
-                audio.addEventListener('ended', function () {
-                    if (queueMixing) {
+                function onReplayEnded(event) {
+                    if (event.currentTarget !== audio || queueMixing) {
                         return;
                     }
                     flush();
@@ -1443,7 +1414,16 @@
                     } else {
                         updateUi();
                     }
-                });
+                }
+
+                audio.addEventListener('play', onReplayPlay);
+                audio.addEventListener('pause', onReplayPause);
+                audio.addEventListener('timeupdate', onReplayTimeUpdate);
+                audio.addEventListener('ended', onReplayEnded);
+                queuePreload.addEventListener('play', onReplayPlay);
+                queuePreload.addEventListener('pause', onReplayPause);
+                queuePreload.addEventListener('timeupdate', onReplayTimeUpdate);
+                queuePreload.addEventListener('ended', onReplayEnded);
 
                 window.addEventListener('pagehide', function () {
                     stopQueueFade();
