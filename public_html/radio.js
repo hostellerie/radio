@@ -1149,7 +1149,25 @@
                 }
 
                 function replacePlaylist(nextItems) {
-                    if (!nextItems || !nextItems.length) {
+                    if (!nextItems) {
+                        return;
+                    }
+
+                    if (!nextItems.length) {
+                        flush();
+                        items = [];
+                        index = 0;
+                        root.setAttribute('data-radio-replay-items', '[]');
+                        renderDynamicChapters();
+                        updateProgressBounds();
+                        audio.pause();
+                        audio.removeAttribute('src');
+                        audio.load();
+                        refreshQueuePreload();
+                        if (now) {
+                            now.textContent = '';
+                        }
+                        updateUi();
                         return;
                     }
 
