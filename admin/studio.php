@@ -100,6 +100,25 @@ $searchFilters = array(
     'broadcast' => '1'
 );
 $searchRows = $canEdit ? RADIO_getMediaList(60, false, 'title', 'asc', $searchFilters) : array();
+$jingleRows = $canEdit ? RADIO_getMediaList(100, false, 'title', 'asc', array(
+    'type' => 'jingle',
+    'status' => 'published',
+    'broadcast' => '1'
+)) : array();
+$jingleOptions = '<option value="">' . radio_studio_h($LANG_RADIO['studio_djfx_pad_empty']) . '</option>';
+foreach ($jingleRows as $jingleRow) {
+    if (!RADIO_hasReadAccess($jingleRow) || !RADIO_isBroadcastAvailable($jingleRow)) {
+        continue;
+    }
+    $jingleLabel = trim(
+        (!empty($jingleRow['author']) ? $jingleRow['author'] . ' — ' : '')
+        . $jingleRow['title']
+    );
+    $jingleOptions .= '<option value="' . (int) $jingleRow['media_id'] . '"'
+        . ' data-stream-url="' . radio_studio_h(RADIO_mediaUrl((int) $jingleRow['media_id'], false)) . '">'
+        . radio_studio_h($jingleLabel) . '</option>';
+}
+
 
 $items = RADIO_getProgramItems($programId);
 $playlist = array();
@@ -270,10 +289,26 @@ if ($canEdit) {
         . '<input type="range" min="-100" max="100" value="0" step="1" data-radio-djfx="filter"></label>'
         . '<button type="button" class="radio-admin__button" data-radio-djfx-button="echo" aria-pressed="false">'
         . radio_studio_h($LANG_RADIO['studio_djfx_echo']) . '</button>'
-        . '<button type="button" class="radio-admin__button" data-radio-djfx-button="horn">'
-        . radio_studio_h($LANG_RADIO['studio_djfx_horn']) . '</button>'
         . '<button type="button" class="radio-admin__button" data-radio-djfx-button="reset">'
         . radio_studio_h($LANG_RADIO['studio_djfx_reset']) . '</button>'
+        . '</div>'
+        . '<div class="radio-studio__djfx-pads" data-radio-djfx-pads>'
+        . '<div class="radio-studio__djfx-pad" data-radio-djfx-pad="1">'
+        . '<select data-radio-djfx-pad-select="1">' . $jingleOptions . '</select>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-pad-play="1">' . radio_studio_h($LANG_RADIO['studio_djfx_pad_play']) . '</button>'
+        . '</div>'
+        . '<div class="radio-studio__djfx-pad" data-radio-djfx-pad="2">'
+        . '<select data-radio-djfx-pad-select="2">' . $jingleOptions . '</select>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-pad-play="2">' . radio_studio_h($LANG_RADIO['studio_djfx_pad_play']) . '</button>'
+        . '</div>'
+        . '<div class="radio-studio__djfx-pad" data-radio-djfx-pad="3">'
+        . '<select data-radio-djfx-pad-select="3">' . $jingleOptions . '</select>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-pad-play="3">' . radio_studio_h($LANG_RADIO['studio_djfx_pad_play']) . '</button>'
+        . '</div>'
+        . '<div class="radio-studio__djfx-pad" data-radio-djfx-pad="4">'
+        . '<select data-radio-djfx-pad-select="4">' . $jingleOptions . '</select>'
+        . '<button type="button" class="radio-admin__button" data-radio-djfx-pad-play="4">' . radio_studio_h($LANG_RADIO['studio_djfx_pad_play']) . '</button>'
+        . '</div>'
         . '</div>'
         . '<small class="radio-admin__muted">' . radio_studio_h($LANG_RADIO['studio_djfx_help']) . '</small>'
         . '</section>';
