@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 $type = isset($_GET['type']) && $_GET['type'] === 'program' ? 'program' : 'media';
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
