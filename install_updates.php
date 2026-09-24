@@ -162,34 +162,9 @@ function radio_update_0_3_2_to_0_4_0()
 
 function radio_update_0_4_0_to_0_5_0()
 {
-    global $_TABLES;
-
-    $table = $_TABLES['radio_site_media'];
-    $result = DB_query("SHOW TABLES LIKE '" . DB_escapeString($table) . "'");
-    if (!DB_error() && DB_numRows($result) > 0) {
-        return true;
-    }
-
-    DB_query("CREATE TABLE " . $table . " (
-      media_id int(10) unsigned NOT NULL,
-      enabled tinyint(1) unsigned NOT NULL default '1',
-      status varchar(24) NOT NULL default 'published',
-      on_demand tinyint(1) unsigned NOT NULL default '1',
-      broadcast tinyint(1) unsigned NOT NULL default '1',
-      automatic_rotation tinyint(1) unsigned NOT NULL default '1',
-      allow_download tinyint(1) unsigned NOT NULL default '1',
-      owner_id int(10) unsigned NOT NULL default '2',
-      group_id mediumint(8) unsigned NOT NULL default '1',
-      perm_owner tinyint(1) unsigned NOT NULL default '3',
-      perm_group tinyint(1) unsigned NOT NULL default '2',
-      perm_members tinyint(1) unsigned NOT NULL default '2',
-      perm_anon tinyint(1) unsigned NOT NULL default '2',
-      modified datetime NOT NULL,
-      PRIMARY KEY (media_id),
-      KEY enabled_status (enabled,status)
-    ) ENGINE=MyISAM");
-
-    return !DB_error();
+    // Radio 0.5.0 was a development checkpoint. The final 0.5.x shared-media
+    // model is completed by the 0.5.1 migration without a cross-database table.
+    return true;
 }
 
 
@@ -211,7 +186,31 @@ function radio_update_0_5_0_to_0_5_1()
         }
     }
 
-    return radio_column_exists($table, 'metadata_mtime');
+    if (!radio_column_exists($table, 'shared_hidden')) {
+        DB_query(
+            "ALTER TABLE " . $table
+            . " ADD shared_hidden tinyint(1) unsigned NOT NULL default '0' AFTER metadata_mtime"
+        );
+        if (DB_error()) {
+            return false;
+        }
+    }
+
+    // Remove the short-lived development table if a 0.5.0 test installation
+    // created it. 0.5.1 no longer uses a shared database catalogue.
+    if (isset($_TABLES['radio_site_media'])) {
+        $legacy = $_TABLES['radio_site_media'];
+        $legacyResult = DB_query("SHOW TABLES LIKE '" . DB_escapeString($legacy) . "'");
+        if (!DB_error() && DB_numRows($legacyResult) > 0) {
+            DB_query("DROP TABLE " . $legacy);
+            if (DB_error()) {
+                return false;
+            }
+        }
+    }
+
+    return radio_column_exists($table, 'metadata_mtime')
+        && radio_column_exists($table, 'shared_hidden');
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
