@@ -380,6 +380,26 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($studioPage, 'data-radio-studio-djfx') !== false
+        && strpos($studioPage, 'data-radio-djfx="low"') !== false
+        && strpos($studioPage, 'data-radio-djfx="mid"') !== false
+        && strpos($studioPage, 'data-radio-djfx="high"') !== false
+        && strpos($studioPage, 'data-radio-djfx="filter"') !== false
+        && strpos($studioPage, 'data-radio-djfx-button="echo"') !== false
+        && strpos($studioPage, 'data-radio-djfx-button="horn"') !== false,
+    'Radio Studio must expose compact realtime DJ FX controls.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, "root.addEventListener('radio:djfx'") !== false
+        && strpos($publicPlayer, "context.createBiquadFilter()") !== false
+        && strpos($publicPlayer, "context.createDelay(1.0)") !== false
+        && strpos($publicPlayer, "function horn()") !== false
+        && strpos($studioJs, "dispatchDjFx") !== false,
+    'Radio Studio DJ FX must use the Web Audio API for realtime EQ, filter, echo and horn processing.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function maintainQueueBuffers') !== false
         && strpos($publicPlayer, 'window.setInterval(maintainQueueBuffers, 10000)') !== false
         && strpos($publicPlayer, 'function advanceQueueAudioRole') !== false
