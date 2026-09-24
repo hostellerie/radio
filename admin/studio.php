@@ -195,7 +195,13 @@ if ($canEdit) {
         . ' data-queue-not-ready-label="' . radio_studio_h($LANG_RADIO['studio_queue_not_ready']) . '"'
         . ' data-move-up-label="' . radio_studio_h($LANG_RADIO['move_up']) . '"'
         . ' data-move-down-label="' . radio_studio_h($LANG_RADIO['move_down']) . '"'
-        . ' data-remove-label="' . radio_studio_h($LANG_RADIO['remove']) . '"';
+        . ' data-remove-label="' . radio_studio_h($LANG_RADIO['remove']) . '"'
+        . ' data-broadcast-start-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_start']) . '"'
+        . ' data-broadcast-stop-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_stop']) . '"'
+        . ' data-broadcast-active-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_active']) . '"'
+        . ' data-broadcast-started-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_started']) . '"'
+        . ' data-broadcast-stopped-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_stopped']) . '"'
+        . ' data-broadcast-failed-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_failed']) . '"';
 }
 
 $content = '<div class="radio-replay radio-program-preview"' . $studioAttrs . '>';
@@ -205,7 +211,7 @@ $content .= '<p><a href="'
 $content .= '<h1>' . radio_studio_h($LANG_RADIO['studio_title']) . ': '
     . radio_studio_h($program['title']) . '</h1>';
 $content .= '<p class="radio-admin__muted">'
-    . radio_studio_h($LANG_RADIO['studio_page_help_simple']) . '</p>';
+    . radio_studio_h(isset($LANG_RADIO['studio_help']) ? $LANG_RADIO['studio_help'] : $LANG_RADIO['studio_page_help_simple']) . '</p>';
 $content .= $message;
 
 $content .= '<section class="radio-replay__player" data-radio-replay-player'
@@ -241,6 +247,12 @@ if ($canEdit) {
     $content .= '<div class="radio-studio__player-meta">'
         . '<span class="radio-studio__buffer-status" data-radio-studio-buffer></span>'
         . '<span class="radio-admin__muted radio-studio__action-status" data-radio-studio-status></span>'
+        . '</div>'
+        . '<div class="radio-studio__broadcast-bar">'
+        . '<button type="button" class="radio-admin__button radio-studio__broadcast-button"'
+        . ' data-radio-studio-broadcast>'
+        . radio_studio_h($LANG_RADIO['studio_broadcast_start']) . '</button>'
+        . '<strong class="radio-studio__broadcast-state" data-radio-studio-broadcast-state></strong>'
         . '</div>';
 }
 
