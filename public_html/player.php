@@ -1,12 +1,9 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 global $_CONF, $_RADIO_CONF, $LANG_RADIO;
 
-if (isset($_RADIO_CONF['enabled']) && !$_RADIO_CONF['enabled']) {
-    header('HTTP/1.1 503 Service Unavailable');
-    exit;
-}
 
 $title = isset($_RADIO_CONF['public_title']) && trim((string) $_RADIO_CONF['public_title']) !== ''
     ? trim((string) $_RADIO_CONF['public_title'])
