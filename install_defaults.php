@@ -25,7 +25,10 @@ $_RADIO_DEFAULT = array(
     'stats_retention_days' => 90,
     'block_enabled' => 0,
     'block_isleft' => 0,
-    'block_order' => 50
+    'block_order' => 50,
+    'library_mode' => 'local',
+    'shared_storage_path' => '',
+    'shared_library_table' => ''
 );
 
 function RADIO_configSortOrder()
@@ -51,16 +54,19 @@ function RADIO_configSortOrder()
         'stats_retention_days' => 150,
         'block_enabled' => 160,
         'block_isleft' => 170,
-        'block_order' => 180
+        'block_order' => 180,
+        'library_mode' => 190,
+        'shared_storage_path' => 200,
+        'shared_library_table' => 210
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode'), true)
         ? 'select'
         : 'text';
-    $select = $name === 'transition_mode' ? 1 : 0;
+    $select = $name === 'transition_mode' ? 1 : ($name === 'library_mode' ? 2 : 0);
 
     $c->add($name, $default, $type, 0, 0, $select, $sort, true, 'radio', 0);
 }
