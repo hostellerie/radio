@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 global $_CONF, $_RADIO_CONF;
 
