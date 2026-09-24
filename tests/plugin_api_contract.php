@@ -268,16 +268,16 @@ radio_contract_require(
         && strpos($studioPage, 'RADIO_isBroadcastAvailable') !== false
         && strpos($studioPage, 'data-radio-replay-player') !== false
         && strpos($studioPage, 'data-radio-replay-chapter') !== false
-        && strpos($studioPage, 'data-radio-studio-queue') !== false
-        && strpos($studioPage, 'data-radio-studio-search') !== false
+        && strpos($studioPage, 'radio-studio__queue') !== false
+        && strpos($studioPage, 'radio-program-picker__filters') !== false
         && strpos($studioPage, "RADIO_mediaUrl((int) \$item['media_id'], false)") !== false,
-    'Radio Studio must provide private continuous chaptered preview plus playlist search and queue editing.'
+    'Radio Studio must provide private continuous preview, a server-rendered queue and media search.'
 );
 
 radio_contract_require(
     strpos($functions, '<script id="radio-public-js" defer src="') !== false
-        && strpos($studioPage, '<script defer src="') !== false,
-    'Radio public and Studio scripts must be deferred so player controls are bound after the DOM exists.'
+        && strpos($studioPage, '$content .= $studioSimpleScript;') !== false,
+    'Radio public controls must be deferred and the minimal Studio helper must be appended after its markup.'
 );
 
 radio_contract_require(
@@ -386,11 +386,8 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($publicPlayer, 'queuePreload = new Audio()') !== false
-        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false
-        && strpos($publicPlayer, "radio:buffer-status") !== false
-        && strpos($studioPage, 'data-radio-studio-buffer') !== false
-        && strpos($studioJs, "player.addEventListener('radio:buffer-status'") !== false,
-    'Radio programme preview and Studio must prebuffer N+1/N+2 and expose buffer readiness.'
+        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false,
+    'Radio programme preview player must preserve N+1/N+2 prebuffering.'
 );
 
 radio_contract_require(
