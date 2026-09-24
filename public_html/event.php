@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('HTTP/1.1 405 Method Not Allowed');
