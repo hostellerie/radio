@@ -54,6 +54,7 @@ $LANG_RADIO = array(
     'storage' => 'Stockage persistant',
     'storage_ready' => 'Disponible',
     'storage_unavailable' => 'Indisponible',
+    'library_mode_label' => 'Mode de la médiathèque',
     'local_media_mode' => 'Médias locaux',
     'shared_media_mode' => 'Médias partagés',
     'sync_shared_media' => 'Synchroniser les médias partagés',
