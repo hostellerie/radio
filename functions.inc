@@ -4339,9 +4339,29 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
     return false;
 }
 
+function RADIO_broadcastSessionTableReady()
+{
+    static $ready = null;
+    global $_TABLES;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    $result = DB_query(
+        "SHOW TABLES LIKE '" . DB_escapeString($_TABLES['radio_broadcast_sessions']) . "'"
+    );
+    $ready = !DB_error() && DB_numRows($result) > 0;
+    return $ready;
+}
+
 function RADIO_getActiveBroadcastSession()
 {
     global $_TABLES;
+
+    if (!RADIO_broadcastSessionTableReady()) {
+        return false;
+    }
 
     $result = DB_query(
         "SELECT * FROM {$_TABLES['radio_broadcast_sessions']} "
@@ -4357,7 +4377,7 @@ function RADIO_startBroadcastSession($programId, $currentItemId)
 {
     global $_TABLES, $_USER;
 
-    if (!SEC_hasRights('radio.schedule')) {
+    if (!SEC_hasRights('radio.schedule') || !RADIO_broadcastSessionTableReady()) {
         return false;
     }
 
@@ -4412,7 +4432,7 @@ function RADIO_stopBroadcastSession($programId)
 {
     global $_TABLES;
 
-    if (!SEC_hasRights('radio.schedule')) {
+    if (!SEC_hasRights('radio.schedule') || !RADIO_broadcastSessionTableReady()) {
         return false;
     }
 
@@ -4438,7 +4458,7 @@ function RADIO_resolveBroadcastSession($timestamp)
         return false;
     }
 
-    $program = RADIO_getProgram((int) $session['program_id'], true);
+    $program = RADIO_getProgram((int) $session['program_id'], false);
     if ($program === false) {
         return false;
     }
