@@ -164,6 +164,7 @@ function radio_studio_items($programId)
             'title' => $item['title'],
             'author' => isset($item['author']) ? $item['author'] : '',
             'media_type' => isset($item['media_type']) ? $item['media_type'] : '',
+        'source_kind' => RADIO_sourceKind($item),
             'media_type_label' => RADIO_adminMediaTypeLabel(isset($item['media_type']) ? $item['media_type'] : ''),
             'category' => isset($item['category']) ? $item['category'] : '',
             'collection' => isset($item['collection_name']) ? $item['collection_name'] : '',
