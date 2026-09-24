@@ -121,7 +121,8 @@ foreach ($items as $item) {
         'author' => isset($item['author']) ? $item['author'] : '',
         'media_type' => isset($item['media_type']) ? $item['media_type'] : '',
         'duration' => $duration,
-        'offset' => $offset,
+        'offset' => 0,
+        'transition_overlap' => 0,
         'playable' => $playable,
         'stream_url' => $playable ? RADIO_mediaUrl((int) $item['media_id'], false) : ''
     );
@@ -138,9 +139,24 @@ foreach ($items as $item) {
         . '<span class="radio-replay__chapter-title">' . radio_studio_h($chapterLabel) . '</span>'
         . '</button></li>';
 
-    if ($playable) {
-        $offset += $duration;
+}
+
+$transitionMode = RADIO_transitionMode();
+$crossfadeSeconds = RADIO_crossfadeSeconds();
+$offset = 0;
+for ($i = 0; $i < count($playlist); $i++) {
+    $playlist[$i]['offset'] = $offset;
+    $overlap = 0;
+    if ($i + 1 < count($playlist)) {
+        $overlap = RADIO_transitionOverlapFor(
+            $playlist[$i],
+            $playlist[$i + 1],
+            $transitionMode,
+            $crossfadeSeconds
+        );
     }
+    $playlist[$i]['transition_overlap'] = $overlap;
+    $offset += max(0, (int) $playlist[$i]['duration'] - $overlap);
 }
 
 $playlistJson = json_encode($playlist);
