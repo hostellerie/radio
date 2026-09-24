@@ -466,9 +466,10 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($publicJs, 'var previousAudio = audio;') !== false
+    strpos($publicJs, 'function advanceQueueAudioRole') !== false
         && strpos($publicJs, 'audio = queuePreload;') !== false
-        && strpos($publicJs, 'queuePreload = previousAudio;') !== false
+        && strpos($publicJs, 'queuePreload = bufferedReserve;') !== false
+        && strpos($publicJs, 'queueReserve = previousAudio;') !== false
         && strpos($publicJs, 'event.currentTarget !== audio') !== false,
     'Radio Studio crossfade handoff must promote the already-playing preload without reloading or seeking the MP3.'
 );
