@@ -1057,15 +1057,79 @@
                                 return;
                             }
 
-                            var resumeAt = queuePreload.currentTime || overlap;
-                            queuePreload.pause();
-                            queuePreload.volume = 1;
+                            var nextIndex = index + 1;
+                            var nextItem = items[nextIndex];
+                            var handoffAt = queuePreload.currentTime || overlap;
+
+                            /*
+                             * Keep the already-playing preload alive until the
+                             * main player has loaded and started at the same
+                             * position. Stopping the preload first caused a
+                             * short gap / backwards-sounding jump while the
+                             * main <audio> reloaded the same file.
+                             */
                             audio.pause();
-                            audio.volume = 1;
-                            queueMixing = false;
-                            queueFadeFrame = 0;
-                            started = false;
-                            setItem(index + 1, resumeAt, true);
+                            audio.volume = 0;
+                            audio.src = nextItem.stream_url || '';
+                            audio.load();
+
+                            function finishQueueHandoff() {
+                                var livePosition = Math.max(
+                                    handoffAt,
+                                    queuePreload.currentTime || 0
+                                );
+
+                                try {
+                                    audio.currentTime = livePosition;
+                                } catch (error) {}
+
+                                var mainPromise = audio.play();
+                                if (!mainPromise || typeof mainPromise.then !== 'function') {
+                                    queuePreload.pause();
+                                    queuePreload.volume = 1;
+                                    audio.volume = 1;
+                                    queueMixing = false;
+                                    queueFadeFrame = 0;
+                                    index = nextIndex;
+                                    started = false;
+                                    refreshQueuePreload();
+                                    updateUi();
+                                    return;
+                                }
+
+                                mainPromise.then(function () {
+                                    var currentLivePosition = queuePreload.currentTime || livePosition;
+                                    if (Math.abs((audio.currentTime || 0) - currentLivePosition) > 0.12) {
+                                        try {
+                                            audio.currentTime = currentLivePosition;
+                                        } catch (error) {}
+                                    }
+
+                                    audio.volume = 1;
+                                    queuePreload.pause();
+                                    queuePreload.volume = 1;
+                                    queueMixing = false;
+                                    queueFadeFrame = 0;
+                                    index = nextIndex;
+                                    started = false;
+                                    refreshQueuePreload();
+                                    updateUi();
+                                }).catch(function () {
+                                    audio.volume = 1;
+                                    queuePreload.volume = 1;
+                                    queueMixing = false;
+                                    queueFadeFrame = 0;
+                                });
+                            }
+
+                            if (audio.readyState >= 1) {
+                                finishQueueHandoff();
+                            } else {
+                                audio.addEventListener('loadedmetadata', function onceHandoff() {
+                                    audio.removeEventListener('loadedmetadata', onceHandoff);
+                                    finishQueueHandoff();
+                                });
+                            }
                         }
                         queueFadeFrame = window.requestAnimationFrame(fade);
                     }).catch(function () {
