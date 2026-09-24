@@ -571,6 +571,8 @@
         var transitionTimer = 0;
         var transitionProgramId = 0;
         var transitionRetryCount = 0;
+        var liveSource = '';
+        var syncTick = 0;
         var wave = waveform(canvas, audio);
         var transitionManager = createTransitionManager(audio, {
             beforeTransition: function () {
@@ -653,7 +655,7 @@
             }
             transitionProgramId = 0;
 
-            if (!data || data.source === 'schedule' || !data.upcoming || !data.upcoming.length) {
+            if (!data || (data.source === 'schedule' || data.source === 'semi-live') || !data.upcoming || !data.upcoming.length) {
                 return;
             }
 
@@ -680,6 +682,7 @@
         }
 
         function apply(data, play, fromEnded, expectedProgramId) {
+            liveSource = data && data.source ? data.source : '';
             scheduleNextProgrammeTransition(data);
 
             if (!data.current_media) {
@@ -696,7 +699,7 @@
                 ? (parseInt(String(data.now_playing.program_id).replace('program:', ''), 10) || 0)
                 : 0;
 
-            if (transitionManager.isMixing() && data.source === 'rotation' && nextId !== mediaId) {
+            if (transitionManager.isMixing() && (data.source === 'rotation' || data.source === 'semi-live') && nextId !== mediaId) {
                 return;
             }
 
@@ -815,8 +818,11 @@
         }, 100);
 
         window.setInterval(function () {
-            sync(userStarted && !audio.paused);
-        }, 15000);
+            syncTick++;
+            if (liveSource === 'semi-live' || syncTick % 5 === 0) {
+                sync(userStarted && !audio.paused);
+            }
+        }, 3000);
 
         wave.draw();
         sync(false);
