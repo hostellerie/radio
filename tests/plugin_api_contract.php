@@ -242,68 +242,82 @@ radio_contract_require(
 
 $programAdmin = file_get_contents($root . '/admin/programs.php');
 $rotationAdmin = file_get_contents($root . '/admin/rotation.php');
-$programPickerTemplate = file_get_contents($root . '/templates/admin/program-media-picker.thtml');
-$programResultTemplate = file_get_contents($root . '/templates/admin/program-media-result.thtml');
+$studioPage = file_get_contents($root . '/admin/studio.php');
+$studioApi = file_get_contents($root . '/admin/studio-api.php');
+$studioJs = file_get_contents($root . '/admin/radio-studio.js');
+$legacyPreview = file_get_contents($root . '/admin/preview.php');
+
 radio_contract_require(
-    strpos($programAdmin, 'RADIO_adminRenderProgramMediaPicker') !== false
-        && strpos($programAdmin, "RADIO_getMediaList(100, false, 'title', 'asc', \$pickerQuery)") !== false
-        && strpos($programAdmin, '<select name="media_id">') === false
-        && strpos($programPickerTemplate, 'name="picker_q"') !== false
-        && strpos($programPickerTemplate, 'name="picker_category"') !== false
-        && strpos($programPickerTemplate, 'name="picker_collection"') !== false
-        && strpos($programPickerTemplate, 'name="picker_tag"') !== false
-        && strpos($programResultTemplate, 'name="add_program_item"') !== false
-        && strpos($programResultTemplate, '>+</button>') !== false,
-    'Radio programme editing must use the searchable media picker with one-click add controls instead of the legacy media select.'
+    strpos($programAdmin, 'RADIO_adminRenderProgramMediaPicker') === false
+        && strpos($programAdmin, 'RADIO_addProgramItem') === false
+        && strpos($programAdmin, 'RADIO_removeProgramItem') === false
+        && strpos($programAdmin, 'RADIO_moveProgramItem') === false
+        && strpos($programAdmin, '/plugins/radio/studio.php?program_id=') !== false,
+    'Radio programme administration must stay metadata-only and link to the Studio for playlist editing.'
 );
 
-$programPreview = file_get_contents($root . '/admin/preview.php');
 radio_contract_require(
-    strpos($programAdmin, '/plugins/radio/preview.php?program_id=') !== false
-        && strpos($programPreview, "SEC_hasRights('radio.schedule')") !== false
-        && strpos($programPreview, 'RADIO_getProgramItems') !== false
-        && strpos($programPreview, 'RADIO_isBroadcastAvailable') !== false
-        && strpos($programPreview, 'data-radio-replay-player') !== false
-        && strpos($programPreview, 'data-radio-replay-chapter') !== false
-        && strpos($programPreview, "RADIO_mediaUrl((int) \$item['media_id'], false)") !== false,
-    'Radio programme administration must provide a private continuous chaptered preview before broadcast.'
+    strpos($studioPage, "SEC_hasRights('radio.schedule')") !== false
+        && strpos($studioPage, 'RADIO_getProgramItems') !== false
+        && strpos($studioPage, 'RADIO_isBroadcastAvailable') !== false
+        && strpos($studioPage, 'data-radio-replay-player') !== false
+        && strpos($studioPage, 'data-radio-replay-chapter') !== false
+        && strpos($studioPage, 'data-radio-studio-queue') !== false
+        && strpos($studioPage, 'data-radio-studio-search') !== false
+        && strpos($studioPage, "RADIO_mediaUrl((int) $item['media_id'], false)") !== false,
+    'Radio Studio must provide private continuous chaptered preview plus playlist search and queue editing.'
 );
 
 radio_contract_require(
     strpos($functions, '<script id="radio-public-js" defer src="') !== false
-        && strpos($programPreview, '<script defer src="') !== false,
-    'Radio preview and Studio scripts must be deferred so player controls are bound after the DOM exists.'
+        && strpos($studioPage, '<script defer src="') !== false,
+    'Radio public and Studio scripts must be deferred so player controls are bound after the DOM exists.'
 );
 
-$studioEndpoint = file_get_contents($root . '/admin/studio.php');
-$studioJs = file_get_contents($root . '/admin/radio-studio.js');
 radio_contract_require(
-    strpos($programPreview, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
-        && strpos($programPreview, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
-        && strpos($programPreview, 'SEC_checkToken()') !== false
+    strpos($studioApi, "if ($studioAction === 'add')") !== false
+        && strpos($studioApi, "$afterItemId = $position === 'next' ? $currentItemId : 0") !== false
+        && strpos($studioApi, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
+        && strpos($studioApi, "if ($studioAction === 'remove')") !== false
+        && strpos($studioApi, "if ($studioAction === 'move_up' || $studioAction === 'move_down')") !== false
+        && strpos($studioApi, 'SEC_checkToken()') !== false
         && strpos($studioJs, "body.set('studio_action', 'add')") !== false
-        && strpos($studioJs, 'mutationEndpoint || endpoint') !== false
-        && strpos($studioJs, 'renderQueue(data.items || [])') !== false
-        && strpos($programPreview, 'data-radio-studio-queue') !== false,
-    'Radio Studio + and Play next actions must persist through the preview CSRF context and immediately refresh the saved programme queue.'
+        && strpos($studioJs, "mutateItem('remove'") !== false
+        && strpos($studioJs, "mutateItem('move_up'") !== false
+        && strpos($studioJs, "mutateItem('move_down'") !== false
+        && strpos($studioJs, 'renderQueue(data.items || [])') !== false,
+    'Radio Studio add, remove and reorder actions must persist through one CSRF-protected Studio API and immediately refresh the saved queue.'
 );
 
 radio_contract_require(
     strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
-        && strpos($studioEndpoint, "if (\$action === 'state')") !== false
-        && strpos($studioEndpoint, "if (\$action === 'search')") !== false
-        && strpos($studioEndpoint, "if (\$action === 'add')") === false
-        && strpos($studioEndpoint, 'SEC_checkToken()') === false
+        && strpos($studioApi, "if ($action === 'state')") !== false
+        && strpos($studioApi, "if ($action === 'search')") !== false
         && strpos($studioJs, "body.set('current_item_id'") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'next')") !== false
         && strpos($studioJs, "addMedia(item.media_id, 'end')") !== false
         && strpos($studioJs, "window.setInterval(syncState, 3000)") !== false
-        && strpos($programPreview, 'data-radio-replay-dynamic=') !== false
-        && strpos($programPreview, 'data-radio-replay-track="0"') !== false
+        && strpos($studioPage, 'data-radio-replay-dynamic=') !== false
+        && strpos($studioPage, 'data-radio-replay-track="0"') !== false
         && strpos($publicPlayer, "root.addEventListener('radio:playlist-update'") !== false
         && strpos($publicPlayer, 'data-radio-current-item-id') !== false,
-    'Radio Studio must keep state/search read-only while preview.php owns CSRF-protected queue mutations without reloading the current audio.'
+    'Radio Studio must keep live playlist state synchronized without reloading the current audio.'
+);
+
+radio_contract_require(
+    strpos($legacyPreview, '/plugins/radio/studio.php') !== false
+        && strpos($legacyPreview, "header('Location: ' . $url, true, 302)") !== false,
+    'Legacy preview.php URLs must redirect to the canonical Studio page.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, 'queuePreload = new Audio()') !== false
+        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false
+        && strpos($publicPlayer, "radio:buffer-status") !== false
+        && strpos($studioPage, 'data-radio-studio-buffer') !== false
+        && strpos($studioJs, "player.addEventListener('radio:buffer-status'") !== false,
+    'Radio Studio must prebuffer N+1/N+2 and expose buffer readiness.'
 );
 
 radio_contract_require(
