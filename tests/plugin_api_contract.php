@@ -311,6 +311,26 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($studioPage, 'radio-studio__queue-type') !== false
+        && strpos($studioPage, 'radio-studio__queue-duration') !== false
+        && strpos($studioPage, 'radio-studio__queue-title radio-studio__queue-seek') !== false
+        && strpos($studioJs, "type.className = 'radio-admin__badge radio-studio__queue-type'") !== false
+        && strpos($studioJs, "duration.className = 'radio-studio__queue-duration'") !== false,
+    'Radio Studio programme queue must render type and duration before the left-aligned media title and actions.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, 'function itemPlayable') !== false
+        && strpos($publicPlayer, 'function nextPlayableIndex') !== false
+        && strpos($publicPlayer, 'function totalDuration') !== false
+        && strpos($publicPlayer, 'function seekGlobal') !== false
+        && strpos($publicPlayer, 'parseFloat(seconds || 0)') !== false
+        && strpos($publicPlayer, 'var followingIndex = nextPlayableIndex(index + 1)') !== false
+        && strpos($publicPlayer, 'if (audio.ended || !itemPlayable(index))') !== false,
+    'Radio Studio Listen must traverse all playable programme items and global navigation must seek across the full programme timeline.'
+);
+
+radio_contract_require(
     strpos($legacyPreview, '/plugins/radio/studio.php') !== false
         && strpos($legacyPreview, "header('Location: ' . \$url, true, 302)") !== false,
     'Legacy preview.php URLs must redirect to the canonical Studio page.'
