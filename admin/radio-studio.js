@@ -364,7 +364,14 @@
             cache: 'no-store'
         })
             .then(function (response) {
-                return response.json().then(function (data) {
+                return response.text().then(function (text) {
+                    var data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
+                        var kind = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
+                        throw new Error(kind + '_http_' + response.status);
+                    }
                     return {response: response, data: data};
                 });
             })
@@ -377,7 +384,23 @@
                         body.set(tokenName, tokenValue);
                         return mutate(body, successLabel, true);
                     }
-                    throw new Error(data.error || ('http_' + result.response.status));
+                    var serverDetail = data.error || ('http_' + result.response.status);
+                    if (data.message) {
+                        serverDetail += ': ' + data.message;
+                    }
+                    if (data.file && data.line) {
+                        serverDetail += ' @ ' + data.file + ':' + data.line;
+                    }
+                    throw new Error(serverDetail);
+                }
+
+                if (data.php_warnings && data.php_warnings.length) {
+                    var warning = data.php_warnings[0];
+                    setStatus(
+                        (studio.getAttribute('data-error-label') || 'Error')
+                        + ' (PHP warning: ' + warning.message
+                        + ' @ ' + warning.file + ':' + warning.line + ')'
+                    );
                 }
 
                 version = data.version || version;
