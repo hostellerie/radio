@@ -386,17 +386,20 @@ radio_contract_require(
         && strpos($studioPage, 'data-radio-djfx="high"') !== false
         && strpos($studioPage, 'data-radio-djfx="filter"') !== false
         && strpos($studioPage, 'data-radio-djfx-button="echo"') !== false
-        && strpos($studioPage, 'data-radio-djfx-button="horn"') !== false,
-    'Radio Studio must expose compact realtime DJ FX controls.'
+        && strpos($studioPage, 'data-radio-djfx-pad-select="1"') !== false
+        && strpos($studioPage, 'data-radio-djfx-pad-play="4"') !== false,
+    'Radio Studio must expose compact realtime DJ FX controls with assignable jingle pads.'
 );
 
 radio_contract_require(
     strpos($publicPlayer, "root.addEventListener('radio:djfx'") !== false
         && strpos($publicPlayer, "context.createBiquadFilter()") !== false
         && strpos($publicPlayer, "context.createDelay(1.0)") !== false
-        && strpos($publicPlayer, "function horn()") !== false
-        && strpos($studioJs, "dispatchDjFx") !== false,
-    'Radio Studio DJ FX must use the Web Audio API for realtime EQ, filter, echo and horn processing.'
+        && strpos($publicPlayer, "function assignSample") !== false
+        && strpos($publicPlayer, "function playSample") !== false
+        && strpos($studioJs, "dispatchDjFx") !== false
+        && strpos($studioJs, "radio.djfx.pads.") !== false,
+    'Radio Studio DJ FX must use the Web Audio API for realtime EQ/filter/echo and persistent assignable jingle pads.'
 );
 
 radio_contract_require(
