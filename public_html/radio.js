@@ -874,6 +874,7 @@
                 var queueMixing = false;
                 var queueFadeFrame = 0;
                 var queueBufferTimer = 0;
+                var queueTransitionTimer = 0;
                 var queuePreloadLastKick = 0;
                 var queueReserveLastKick = 0;
                 queuePreload.preload = 'auto';
@@ -1056,6 +1057,7 @@
                 queueReserve.addEventListener('canplay', onQueueBufferProgress);
 
                 queueBufferTimer = window.setInterval(maintainQueueBuffers, 10000);
+                queueTransitionTimer = window.setInterval(monitorQueueTransition, 100);
 
                 function itemOffset(i) {
                     return items[i] ? (parseInt(items[i].offset || 0, 10) || 0) : 0;
@@ -1149,7 +1151,11 @@
                         return;
                     }
 
-                    var remaining = Math.max(0, (parseInt(items[index].duration || 0, 10) || 0) - (audio.currentTime || 0));
+                    var declaredDuration = parseFloat(items[index].duration || 0) || 0;
+                    var actualDuration = isFinite(audio.duration) && audio.duration > 0
+                        ? audio.duration
+                        : declaredDuration;
+                    var remaining = Math.max(0, actualDuration - (audio.currentTime || 0));
                     if (remaining > overlap + 0.12) {
                         return;
                     }
@@ -1201,6 +1207,64 @@
                         queuePreload.volume = 1;
                         audio.volume = 1;
                     });
+                }
+
+                function forceQueueHandoffIfNeeded() {
+                    if (queueMixing || audio.paused || index + 1 >= items.length
+                        || !itemPlayable(index) || !itemPlayable(index + 1)
+                        || queuePreloadUrl !== (items[index + 1].stream_url || '')
+                        || queuePreload.readyState < 2) {
+                        return;
+                    }
+
+                    /*
+                     * timeupdate can be sparse or throttled. Use the decoded
+                     * duration as a last-moment watchdog so a ready N+1 starts
+                     * just before N ends instead of leaving an audible gap.
+                     */
+                    var actualDuration = isFinite(audio.duration) && audio.duration > 0
+                        ? audio.duration
+                        : (parseFloat(items[index].duration || 0) || 0);
+                    if (actualDuration < 1) {
+                        return;
+                    }
+
+                    var remaining = actualDuration - (audio.currentTime || 0);
+                    if (remaining > 0.18 || remaining < -0.5) {
+                        return;
+                    }
+
+                    queueMixing = true;
+                    queuePreload.volume = 1;
+                    try {
+                        queuePreload.currentTime = 0;
+                    } catch (error) {}
+
+                    var nextIndex = index + 1;
+                    var promise = queuePreload.play();
+                    if (!promise || typeof promise.then !== 'function') {
+                        queueMixing = false;
+                        return;
+                    }
+
+                    promise.then(function () {
+                        if (!queueMixing || nextIndex !== index + 1) {
+                            return;
+                        }
+                        advanceQueueAudioRole(nextIndex);
+                    }).catch(function () {
+                        queueMixing = false;
+                    });
+                }
+
+                function monitorQueueTransition() {
+                    if (!audio || audio.paused) {
+                        return;
+                    }
+                    startQueueCrossfade();
+                    if (!queueMixing) {
+                        forceQueueHandoffIfNeeded();
+                    }
                 }
 
                 function activeItemId() {
@@ -1616,6 +1680,9 @@
                 window.addEventListener('pagehide', function () {
                     if (queueBufferTimer) {
                         window.clearInterval(queueBufferTimer);
+                    }
+                    if (queueTransitionTimer) {
+                        window.clearInterval(queueTransitionTimer);
                     }
                     stopQueueFade();
                     flush();
