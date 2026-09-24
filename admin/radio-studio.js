@@ -352,7 +352,7 @@
             });
     }
 
-    function mutate(body, successLabel) {
+    function mutate(body, successLabel, retried) {
         if (tokenName && tokenValue) {
             body.set(tokenName, tokenValue);
         }
@@ -363,12 +363,23 @@
             credentials: 'same-origin',
             cache: 'no-store'
         })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
+            .then(function (response) {
+                return response.json().then(function (data) {
+                    return {response: response, data: data};
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
                 updateToken(data);
+
                 if (!data.ok) {
-                    throw new Error(data.error || 'mutation_failed');
+                    if (data.error === 'invalid_token' && !retried && tokenName && tokenValue) {
+                        body.set(tokenName, tokenValue);
+                        return mutate(body, successLabel, true);
+                    }
+                    throw new Error(data.error || ('http_' + result.response.status));
                 }
+
                 version = data.version || version;
                 renderQueue(data.items || []);
                 dispatchPlaylist(data.items || []);
@@ -376,9 +387,14 @@
                 if (successLabel) {
                     window.setTimeout(function () { setStatus(''); }, 1200);
                 }
+                return true;
             })
-            .catch(function () {
-                setStatus(studio.getAttribute('data-error-label') || 'Error');
+            .catch(function (error) {
+                var generic = studio.getAttribute('data-error-label') || 'Error';
+                var detail = error && error.message ? String(error.message) : '';
+                setStatus(detail && detail !== 'mutation_failed'
+                    ? generic + ' (' + detail + ')'
+                    : generic);
             });
     }
 
