@@ -893,6 +893,10 @@
                     var feedback = null;
                     var wet = null;
                     var master = null;
+                    var analyser = null;
+                    var scopeData = null;
+                    var scopeFreq = null;
+                    var scopeFrame = 0;
                     var ready = false;
                     var samples = {};
 
@@ -950,6 +954,12 @@
                             master = context.createGain();
                             master.gain.value = 1;
 
+                            analyser = context.createAnalyser();
+                            analyser.fftSize = 512;
+                            analyser.smoothingTimeConstant = 0.72;
+                            scopeData = new Uint8Array(analyser.fftSize);
+                            scopeFreq = new Uint8Array(analyser.frequencyBinCount);
+
                             var elements = [audio, queuePreload, queueReserve];
                             for (var sourceIndex = 0; sourceIndex < elements.length; sourceIndex++) {
                                 context.createMediaElementSource(elements[sourceIndex]).connect(low);
@@ -969,9 +979,11 @@
                             delay.connect(wet);
                             wet.connect(master);
 
-                            master.connect(context.destination);
+                            master.connect(analyser);
+                            analyser.connect(context.destination);
 
                             ready = true;
+                            drawScope();
                             if (context.state === 'suspended') {
                                 context.resume().catch(function () {});
                             }
@@ -980,6 +992,72 @@
                             ready = false;
                             return false;
                         }
+                    }
+
+                    function drawScope() {
+                        if (!ready || !analyser || scopeFrame) {
+                            return;
+                        }
+
+                        var canvas = root.querySelector('[data-radio-djfx-scope]');
+                        if (!canvas || !canvas.getContext) {
+                            return;
+                        }
+
+                        var ctx = canvas.getContext('2d');
+                        if (!ctx) {
+                            return;
+                        }
+
+                        function frame() {
+                            if (!ready || !analyser) {
+                                scopeFrame = 0;
+                                return;
+                            }
+
+                            analyser.getByteTimeDomainData(scopeData);
+                            analyser.getByteFrequencyData(scopeFreq);
+
+                            var width = canvas.width;
+                            var height = canvas.height;
+                            var waveHeight = Math.round(height * 0.7);
+                            ctx.clearRect(0, 0, width, height);
+
+                            ctx.lineWidth = 2;
+                            ctx.strokeStyle = '#61e7c7';
+                            ctx.beginPath();
+                            for (var i = 0; i < scopeData.length; i++) {
+                                var x = i * width / (scopeData.length - 1);
+                                var normalized = (scopeData[i] - 128) / 128;
+                                var y = waveHeight * 0.5 + normalized * waveHeight * 0.42;
+                                if (i === 0) {
+                                    ctx.moveTo(x, y);
+                                } else {
+                                    ctx.lineTo(x, y);
+                                }
+                            }
+                            ctx.stroke();
+
+                            var bandTop = Math.round(height * 0.73);
+                            var bars = 72;
+                            var barWidth = width / bars;
+                            ctx.fillStyle = 'rgba(97,231,199,.55)';
+                            for (var b = 0; b < bars; b++) {
+                                var freqIndex = Math.floor(b * scopeFreq.length / bars);
+                                var level = scopeFreq[freqIndex] / 255;
+                                var barHeight = Math.max(1, level * (height - bandTop));
+                                ctx.fillRect(
+                                    b * barWidth,
+                                    height - barHeight,
+                                    Math.max(1, barWidth - 2),
+                                    barHeight
+                                );
+                            }
+
+                            scopeFrame = window.requestAnimationFrame(frame);
+                        }
+
+                        scopeFrame = window.requestAnimationFrame(frame);
                     }
 
                     function setFilter(value) {
