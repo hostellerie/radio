@@ -146,11 +146,10 @@ function radio_studio_check_token()
 
 function radio_studio_items($programId)
 {
-    $items = RADIO_getProgramItems((int) $programId);
-    $playlist = array();
-    $offset = 0;
+    $rows = RADIO_getProgramItems((int) $programId);
+    $items = array();
 
-    foreach ($items as $item) {
+    foreach ($rows as $item) {
         if (!RADIO_hasReadAccess($item)) {
             continue;
         }
@@ -158,7 +157,7 @@ function radio_studio_items($programId)
         $duration = max(0, (int) $item['duration']);
         $playable = RADIO_isBroadcastAvailable($item) && $duration > 0;
 
-        $playlist[] = array(
+        $items[] = array(
             'item_id' => (int) $item['item_id'],
             'media_id' => (int) $item['media_id'],
             'title' => $item['title'],
@@ -168,17 +167,33 @@ function radio_studio_items($programId)
             'collection' => isset($item['collection_name']) ? $item['collection_name'] : '',
             'tags' => isset($item['tags']) ? $item['tags'] : '',
             'duration' => $duration,
-            'offset' => $offset,
+            'offset' => 0,
+            'transition_overlap' => 0,
             'playable' => $playable,
             'stream_url' => $playable ? RADIO_mediaUrl((int) $item['media_id'], false) : ''
         );
-
-        if ($playable) {
-            $offset += $duration;
-        }
     }
 
-    return $playlist;
+    $mode = RADIO_transitionMode();
+    $seconds = RADIO_crossfadeSeconds();
+    $offset = 0;
+
+    for ($i = 0; $i < count($items); $i++) {
+        $items[$i]['offset'] = $offset;
+        $overlap = 0;
+        if ($i + 1 < count($items)) {
+            $overlap = RADIO_transitionOverlapFor(
+                $items[$i],
+                $items[$i + 1],
+                $mode,
+                $seconds
+            );
+        }
+        $items[$i]['transition_overlap'] = $overlap;
+        $offset += max(0, (int) $items[$i]['duration'] - $overlap);
+    }
+
+    return $items;
 }
 
 function radio_studio_state($programId)
