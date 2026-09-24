@@ -23,7 +23,6 @@ require_once __DIR__ . '/services.inc.php';
 
 $_TABLES['radio_media_local'] = $_DB_table_prefix . 'radio_media';
 $_TABLES['radio_media'] = $_TABLES['radio_media_local'];
-$_TABLES['radio_site_media'] = $_DB_table_prefix . 'radio_site_media';
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
@@ -1357,7 +1356,7 @@ function RADIO_mediaAvailabilitySql($field, $alias)
 function RADIO_isOnDemandAvailable($row)
 {
     return is_array($row)
-        && (!array_key_exists('site_enabled', $row) || !empty($row['site_enabled']))
+        && (!RADIO_sharedMediaEnabled() || empty($row['shared_hidden']))
         && isset($row['status'])
         && $row['status'] === 'published'
         && (!array_key_exists('on_demand', $row) || !empty($row['on_demand']));
@@ -1366,7 +1365,7 @@ function RADIO_isOnDemandAvailable($row)
 function RADIO_isBroadcastAvailable($row)
 {
     return is_array($row)
-        && (!array_key_exists('site_enabled', $row) || !empty($row['site_enabled']))
+        && (!RADIO_sharedMediaEnabled() || empty($row['shared_hidden']))
         && isset($row['status'])
         && $row['status'] === 'published'
         && (!array_key_exists('broadcast', $row) || !empty($row['broadcast']));
@@ -1965,7 +1964,7 @@ function RADIO_getMedia($id, $publishedOnly)
         }
     }
     if ($publishedOnly && ($row['status'] !== 'published'
-        || empty($row['site_enabled'])
+        || (RADIO_sharedMediaEnabled() && !empty($row['shared_hidden']))
         || !RADIO_hasReadAccess($row))) {
         return false;
     }
@@ -2101,6 +2100,10 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
     $where = ($publishedOnly && !RADIO_sharedLibraryEnabled())
         ? " WHERE status='published'"
         : ' WHERE 1=1';
+    if (RADIO_sharedMediaEnabled()) {
+        $where .= " AND shared_hidden=0";
+    }
+
 
     if ($publishedOnly && !RADIO_sharedLibraryEnabled()) {
         $where .= RADIO_mediaAvailabilitySql('on_demand', '');
@@ -2307,18 +2310,30 @@ function RADIO_deleteMedia($id)
 
     DB_query("DELETE FROM {$_TABLES['radio_program_items']} WHERE media_id=" . (int) $id);
 
-    DB_query("DELETE FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $id);
-    if (DB_error()) {
-        return false;
-    }
+    if (RADIO_sharedMediaEnabled() && RADIO_sourceKind($row) === 'local') {
+        DB_query(
+            "UPDATE {$_TABLES['radio_media']} SET shared_hidden=1,"
+            . "status='draft',on_demand=0,broadcast=0,automatic_rotation=0,"
+            . "modified='" . DB_escapeString(date('Y-m-d H:i:s')) . "' "
+            . "WHERE media_id=" . (int) $id
+        );
+        if (DB_error()) {
+            return false;
+        }
+    } else {
+        DB_query("DELETE FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $id);
+        if (DB_error()) {
+            return false;
+        }
 
-    if (!empty($row['cover_name'])) {
-        RADIO_deleteCover($row['cover_name']);
-    }
+        if (!empty($row['cover_name'])) {
+            RADIO_deleteCover($row['cover_name']);
+        }
 
-    $path = RADIO_storageDir() . basename($row['storage_name']);
-    if (RADIO_sourceKind($row) === 'local' && is_file($path) && !@unlink($path)) {
-        COM_errorLog('Radio: database row deleted but media file could not be removed: ' . $path, 1);
+        $path = RADIO_storageDir() . basename($row['storage_name']);
+        if (RADIO_sourceKind($row) === 'local' && is_file($path) && !@unlink($path)) {
+            COM_errorLog('Radio: database row deleted but media file could not be removed: ' . $path, 1);
+        }
     }
 
     if (function_exists('PLG_itemDeleted')) {
