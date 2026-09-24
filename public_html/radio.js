@@ -1091,7 +1091,6 @@
 
                             refreshQueuePreload();
                             updateUi();
-                            }
                         }
                         queueFadeFrame = window.requestAnimationFrame(fade);
                     }).catch(function () {
