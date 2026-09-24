@@ -4,7 +4,7 @@ Modern audio and web radio plugin for Geeklog with media management, playlists, 
 
 ## Media availability model
 
-Radio 0.5.0 separates publication from the ways a media item can be used:
+Radio 0.5.1 separates publication from the ways a media item can be used:
 
 - **Published** — the media is active and may be used by Radio.
 - **On demand** — the media may be exposed individually to visitors in the public catalogue, item pages, podcast/feed collections and public playlists.
@@ -17,7 +17,7 @@ Existing installations keep the availability flags enabled by default during upg
 
 ## Media classification
 
-Radio 0.5.0 keeps three complementary organization layers without overloading the technical media type:
+Radio 0.5.1 keeps three complementary organization layers without overloading the technical media type:
 
 - **Category** — the primary editorial classification.
 - **Collection** — a deliberate grouping such as a special programme, station package or thematic set.
@@ -33,19 +33,24 @@ Each newly created rotation cycle receives a fresh shuffled order, then remains 
 
 Radio also uses adaptive N+1/N+2 buffering in its live players and programme Studio. The next media item is prepared immediately, the following item is prepared once enough of N+1 is buffered, and a crossfade is delayed when the next track is not sufficiently ready.
 
-## Multisite media libraries
+## Multisite shared media
 
-Radio 0.5.0 keeps the default installation fully local and adds two opt-in multisite modes:
+Radio 0.5.1 keeps the default installation fully local and adds one opt-in **Shared media** mode.
 
 - **Local** — the default. Each Geeklog site keeps its own catalogue and its own Radio storage.
-- **Shared storage** — sites keep independent catalogue rows while audio files are stored in one common directory.
-- **Shared library** — sites use one common media catalogue and common storage while programmes, schedules, statistics and configuration remain local to each Geeklog site.
+- **Shared media** — every site keeps its own Radio database rows, permissions, publication state, programmes, schedules and statistics, while all sites point to the same audio directory.
 
-Shared-library mode uses a local `radio_site_media` table for site-specific media state. Publication, on-demand use, broadcast use, automatic rotation, download permission and Geeklog ACL values can therefore differ by site without duplicating the media catalogue or audio files. A media item disabled on one site remains available to other sites.
+No shared MySQL user or cross-database access is required.
 
-The shared catalogue table is configured explicitly with **Shared media catalogue table** and is validated as a database table identifier. The shared storage directory is configured with **Shared media storage path**. Sites that do not enable either shared mode continue to use the existing local table and storage path with no behavioural change.
+For local MP3 files in Shared media mode, Radio uses embedded ID3v2 metadata as the common descriptive layer. Title, artist, collection, category, tags, description and Radio classification are written into the MP3 itself. When another site sees the same shared file, it can import or refresh these values into its own local catalogue.
 
-When shared-library mode is active, deleting a media item from one site disables it for that site instead of deleting the shared catalogue row or physical audio file. Global media metadata such as title, author, duration, category, collection and tags remains attached to the shared catalogue.
+Radio compares the shared file modification time with a local metadata cache marker instead of parsing every MP3 on every request. Administrators can also force **Sync shared media**, **Sync from file** or **Write metadata to file** from the Radio administration.
+
+Before a site writes shared MP3 metadata, Radio re-reads the current ID3 tag and applies only the fields actually changed by that site. This prevents an older local cache from silently overwriting newer corrections made by another site.
+
+Removing a shared local media item from one site only hides it from that site's Radio catalogue and programmes. The common audio file is preserved for the other sites.
+
+Non-MP3 shared files remain usable in Shared media mode, but embedded cross-site metadata synchronization is currently implemented for MP3/ID3 only.
 
 ## Compatibility
 
