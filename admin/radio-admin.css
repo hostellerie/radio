@@ -189,3 +189,41 @@
 .radio-studio__inline-form .radio-program-item__action,
 .radio-studio__inline-form .radio-admin__button,
 .radio-studio__inline-form .radio-program-picker__add{margin:0}
+
+
+/* Studio queue: keep title, type, duration and actions aligned from the left. */
+.radio-studio__queue{padding-left:1.35rem;text-align:left}
+.radio-studio__queue-item{
+    justify-content:flex-start;
+    text-align:left
+}
+.radio-studio__queue-main{
+    display:flex;
+    align-items:center;
+    gap:.45rem;
+    min-width:0;
+    flex:1 1 auto;
+    justify-content:flex-start;
+    text-align:left
+}
+.radio-studio__queue-type{
+    flex:0 0 auto;
+    margin:0
+}
+.radio-studio__queue-item>.radio-admin__muted{
+    flex:0 0 auto;
+    text-align:left
+}
+.radio-studio__queue-item .radio-program-item__actions{
+    margin-left:0;
+    flex:0 0 auto
+}
+@media(max-width:640px){
+    .radio-studio__queue-main{
+        width:100%;
+        flex-wrap:wrap
+    }
+    .radio-studio__queue-item .radio-program-item__actions{
+        align-self:flex-start
+    }
+}
