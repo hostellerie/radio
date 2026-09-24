@@ -842,6 +842,8 @@
                 var trackingEnabled = root.getAttribute('data-radio-replay-track') !== '0';
                 var trackingSource = root.getAttribute('data-radio-replay-source') || 'replay';
                 var dynamicPlaylist = root.getAttribute('data-radio-replay-dynamic') === '1';
+                var transitionMode = root.getAttribute('data-radio-transition-mode') || 'hard';
+                var configuredCrossfade = parseInt(root.getAttribute('data-radio-crossfade-seconds') || '0', 10) || 0;
                 var raw = root.getAttribute('data-radio-replay-items') || '[]';
                 var items = [];
 
@@ -863,6 +865,8 @@
                 var queueReserve = new Audio();
                 var queuePreloadUrl = '';
                 var queueReserveUrl = '';
+                var queueMixing = false;
+                var queueFadeFrame = 0;
                 queuePreload.preload = 'auto';
                 queueReserve.preload = 'auto';
 
@@ -988,6 +992,89 @@
                     return itemOffset(index) + (audio.currentTime || 0);
                 }
 
+                function activeOverlap() {
+                    if (!items[index]) {
+                        return 0;
+                    }
+                    return Math.max(0, parseInt(items[index].transition_overlap || 0, 10) || 0);
+                }
+
+                function stopQueueFade() {
+                    if (queueFadeFrame) {
+                        window.cancelAnimationFrame(queueFadeFrame);
+                        queueFadeFrame = 0;
+                    }
+                    queueMixing = false;
+                    audio.volume = 1;
+                    queuePreload.volume = 1;
+                }
+
+                function startQueueCrossfade() {
+                    if (queueMixing || transitionMode !== 'crossfade' || audio.paused
+                        || index + 1 >= items.length) {
+                        return;
+                    }
+
+                    var overlap = activeOverlap();
+                    if (overlap < 1) {
+                        return;
+                    }
+
+                    var remaining = Math.max(0, (parseInt(items[index].duration || 0, 10) || 0) - (audio.currentTime || 0));
+                    if (remaining > overlap + 0.12) {
+                        return;
+                    }
+
+                    if (!queuePreloadUrl || queuePreload.readyState < 3) {
+                        return;
+                    }
+
+                    queueMixing = true;
+                    queuePreload.volume = 0;
+                    try {
+                        queuePreload.currentTime = 0;
+                    } catch (error) {}
+
+                    var promise = queuePreload.play();
+                    if (!promise || typeof promise.then !== 'function') {
+                        queueMixing = false;
+                        queuePreload.volume = 1;
+                        return;
+                    }
+
+                    promise.then(function () {
+                        var startedAt = performance.now();
+                        function fade(nowTime) {
+                            if (!queueMixing) {
+                                return;
+                            }
+                            var progressValue = Math.min(1, (nowTime - startedAt) / (overlap * 1000));
+                            audio.volume = 1 - progressValue;
+                            queuePreload.volume = progressValue;
+
+                            if (progressValue < 1) {
+                                queueFadeFrame = window.requestAnimationFrame(fade);
+                                return;
+                            }
+
+                            var resumeAt = queuePreload.currentTime || overlap;
+                            queuePreload.pause();
+                            queuePreload.volume = 1;
+                            audio.pause();
+                            audio.volume = 1;
+                            queueMixing = false;
+                            queueFadeFrame = 0;
+                            started = false;
+                            setItem(index + 1, resumeAt, true);
+                        }
+                        queueFadeFrame = window.requestAnimationFrame(fade);
+                    }).catch(function () {
+                        queueMixing = false;
+                        queuePreload.volume = 1;
+                        audio.volume = 1;
+                    });
+                }
+
                 function activeItemId() {
                     return items[index] ? (parseInt(items[index].item_id || 0, 10) || 0) : 0;
                 }
@@ -1057,6 +1144,9 @@
 
                 function setItem(nextIndex, localOffset, shouldPlay) {
                     nextIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+                    if (queueMixing) {
+                        stopQueueFade();
+                    }
                     flush();
                     if (nextIndex !== index) {
                         started = false;
@@ -1273,9 +1363,15 @@
                     updateUi();
                 });
 
-                audio.addEventListener('timeupdate', updateUi);
+                audio.addEventListener('timeupdate', function () {
+                    updateUi();
+                    startQueueCrossfade();
+                });
 
                 audio.addEventListener('ended', function () {
+                    if (queueMixing) {
+                        return;
+                    }
                     flush();
                     if (index + 1 < items.length) {
                         started = false;
@@ -1285,7 +1381,10 @@
                     }
                 });
 
-                window.addEventListener('pagehide', flush);
+                window.addEventListener('pagehide', function () {
+                    stopQueueFade();
+                    flush();
+                });
                 updateProgressBounds();
                 refreshQueuePreload();
                 updateUi();
