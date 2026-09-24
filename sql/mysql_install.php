@@ -27,6 +27,7 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
   mime_type varchar(96) NOT NULL default '',
   duration int(10) unsigned NOT NULL default '0',
   file_size bigint(20) unsigned NOT NULL default '0',
+  metadata_mtime bigint(20) unsigned NOT NULL default '0',
   status varchar(24) NOT NULL default 'draft',
   on_demand tinyint(1) unsigned NOT NULL default '1',
   broadcast tinyint(1) unsigned NOT NULL default '1',
