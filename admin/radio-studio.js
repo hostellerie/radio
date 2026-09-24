@@ -88,8 +88,25 @@
     var djFx = studio.querySelector('[data-radio-studio-djfx]');
     if (djFx) {
         var djRanges = djFx.querySelectorAll('[data-radio-djfx]');
+
+        function updateDjValue(range) {
+            var control = range.getAttribute('data-radio-djfx') || '';
+            var output = djFx.querySelector('[data-radio-djfx-value="' + control + '"]');
+            if (!output) {
+                return;
+            }
+            var value = parseFloat(range.value || '0') || 0;
+            if (control === 'filter') {
+                output.textContent = value > 0 ? '+' + value : String(value);
+            } else {
+                output.textContent = (value > 0 ? '+' : '') + value + ' dB';
+            }
+        }
+
         for (var djIndex = 0; djIndex < djRanges.length; djIndex++) {
+            updateDjValue(djRanges[djIndex]);
             djRanges[djIndex].addEventListener('input', function () {
+                updateDjValue(this);
                 dispatchDjFx(this.getAttribute('data-radio-djfx') || '', parseFloat(this.value || '0') || 0);
             });
         }
@@ -109,6 +126,7 @@
                 if (control === 'reset') {
                     for (var resetIndex = 0; resetIndex < djRanges.length; resetIndex++) {
                         djRanges[resetIndex].value = '0';
+                        updateDjValue(djRanges[resetIndex]);
                     }
                     var echoButton = djFx.querySelector('[data-radio-djfx-button="echo"]');
                     if (echoButton) {
@@ -152,6 +170,17 @@
                 label: label
             };
             savePads();
+
+            var padLabel = djFx.querySelector('[data-radio-djfx-pad-label="' + pad + '"]');
+            var padButton = djFx.querySelector('[data-radio-djfx-pad-play="' + pad + '"]');
+            if (padLabel) {
+                padLabel.textContent = mediaId && label ? label : 'PAD ' + pad;
+            }
+            if (padButton) {
+                padButton.disabled = !mediaId || !url;
+                padButton.classList.toggle('is-assigned', !!mediaId && !!url);
+            }
+
             dispatchDjFx('sample-assign', {
                 pad: pad,
                 media_id: mediaId,
