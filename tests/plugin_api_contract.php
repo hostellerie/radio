@@ -15,6 +15,7 @@ $nowEndpoint = file_get_contents($root . '/public_html/now.php');
 $publicJs = file_get_contents($root . '/public_html/radio.js');
 $publicCss = file_get_contents($root . '/public_html/radio.css');
 $adminJs = file_get_contents($root . '/admin/radio-admin.js');
+$adminCss = file_get_contents($root . '/admin/radio-admin.css');
 
 $errors = array();
 
@@ -200,7 +201,7 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.5.1") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.0") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
@@ -216,8 +217,11 @@ radio_contract_require(
         && strpos($updatesFile, "'0.5.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.5.1'") !== false
         && strpos($updatesFile, 'radio_update_0_5_0_to_0_5_1') !== false
+        && strpos($updatesFile, "'0.5.1' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.6.0'") !== false
+        && strpos($updatesFile, 'radio_update_0_5_1_to_0_6_0') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.5.1 must preserve the existing upgrade chain and add shared-media metadata migration.'
+    'Radio 0.6.0 must preserve the existing upgrade chain and add the semi-live session migration.'
 );
 
 $mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
@@ -298,6 +302,28 @@ radio_contract_require(
         && strpos($studioJs, "body.set('studio_action', 'add')") !== false
         && strpos($studioJs, "mutateItem('remove'") !== false,
     'Radio Studio mutations must use live AJAX updates without reloading the playing Studio page.'
+);
+
+radio_contract_require(
+    strpos($mysqlInstall, 'radio_broadcast_sessions') !== false
+        && strpos($functions, "['radio_broadcast_sessions']") !== false
+        && strpos($functions, 'function RADIO_startBroadcastSession') !== false
+        && strpos($functions, 'function RADIO_stopBroadcastSession') !== false
+        && strpos($functions, 'function RADIO_resolveBroadcastSession') !== false
+        && strpos($functions, "'source' => 'semi-live'") !== false
+        && strpos($studioApi, "if (\$studioAction === 'broadcast_start')") !== false
+        && strpos($studioApi, "if (\$studioAction === 'broadcast_stop')") !== false
+        && strpos($studioPage, 'data-radio-studio-broadcast') !== false
+        && strpos($studioJs, "studio_action', broadcastActive ? 'broadcast_stop' : 'broadcast_start'") !== false,
+    'Radio 0.6.0 Studio must provide server-driven semi-live broadcast sessions without relying on the operator browser as the broadcast clock.'
+);
+
+radio_contract_require(
+    strpos($studioPage, 'radio-studio__player-meta') !== false
+        && strpos($studioPage, 'radio-studio__buffer-status') !== false
+        && strpos($studioPage, 'data-radio-studio-buffer') !== false
+        && strpos($adminCss, '.radio-studio__buffer-status') !== false,
+    'Radio Studio buffer diagnostics must be displayed below the player with dedicated styling.'
 );
 
 radio_contract_require(
@@ -594,9 +620,11 @@ radio_contract_require(
     'Radio public home must use a single native audio timeline.'
 );
 radio_contract_require(
-    strpos($publicJs, '15000') !== false
+    strpos($publicJs, "liveSource === 'semi-live'") !== false
+        && strpos($publicJs, 'syncTick % 5 === 0') !== false
+        && strpos($publicJs, '}, 3000);') !== false
         && strpos($publicJs, 'data.current_media') !== false,
-    'Radio public index player must resynchronize with now.php every 15 seconds.'
+    'Radio public index player must synchronize every 3 seconds during semi-live and retain the normal 15-second cadence otherwise.'
 );
 radio_contract_require(
     strpos($publicJs, 'AudioContext') !== false
