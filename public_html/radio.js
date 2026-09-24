@@ -988,13 +988,30 @@
                     return items[i] ? (parseInt(items[i].offset || 0, 10) || 0) : 0;
                 }
 
-                function totalDuration() {
-                    if (!items.length) {
-                        return 0;
+                function itemPlayable(i) {
+                    return !!(items[i]
+                        && items[i].playable !== false
+                        && items[i].playable !== 0
+                        && items[i].stream_url);
+                }
+
+                function nextPlayableIndex(startIndex) {
+                    for (var playableIndex = Math.max(0, startIndex); playableIndex < items.length; playableIndex++) {
+                        if (itemPlayable(playableIndex)) {
+                            return playableIndex;
+                        }
                     }
-                    var last = items[items.length - 1];
-                    return (parseInt(last.offset || 0, 10) || 0)
-                        + (parseInt(last.duration || 0, 10) || 0);
+                    return -1;
+                }
+
+                function totalDuration() {
+                    for (var lastIndex = items.length - 1; lastIndex >= 0; lastIndex--) {
+                        if (itemPlayable(lastIndex)) {
+                            return itemOffset(lastIndex)
+                                + (parseInt(items[lastIndex].duration || 0, 10) || 0);
+                        }
+                    }
+                    return 0;
                 }
 
                 function totalPosition() {
@@ -1015,12 +1032,14 @@
                     }
                     queueMixing = false;
                     audio.volume = 1;
+                    queuePreload.pause();
                     queuePreload.volume = 1;
                 }
 
                 function startQueueCrossfade() {
                     if (queueMixing || transitionMode !== 'crossfade' || audio.paused
-                        || index + 1 >= items.length) {
+                        || index + 1 >= items.length || !itemPlayable(index)
+                        || !itemPlayable(index + 1)) {
                         return;
                     }
 
@@ -1200,19 +1219,34 @@
                 }
 
                 function seekGlobal(seconds, shouldPlay) {
-                    seconds = Math.max(0, parseInt(seconds || 0, 10) || 0);
-                    var nextIndex = items.length - 1;
+                    var duration = totalDuration();
+                    seconds = Math.max(0, Math.min(duration, parseFloat(seconds || 0) || 0));
 
+                    var targetIndex = -1;
                     for (var i = 0; i < items.length; i++) {
-                        var start = itemOffset(i);
-                        var duration = parseInt(items[i].duration || 0, 10) || 0;
-                        if (seconds < start + duration) {
-                            nextIndex = i;
+                        if (!itemPlayable(i)) {
+                            continue;
+                        }
+                        if (itemOffset(i) <= seconds) {
+                            targetIndex = i;
+                        } else {
                             break;
                         }
                     }
 
-                    setItem(nextIndex, seconds - itemOffset(nextIndex), shouldPlay);
+                    if (targetIndex < 0) {
+                        targetIndex = nextPlayableIndex(0);
+                    }
+                    if (targetIndex < 0) {
+                        return;
+                    }
+
+                    var localOffset = Math.max(0, seconds - itemOffset(targetIndex));
+                    var itemDuration = parseInt(items[targetIndex].duration || 0, 10) || 0;
+                    if (itemDuration > 0) {
+                        localOffset = Math.min(localOffset, Math.max(0, itemDuration - 0.05));
+                    }
+                    setItem(targetIndex, localOffset, shouldPlay);
                 }
 
                 root.addEventListener('radio:seek-item', function (event) {
@@ -1328,8 +1362,19 @@
 
                 toggle.addEventListener('click', function () {
                     if (audio.paused) {
+                        if (audio.ended || !itemPlayable(index)) {
+                            var startIndex = audio.ended ? 0 : index;
+                            var playableIndex = nextPlayableIndex(startIndex);
+                            if (playableIndex >= 0) {
+                                setItem(playableIndex, 0, true);
+                            }
+                            return;
+                        }
                         audio.play().catch(function () {});
                     } else {
+                        if (queueMixing) {
+                            stopQueueFade();
+                        }
                         audio.pause();
                     }
                 });
@@ -1407,9 +1452,10 @@
                         return;
                     }
                     flush();
-                    if (index + 1 < items.length) {
+                    var followingIndex = nextPlayableIndex(index + 1);
+                    if (followingIndex >= 0) {
                         started = false;
-                        setItem(index + 1, 0, true);
+                        setItem(followingIndex, 0, true);
                     } else {
                         updateUi();
                     }
