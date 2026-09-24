@@ -401,10 +401,11 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($publicJs, 'function finishQueueHandoff') !== false
-        && strpos($publicJs, 'currentLivePosition = queuePreload.currentTime') !== false
-        && strpos($publicJs, 'refreshQueuePreload();') !== false,
-    'Radio Studio crossfade handoff must keep the preload playing until the main player resumes at the live position.'
+    strpos($publicJs, 'var previousAudio = audio;') !== false
+        && strpos($publicJs, 'audio = queuePreload;') !== false
+        && strpos($publicJs, 'queuePreload = previousAudio;') !== false
+        && strpos($publicJs, 'event.currentTarget !== audio') !== false,
+    'Radio Studio crossfade handoff must promote the already-playing preload without reloading or seeking the MP3.'
 );
 
 radio_contract_require(
