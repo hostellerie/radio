@@ -135,7 +135,9 @@ $offset = 0;
 for ($i = 0; $i < count($playlist); $i++) {
     $playlist[$i]['offset'] = $offset;
     $overlap = 0;
-    if ($i + 1 < count($playlist)) {
+    if ($i + 1 < count($playlist)
+        && !empty($playlist[$i]['playable'])
+        && !empty($playlist[$i + 1]['playable'])) {
         $overlap = RADIO_transitionOverlapFor(
             $playlist[$i],
             $playlist[$i + 1],
