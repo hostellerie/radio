@@ -26,6 +26,7 @@ $_TABLES['radio_media'] = $_TABLES['radio_media_local'];
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
+$_TABLES['radio_broadcast_sessions'] = $_DB_table_prefix . 'radio_broadcast_sessions';
 $_TABLES['radio_events'] = $_DB_table_prefix . 'radio_events';
 $_TABLES['radio_sources'] = $_DB_table_prefix . 'radio_sources';
 
@@ -4338,9 +4339,258 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
     return false;
 }
 
+function RADIO_getActiveBroadcastSession()
+{
+    global $_TABLES;
+
+    $result = DB_query(
+        "SELECT * FROM {$_TABLES['radio_broadcast_sessions']} "
+        . "WHERE state='active' ORDER BY session_id DESC LIMIT 1"
+    );
+    if (DB_error() || DB_numRows($result) < 1) {
+        return false;
+    }
+    return DB_fetchArray($result);
+}
+
+function RADIO_startBroadcastSession($programId, $currentItemId)
+{
+    global $_TABLES, $_USER;
+
+    if (!SEC_hasRights('radio.schedule')) {
+        return false;
+    }
+
+    $programId = (int) $programId;
+    $currentItemId = (int) $currentItemId;
+    $program = RADIO_getProgram($programId, false);
+    if ($program === false || !RADIO_hasEditAccess($program)) {
+        return false;
+    }
+
+    $items = RADIO_getProgramItems($programId);
+    $selected = false;
+    foreach ($items as $item) {
+        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)
+            || (int) $item['duration'] < 1) {
+            continue;
+        }
+        if ($selected === false) {
+            $selected = $item;
+        }
+        if ($currentItemId > 0 && (int) $item['item_id'] === $currentItemId) {
+            $selected = $item;
+            break;
+        }
+    }
+    if ($selected === false) {
+        return false;
+    }
+
+    $now = date('Y-m-d H:i:s');
+    DB_query(
+        "UPDATE {$_TABLES['radio_broadcast_sessions']} SET state='stopped',"
+        . "stopped_at='" . DB_escapeString($now) . "',updated_at='" . DB_escapeString($now) . "' "
+        . "WHERE state='active'"
+    );
+    if (DB_error()) {
+        return false;
+    }
+
+    $ownerId = isset($_USER['uid']) ? (int) $_USER['uid'] : 1;
+    DB_query(
+        "INSERT INTO {$_TABLES['radio_broadcast_sessions']} "
+        . "(program_id,current_item_id,state,owner_id,started_at,item_started_at,updated_at) VALUES ("
+        . $programId . "," . (int) $selected['item_id'] . ",'active'," . $ownerId . ","
+        . "'" . DB_escapeString($now) . "','" . DB_escapeString($now) . "','" . DB_escapeString($now) . "')"
+    );
+
+    return !DB_error();
+}
+
+function RADIO_stopBroadcastSession($programId)
+{
+    global $_TABLES;
+
+    if (!SEC_hasRights('radio.schedule')) {
+        return false;
+    }
+
+    $where = "state='active'";
+    if ((int) $programId > 0) {
+        $where .= " AND program_id=" . (int) $programId;
+    }
+    $now = date('Y-m-d H:i:s');
+    DB_query(
+        "UPDATE {$_TABLES['radio_broadcast_sessions']} SET state='stopped',"
+        . "stopped_at='" . DB_escapeString($now) . "',updated_at='" . DB_escapeString($now) . "' "
+        . "WHERE " . $where
+    );
+    return !DB_error();
+}
+
+function RADIO_resolveBroadcastSession($timestamp)
+{
+    global $_TABLES, $_CONF;
+
+    $session = RADIO_getActiveBroadcastSession();
+    if ($session === false) {
+        return false;
+    }
+
+    $program = RADIO_getProgram((int) $session['program_id'], true);
+    if ($program === false) {
+        return false;
+    }
+
+    $rawItems = RADIO_getProgramItems((int) $session['program_id']);
+    $items = array();
+    foreach ($rawItems as $item) {
+        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)
+            || (int) $item['duration'] < 1) {
+            continue;
+        }
+        $items[] = $item;
+    }
+    if (count($items) === 0) {
+        return false;
+    }
+
+    $index = -1;
+    for ($i = 0; $i < count($items); $i++) {
+        if ((int) $items[$i]['item_id'] === (int) $session['current_item_id']) {
+            $index = $i;
+            break;
+        }
+    }
+
+    $itemStarted = strtotime($session['item_started_at']);
+    if ($itemStarted === false) {
+        $itemStarted = (int) $timestamp;
+    }
+
+    if ($index < 0) {
+        $index = 0;
+        $itemStarted = (int) $timestamp;
+        DB_query(
+            "UPDATE {$_TABLES['radio_broadcast_sessions']} SET current_item_id="
+            . (int) $items[0]['item_id'] . ",item_started_at='"
+            . DB_escapeString(date('Y-m-d H:i:s', $itemStarted)) . "',updated_at='"
+            . DB_escapeString(date('Y-m-d H:i:s', $timestamp)) . "' WHERE session_id="
+            . (int) $session['session_id']
+        );
+    }
+
+    $mode = RADIO_transitionMode();
+    $seconds = RADIO_crossfadeSeconds();
+
+    while ($index < count($items)) {
+        $current = $items[$index];
+        $next = $index + 1 < count($items) ? $items[$index + 1] : false;
+        $overlap = $next !== false
+            ? RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
+            : 0;
+        $slotDuration = max(1, (int) $current['duration'] - $overlap);
+        $elapsed = max(0, (int) $timestamp - $itemStarted);
+
+        if ($elapsed < $slotDuration) {
+            $nextNext = $index + 2 < count($items) ? $items[$index + 2] : false;
+            $startedAt = strtotime($session['started_at']);
+            if ($startedAt === false) {
+                $startedAt = $itemStarted;
+            }
+
+            $remaining = max(0, (int) $current['duration'] - $elapsed);
+            for ($r = $index + 1; $r < count($items); $r++) {
+                $remaining += max(1, (int) $items[$r]['duration']);
+            }
+
+            return array(
+                'session' => $session,
+                'program' => array(
+                    'program_id' => (int) $program['program_id'],
+                    'program_title' => $program['title'],
+                    'url' => rtrim($_CONF['site_url'], '/') . '/radio/program.php?id=' . (int) $program['program_id'],
+                    'start' => $startedAt,
+                    'end' => (int) $timestamp + $remaining,
+                    'elapsed' => max(0, (int) $timestamp - $startedAt),
+                    'remaining' => $remaining
+                ),
+                'media' => array(
+                    'media_id' => (int) $current['media_id'],
+                    'external_id' => RADIO_externalId('media', (int) $current['media_id']),
+                    'title' => $current['title'],
+                    'media_type' => $current['media_type'],
+                    'source_kind' => RADIO_sourceKind($current),
+                    'duration' => (int) $current['duration'],
+                    'slot_duration' => $slotDuration,
+                    'offset' => $elapsed,
+                    'transition_mode' => $mode,
+                    'transition_seconds' => $overlap,
+                    'stream_url' => RADIO_mediaUrl((int) $current['media_id'], false),
+                    'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $current['media_id'])),
+                    'next_media' => $next === false ? false : array(
+                        'media_id' => (int) $next['media_id'],
+                        'external_id' => RADIO_externalId('media', (int) $next['media_id']),
+                        'title' => $next['title'],
+                        'media_type' => $next['media_type'],
+                        'source_kind' => RADIO_sourceKind($next),
+                        'duration' => (int) $next['duration'],
+                        'stream_url' => RADIO_mediaUrl((int) $next['media_id'], false),
+                        'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $next['media_id']))
+                    ),
+                    'next_next_media' => $nextNext === false ? false : array(
+                        'media_id' => (int) $nextNext['media_id'],
+                        'external_id' => RADIO_externalId('media', (int) $nextNext['media_id']),
+                        'title' => $nextNext['title'],
+                        'media_type' => $nextNext['media_type'],
+                        'source_kind' => RADIO_sourceKind($nextNext),
+                        'duration' => (int) $nextNext['duration'],
+                        'stream_url' => RADIO_mediaUrl((int) $nextNext['media_id'], false),
+                        'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $nextNext['media_id']))
+                    )
+                )
+            );
+        }
+
+        if ($next === false) {
+            $now = date('Y-m-d H:i:s', $timestamp);
+            DB_query(
+                "UPDATE {$_TABLES['radio_broadcast_sessions']} SET state='stopped',"
+                . "stopped_at='" . DB_escapeString($now) . "',updated_at='" . DB_escapeString($now) . "' "
+                . "WHERE session_id=" . (int) $session['session_id']
+            );
+            return false;
+        }
+
+        $itemStarted += $slotDuration;
+        $index++;
+        DB_query(
+            "UPDATE {$_TABLES['radio_broadcast_sessions']} SET current_item_id="
+            . (int) $items[$index]['item_id'] . ",item_started_at='"
+            . DB_escapeString(date('Y-m-d H:i:s', $itemStarted)) . "',updated_at='"
+            . DB_escapeString(date('Y-m-d H:i:s', $timestamp)) . "' WHERE session_id="
+            . (int) $session['session_id']
+        );
+    }
+
+    return false;
+}
+
 function RADIO_getLiveState($timestamp)
 {
     $timestamp = $timestamp ? (int) $timestamp : time();
+
+    $broadcast = RADIO_resolveBroadcastSession($timestamp);
+    if ($broadcast !== false) {
+        return array(
+            'timestamp' => $timestamp,
+            'source' => 'semi-live',
+            'program' => $broadcast['program'],
+            'media' => $broadcast['media']
+        );
+    }
+
     $program = RADIO_getNowPlaying($timestamp);
 
     if ($program !== false) {
