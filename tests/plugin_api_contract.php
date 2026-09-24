@@ -401,6 +401,13 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicJs, 'function finishQueueHandoff') !== false
+        && strpos($publicJs, 'currentLivePosition = queuePreload.currentTime') !== false
+        && strpos($publicJs, 'refreshQueuePreload();') !== false,
+    'Radio Studio crossfade handoff must keep the preload playing until the main player resumes at the live position.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function createTransitionManager') !== false
         && strpos($blockPlayer, 'function createTransitionManager') !== false
         && strpos($persistentPlayer, 'function createTransitionManager') !== false
