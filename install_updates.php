@@ -19,6 +19,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.3.2' => array(
         'next' => '0.4.0',
         'callback' => 'radio_update_0_3_2_to_0_4_0'
+    ),
+    '0.4.0' => array(
+        'next' => '0.5.0',
+        'callback' => 'radio_update_0_4_0_to_0_5_0'
     )
 );
 
@@ -149,6 +153,39 @@ function radio_update_0_3_2_to_0_4_0()
         && radio_column_exists($table, 'tags')
         && radio_index_exists($table, 'category')
         && radio_index_exists($table, 'collection_name');
+}
+
+
+function radio_update_0_4_0_to_0_5_0()
+{
+    global $_TABLES;
+
+    $table = $_TABLES['radio_site_media'];
+    $result = DB_query("SHOW TABLES LIKE '" . DB_escapeString($table) . "'");
+    if (!DB_error() && DB_numRows($result) > 0) {
+        return true;
+    }
+
+    DB_query("CREATE TABLE " . $table . " (
+      media_id int(10) unsigned NOT NULL,
+      enabled tinyint(1) unsigned NOT NULL default '1',
+      status varchar(24) NOT NULL default 'published',
+      on_demand tinyint(1) unsigned NOT NULL default '1',
+      broadcast tinyint(1) unsigned NOT NULL default '1',
+      automatic_rotation tinyint(1) unsigned NOT NULL default '1',
+      allow_download tinyint(1) unsigned NOT NULL default '1',
+      owner_id int(10) unsigned NOT NULL default '2',
+      group_id mediumint(8) unsigned NOT NULL default '1',
+      perm_owner tinyint(1) unsigned NOT NULL default '3',
+      perm_group tinyint(1) unsigned NOT NULL default '2',
+      perm_members tinyint(1) unsigned NOT NULL default '2',
+      perm_anon tinyint(1) unsigned NOT NULL default '2',
+      modified datetime NOT NULL,
+      PRIMARY KEY (media_id),
+      KEY enabled_status (enabled,status)
+    ) ENGINE=MyISAM");
+
+    return !DB_error();
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
