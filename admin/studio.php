@@ -206,12 +206,6 @@ $content .= '<h1>' . radio_studio_h($LANG_RADIO['studio_title']) . ': '
     . radio_studio_h($program['title']) . '</h1>';
 $content .= '<p class="radio-admin__muted">'
     . radio_studio_h($LANG_RADIO['studio_page_help_simple']) . '</p>';
-if ($canEdit) {
-    $content .= '<p class="radio-studio__status-group">'
-        . '<span class="radio-admin__muted" data-radio-studio-buffer></span>'
-        . '<span class="radio-admin__muted" data-radio-studio-status></span>'
-        . '</p>';
-}
 $content .= $message;
 
 $content .= '<section class="radio-replay__player" data-radio-replay-player'
@@ -242,6 +236,13 @@ $content .= '<section class="radio-replay__player" data-radio-replay-player'
     . '<span data-radio-replay-total>' . gmdate('H:i:s', $offset) . '</span></div>'
     . '<ol class="radio-replay__chapters radio-visually-hidden" aria-hidden="true">' . $chapters . '</ol>'
     . '</section>';
+
+if ($canEdit) {
+    $content .= '<div class="radio-studio__player-meta">'
+        . '<span class="radio-studio__buffer-status" data-radio-studio-buffer></span>'
+        . '<span class="radio-admin__muted radio-studio__action-status" data-radio-studio-status></span>'
+        . '</div>';
+}
 
 $content .= '<section class="radio-studio__queue-panel"><h2>'
     . radio_studio_h($LANG_RADIO['studio_queue_title']) . '</h2>';
