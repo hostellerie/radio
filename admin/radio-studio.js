@@ -399,6 +399,22 @@
             });
         }
 
+        for (var savedPadNumber = 1; savedPadNumber <= 4; savedPadNumber++) {
+            var savedModePad = savedPads[savedPadNumber] || null;
+            var savedModeLabel = djMode.querySelector('[data-radio-djmode-pad-label="' + savedPadNumber + '"]');
+            var savedModeButton = djMode.querySelector('[data-radio-djmode-pad="' + savedPadNumber + '"]');
+            if (savedModeLabel) {
+                savedModeLabel.textContent = savedModePad && savedModePad.media_id && savedModePad.label
+                    ? savedModePad.label
+                    : 'PAD ' + savedPadNumber;
+            }
+            if (savedModeButton) {
+                var savedReady = !!(savedModePad && savedModePad.media_id && savedModePad.url);
+                savedModeButton.disabled = !savedReady;
+                savedModeButton.classList.toggle('is-assigned', savedReady);
+            }
+        }
+
         var modePads = djMode.querySelectorAll('[data-radio-djmode-pad]');
         for (var modePadIndex = 0; modePadIndex < modePads.length; modePadIndex++) {
             modePads[modePadIndex].addEventListener('click', function () {
