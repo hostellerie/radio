@@ -209,6 +209,10 @@ function radio_studio_state($programId)
     }
 
     $broadcast = RADIO_getActiveBroadcastSession();
+    if ($broadcast !== false && (int) $broadcast['program_id'] === (int) $programId) {
+        RADIO_resolveBroadcastSession(time());
+        $broadcast = RADIO_getActiveBroadcastSession();
+    }
 
     return array(
         'ok' => true,
@@ -218,6 +222,7 @@ function radio_studio_state($programId)
             && (int) $broadcast['program_id'] === (int) $programId,
         'broadcast_program_id' => $broadcast !== false ? (int) $broadcast['program_id'] : 0,
         'broadcast_session_id' => $broadcast !== false ? (int) $broadcast['session_id'] : 0,
+        'broadcast_current_item_id' => $broadcast !== false ? (int) $broadcast['current_item_id'] : 0,
         'csrf_name' => CSRF_TOKEN,
         'csrf_token' => SEC_createToken()
     );
