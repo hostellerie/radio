@@ -64,13 +64,11 @@ $storageDetails = '<section class="radio-admin__panel"><h2>'
     . htmlspecialchars($LANG_RADIO['storage'], ENT_QUOTES, 'UTF-8') . '</h2><p><strong>'
     . htmlspecialchars($ready ? $LANG_RADIO['storage_ready'] : $LANG_RADIO['storage_unavailable'], ENT_QUOTES, 'UTF-8')
     . '</strong><br><code>' . htmlspecialchars($storage, ENT_QUOTES, 'UTF-8') . '</code></p>'
-    . '<p><strong>' . htmlspecialchars(
-        isset($LANG_RADIO['library_mode']) ? $LANG_RADIO['library_mode'] : 'Media library mode',
-        ENT_QUOTES,
-        'UTF-8'
-    ) . ':</strong> '
+    . '<p><strong>' . htmlspecialchars($LANG_RADIO['library_mode_label'], ENT_QUOTES, 'UTF-8') . ':</strong> '
     . htmlspecialchars(
-        RADIO_sharedMediaEnabled() ? $LANG_RADIO['shared_media_mode'] : $LANG_RADIO['local_media_mode'],
+        RADIO_sharedMediaEnabled()
+            ? $LANG_RADIO['shared_media_mode']
+            : $LANG_RADIO['local_media_mode'],
         ENT_QUOTES,
         'UTF-8'
     ) . '</p>';
