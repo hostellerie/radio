@@ -287,8 +287,8 @@ radio_contract_require(
         && strpos($studioApi, "if (\$studioAction === 'remove')") !== false
         && strpos($studioApi, "if (\$studioAction === 'move_up' || \$studioAction === 'move_down')") !== false
         && strpos($studioApi, 'function radio_studio_check_token') !== false
-        && strpos($studioApi, "$_TABLES['tokens']") !== false
-        && strpos($studioApi, "DB_delete($_TABLES['tokens'], 'token', $token)") !== false
+        && strpos($studioApi, "\$_TABLES['tokens']") !== false
+        && strpos($studioApi, "DB_delete(\$_TABLES['tokens'], 'token', \$token)") !== false
         && strpos($studioApi, "'csrf_token'") !== false
         && strpos($studioJs, "data.error === 'invalid_token'") !== false
         && strpos($studioJs, "body.set('studio_action', 'add')") !== false
