@@ -330,85 +330,163 @@
 }
 
 
-/* Studio live DJ FX: intentionally compact and immediate. */
+/* Studio live DJ FX: spacious controls for mouse and touch use. */
 .radio-studio__djfx{
-    margin:0 0 1rem;
-    padding:.75rem;
+    margin:0 0 1.25rem;
+    padding:1rem 1.05rem 1.1rem;
     border:1px solid rgba(127,127,127,.22);
-    border-radius:.4rem
+    border-radius:.55rem
 }
 .radio-studio__djfx-title{
     display:block;
-    margin-bottom:.55rem
+    margin-bottom:.85rem;
+    font-size:1.05rem
 }
 .radio-studio__djfx-controls{
     display:grid;
-    grid-template-columns:repeat(4,minmax(110px,1fr)) max-content max-content max-content;
-    gap:.6rem;
-    align-items:end
+    grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(84px,max-content) minmax(84px,max-content);
+    gap:1rem;
+    align-items:stretch
 }
-.radio-studio__djfx-controls label{
+.radio-studio__djfx-control{
     display:grid;
-    gap:.25rem;
-    min-width:0
+    gap:.55rem;
+    min-width:0;
+    padding:.65rem .7rem;
+    border:1px solid rgba(127,127,127,.14);
+    border-radius:.45rem
 }
-.radio-studio__djfx-controls label>span{
-    font-size:.82rem;
-    font-weight:600
-}
-.radio-studio__djfx-controls input[type="range"]{
-    width:100%
-}
-.radio-studio__djfx-controls .radio-admin__button{
-    margin:0;
-    white-space:nowrap
-}
-.radio-studio__djfx-controls .radio-admin__button.is-active{
+.radio-studio__djfx-control-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.65rem;
+    font-size:.86rem;
     font-weight:700
 }
-.radio-studio__djfx small{
-    display:block;
-    margin-top:.45rem
+.radio-studio__djfx-control-head output{
+    min-width:3.8rem;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+    opacity:.78
 }
-@media(max-width:900px){
-    .radio-studio__djfx-controls{
-        grid-template-columns:repeat(2,minmax(130px,1fr)) repeat(3,max-content)
-    }
+.radio-studio__djfx-control input[type="range"]{
+    width:100%;
+    min-height:36px;
+    margin:0;
+    touch-action:pan-x
 }
-@media(max-width:560px){
-    .radio-studio__djfx-controls{
-        grid-template-columns:1fr 1fr
-    }
+.radio-studio__djfx-effect{
+    min-width:84px;
+    min-height:56px!important;
+    margin:0!important;
+    padding:.75rem 1rem!important;
+    align-self:stretch;
+    white-space:nowrap
 }
-
-
+.radio-studio__djfx-effect.is-active{
+    font-weight:700;
+    box-shadow:inset 0 0 0 2px currentColor
+}
+.radio-studio__djfx-pad-title{
+    margin:1.15rem 0 .65rem;
+    padding-top:1rem;
+    border-top:1px solid rgba(127,127,127,.16);
+    font-size:.88rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em
+}
 .radio-studio__djfx-pads{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:.5rem;
-    margin-top:.7rem
+    gap:1rem
 }
 .radio-studio__djfx-pad{
     display:grid;
-    grid-template-columns:minmax(0,1fr) max-content;
-    gap:.35rem;
-    align-items:center
+    gap:.55rem;
+    min-width:0;
+    padding:.65rem;
+    border:1px solid rgba(127,127,127,.16);
+    border-radius:.5rem
+}
+.radio-studio__djfx-pad-trigger{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:.25rem;
+    width:100%;
+    min-height:76px;
+    padding:.85rem 1rem;
+    border:1px solid rgba(127,127,127,.35);
+    border-radius:.5rem;
+    background:rgba(127,127,127,.06);
+    color:inherit;
+    text-align:left;
+    cursor:pointer
+}
+.radio-studio__djfx-pad-trigger:hover,
+.radio-studio__djfx-pad-trigger:focus{
+    background:rgba(127,127,127,.12)
+}
+.radio-studio__djfx-pad-trigger.is-assigned{
+    font-weight:600
+}
+.radio-studio__djfx-pad-trigger:disabled{
+    opacity:.48;
+    cursor:default
+}
+.radio-studio__djfx-pad-trigger strong{
+    display:block;
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.radio-studio__djfx-pad-trigger span{
+    font-size:.8rem;
+    opacity:.7
 }
 .radio-studio__djfx-pad select{
     width:100%;
-    min-width:0
+    min-width:0;
+    min-height:48px!important;
+    padding-top:.5rem!important;
+    padding-bottom:.5rem!important
 }
-.radio-studio__djfx-pad .radio-admin__button{
-    margin:0;
-    white-space:nowrap
+.radio-studio__djfx small{
+    display:block;
+    margin-top:.75rem
 }
-@media(max-width:900px){
+@media(max-width:1100px){
+    .radio-studio__djfx-controls{
+        grid-template-columns:repeat(2,minmax(150px,1fr)) repeat(2,minmax(84px,max-content))
+    }
     .radio-studio__djfx-pads{
         grid-template-columns:repeat(2,minmax(0,1fr))
     }
 }
-@media(max-width:560px){
+@media(max-width:640px){
+    .radio-studio__djfx{
+        padding:.85rem
+    }
+    .radio-studio__djfx-controls{
+        grid-template-columns:1fr 1fr;
+        gap:.75rem
+    }
+    .radio-studio__djfx-control{
+        padding:.7rem
+    }
+    .radio-studio__djfx-effect{
+        width:100%;
+        min-height:58px!important
+    }
     .radio-studio__djfx-pads{
-        grid-template-columns:1fr
+        grid-template-columns:1fr;
+        gap:.8rem
+    }
+    .radio-studio__djfx-pad-trigger{
+        min-height:84px
     }
 }
