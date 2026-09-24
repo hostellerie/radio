@@ -178,6 +178,8 @@ $content .= '<section class="radio-replay__player" data-radio-replay-player'
     . ' data-radio-replay-dynamic="0"'
     . ' data-radio-replay-track="0"'
     . ' data-radio-replay-source="studio"'
+    . ' data-radio-transition-mode="' . radio_studio_h($transitionMode) . '"'
+    . ' data-radio-crossfade-seconds="' . (int) $crossfadeSeconds . '"'
     . ' data-radio-replay-items="' . radio_studio_h($playlistJson) . '">'
     . '<audio data-radio-replay-audio preload="metadata"'
     . ($first ? ' src="' . radio_studio_h($first['stream_url']) . '"' : '')
