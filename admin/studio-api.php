@@ -103,6 +103,47 @@ function radio_studio_json($data, $status)
     exit;
 }
 
+function radio_studio_check_token()
+{
+    global $_TABLES, $_USER;
+
+    $token = isset($_POST[CSRF_TOKEN]) ? trim((string) $_POST[CSRF_TOKEN]) : '';
+    if ($token === '') {
+        return false;
+    }
+
+    $result = DB_query(
+        "SELECT token,created,owner_id,ttl FROM {$_TABLES['tokens']} WHERE token='"
+        . DB_escapeString($token) . "'"
+    );
+    if (DB_error() || DB_numRows($result) !== 1) {
+        return false;
+    }
+
+    $row = DB_fetchArray($result);
+
+    // Studio is an AJAX endpoint: Geeklog's SEC_checkToken() additionally
+    // requires the token creation URL to equal HTTP_REFERER. That does not
+    // work here because the token is created/renewed by studio-api.php while
+    // the browser referrer remains studio.php. Keep Geeklog's one-time token,
+    // owner and expiry guarantees, but validate it for this endpoint without
+    // the page-URL comparison.
+    DB_delete($_TABLES['tokens'], 'token', $token);
+
+    $uid = isset($_USER['uid']) ? (int) $_USER['uid'] : 1;
+    if ($uid !== (int) $row['owner_id']) {
+        return false;
+    }
+
+    $ttl = isset($row['ttl']) ? (int) $row['ttl'] : 0;
+    $created = isset($row['created']) ? strtotime($row['created']) : false;
+    if ($ttl > 0 && ($created === false || ($created + $ttl) < time())) {
+        return false;
+    }
+
+    return true;
+}
+
 function radio_studio_items($programId)
 {
     $items = RADIO_getProgramItems((int) $programId);
@@ -168,7 +209,7 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
-    if (!SEC_checkToken()) {
+    if (!radio_studio_check_token()) {
         radio_studio_json(array(
             'ok' => false,
             'error' => 'invalid_token'
