@@ -32,7 +32,6 @@ function plugin_autoinstall_radio($pi_name)
         ),
         'tables' => array(
             'radio_media',
-            'radio_site_media',
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
