@@ -382,10 +382,11 @@ $studioSimpleScript = <<<'JS'
 </script>
 JS;
 
+$content .= $studioSimpleScript;
+
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['studio_title'] . ' - ' . $program['title'],
     'headercode' => RADIO_adminStylesheetLink()
         . RADIO_publicStylesheetLink()
         . RADIO_publicScriptTag()
-        . $studioSimpleScript
 )));
