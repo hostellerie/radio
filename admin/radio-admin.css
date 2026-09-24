@@ -279,3 +279,28 @@
         justify-self:start
     }
 }
+
+
+/* Studio player diagnostics sit directly below the player. */
+.radio-studio__player-meta{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin:.4rem 0 .9rem;
+    padding:0 .15rem
+}
+.radio-studio__buffer-status{
+    font-size:.9rem;
+    font-weight:600;
+    color:#1f6f4a
+}
+.radio-studio__action-status{
+    margin-left:auto
+}
+@media(max-width:640px){
+    .radio-studio__action-status{
+        margin-left:0;
+        width:100%
+    }
+}
