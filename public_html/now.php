@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store, max-age=0');
