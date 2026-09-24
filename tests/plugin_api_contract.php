@@ -357,6 +357,13 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function promoteQueuePreload') !== false
+        && strpos($publicPlayer, 'queuePreload.readyState < 2') !== false
+        && strpos($publicPlayer, 'if (promoteQueuePreload(followingIndex))') !== false,
+    'Radio Studio must promote an already-buffered next item at ended transitions instead of reloading it.'
+);
+
+radio_contract_require(
     strpos($legacyPreview, '/plugins/radio/studio.php') !== false
         && strpos($legacyPreview, "header('Location: ' . \$url, true, 302)") !== false,
     'Legacy preview.php URLs must redirect to the canonical Studio page.'
