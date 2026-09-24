@@ -81,7 +81,17 @@ if (count($programs) === 0) {
 $content .= '</div>';
 
 $content .= '<div><h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_program'] : $LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</h2>'
-    . '<form method="post" enctype="multipart/form-data" action="">'
+    ;
+
+if ($selected) {
+    $content .= '<div class="radio-admin__toolbar">'
+        . '<a class="radio-admin__button radio-admin__button--secondary" href="'
+        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
+        . '">▶ ' . htmlspecialchars($LANG_RADIO['open_studio'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '</div>';
+}
+
+$content .= '<form method="post" enctype="multipart/form-data" action="">'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
     . '<br><input type="text" name="program_title" maxlength="255" required style="width:100%" value="'
     . htmlspecialchars($selected ? $selected['title'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
@@ -110,14 +120,6 @@ if ($selected) {
         . htmlspecialchars($LANG_RADIO['delete'], ENT_QUOTES, 'UTF-8') . '</button>';
 }
 $content .= '</form>';
-
-if ($selected) {
-    $content .= '<div class="radio-admin__toolbar">'
-        . '<a class="radio-admin__button radio-admin__button--secondary" href="'
-        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
-        . '">▶ ' . htmlspecialchars($LANG_RADIO['open_studio'], ENT_QUOTES, 'UTF-8') . '</a>'
-        . '</div>';
-}
 
 $content .= '</div></div>';
 $content = RADIO_adminRenderPage(
