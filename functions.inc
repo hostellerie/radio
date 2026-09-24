@@ -20,7 +20,9 @@ require_once __DIR__ . '/autoinstall.php';
 require_once __DIR__ . '/lib/feed.inc.php';
 require_once __DIR__ . '/services.inc.php';
 
-$_TABLES['radio_media'] = $_DB_table_prefix . 'radio_media';
+$_TABLES['radio_media_local'] = $_DB_table_prefix . 'radio_media';
+$_TABLES['radio_media'] = $_TABLES['radio_media_local'];
+$_TABLES['radio_site_media'] = $_DB_table_prefix . 'radio_site_media';
 $_TABLES['radio_programs'] = $_DB_table_prefix . 'radio_programs';
 $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
@@ -36,6 +38,30 @@ if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
             $_RADIO_CONF = $radioConfig->get_config('radio');
         }
     }
+}
+
+function RADIO_libraryMode()
+{
+    global $_RADIO_CONF;
+    $mode = isset($_RADIO_CONF['library_mode']) ? trim((string) $_RADIO_CONF['library_mode']) : 'local';
+    return in_array($mode, array('local','shared_storage','shared_library'), true) ? $mode : 'local';
+}
+
+function RADIO_safeTableName($name)
+{
+    $name = trim((string) $name);
+    return preg_match('/^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)?$/', $name) ? $name : '';
+}
+
+function RADIO_sharedLibraryEnabled()
+{
+    global $_RADIO_CONF;
+    return RADIO_libraryMode() === 'shared_library'
+        && RADIO_safeTableName(isset($_RADIO_CONF['shared_library_table']) ? $_RADIO_CONF['shared_library_table'] : '') !== '';
+}
+
+if (RADIO_sharedLibraryEnabled()) {
+    $_TABLES['radio_media'] = RADIO_safeTableName($_RADIO_CONF['shared_library_table']);
 }
 
 
@@ -319,7 +345,17 @@ function RADIO_parseExternalId($id)
 
 function RADIO_storageDir()
 {
-    global $_CONF;
+    global $_CONF, $_RADIO_CONF;
+
+    if (RADIO_libraryMode() !== 'local') {
+        $shared = isset($_RADIO_CONF['shared_storage_path'])
+            ? rtrim(trim((string) $_RADIO_CONF['shared_storage_path']), "/\\")
+            : '';
+        if ($shared !== '' && strpos($shared, "\0") === false) {
+            return $shared . DIRECTORY_SEPARATOR;
+        }
+    }
+
     $base = isset($_CONF['path_data']) ? rtrim($_CONF['path_data'], "/\\") : '';
     if ($base === '') {
         return '';
@@ -798,6 +834,21 @@ function RADIO_saveExternalMedia($metadata, &$error)
     }
 
     $id = (int) DB_insertId();
+    if (RADIO_sharedLibraryEnabled() && !RADIO_saveSiteMediaState($id, $metadata, array(
+        'status' => $status,
+        'on_demand' => $onDemand,
+        'broadcast' => $broadcast,
+        'automatic_rotation' => $automaticRotation,
+        'allow_download' => isset($allowDownload) ? $allowDownload : 0,
+        'group_id' => $groupId,
+        'perm_owner' => $permOwner,
+        'perm_group' => $permGroup,
+        'perm_members' => $permMembers,
+        'perm_anon' => $permAnon
+    ))) {
+        $error = 'database_error';
+        return false;
+    }
     if (function_exists('PLG_itemSaved')) {
         PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
     }
@@ -1272,6 +1323,7 @@ function RADIO_mediaAvailabilitySql($field, $alias)
 function RADIO_isOnDemandAvailable($row)
 {
     return is_array($row)
+        && (!array_key_exists('site_enabled', $row) || !empty($row['site_enabled']))
         && isset($row['status'])
         && $row['status'] === 'published'
         && (!array_key_exists('on_demand', $row) || !empty($row['on_demand']));
@@ -1280,6 +1332,7 @@ function RADIO_isOnDemandAvailable($row)
 function RADIO_isBroadcastAvailable($row)
 {
     return is_array($row)
+        && (!array_key_exists('site_enabled', $row) || !empty($row['site_enabled']))
         && isset($row['status'])
         && $row['status'] === 'published'
         && (!array_key_exists('broadcast', $row) || !empty($row['broadcast']));
@@ -1355,6 +1408,80 @@ function RADIO_normalizeImportedMediaTitle($row)
     return $row;
 }
 
+function RADIO_siteMediaState($mediaId)
+{
+    global $_TABLES;
+    if (!RADIO_sharedLibraryEnabled()) {
+        return false;
+    }
+
+    $result = DB_query(
+        "SELECT * FROM {$_TABLES['radio_site_media']} WHERE media_id=" . (int) $mediaId
+    );
+    return DB_numRows($result) > 0 ? DB_fetchArray($result) : false;
+}
+
+function RADIO_mergeSiteMediaState($row)
+{
+    if (!is_array($row)) {
+        return $row;
+    }
+
+    $row['site_enabled'] = 1;
+    if (!RADIO_sharedLibraryEnabled()) {
+        return $row;
+    }
+
+    $state = RADIO_siteMediaState((int) $row['media_id']);
+    if ($state === false) {
+        return $row;
+    }
+
+    $row['site_enabled'] = !empty($state['enabled']) ? 1 : 0;
+    foreach (array(
+        'status','on_demand','broadcast','automatic_rotation','allow_download',
+        'owner_id','group_id','perm_owner','perm_group','perm_members','perm_anon'
+    ) as $field) {
+        if (array_key_exists($field, $state)) {
+            $row[$field] = $state[$field];
+        }
+    }
+    return $row;
+}
+
+function RADIO_saveSiteMediaState($mediaId, $data, $existing)
+{
+    global $_TABLES, $_USER;
+
+    if (!RADIO_sharedLibraryEnabled()) {
+        return true;
+    }
+
+    $owner = isset($_USER['uid']) ? (int) $_USER['uid'] : 2;
+    $status = isset($data['status']) && $data['status'] === 'published'
+        ? 'published'
+        : (isset($existing['status']) ? $existing['status'] : 'draft');
+    $onDemand = isset($data['on_demand']) ? (!empty($data['on_demand']) ? 1 : 0) : (!empty($existing['on_demand']) ? 1 : 0);
+    $broadcast = isset($data['broadcast']) ? (!empty($data['broadcast']) ? 1 : 0) : (!empty($existing['broadcast']) ? 1 : 0);
+    $automaticRotation = isset($data['automatic_rotation']) ? (!empty($data['automatic_rotation']) ? 1 : 0) : (!empty($existing['automatic_rotation']) ? 1 : 0);
+    $allowDownload = isset($data['allow_download']) ? (!empty($data['allow_download']) ? 1 : 0) : (!empty($existing['allow_download']) ? 1 : 0);
+    $enabled = isset($data['site_enabled']) ? (!empty($data['site_enabled']) ? 1 : 0) : 1;
+    $groupId = isset($data['group_id']) ? max(1, (int) $data['group_id']) : (isset($existing['group_id']) ? (int) $existing['group_id'] : RADIO_defaultGroupId());
+    list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($data, is_array($existing) ? $existing : array());
+    $now = date('Y-m-d H:i:s');
+
+    DB_query(
+        "REPLACE INTO {$_TABLES['radio_site_media']} "
+        . "(media_id,enabled,status,on_demand,broadcast,automatic_rotation,allow_download,owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon,modified) VALUES ("
+        . (int) $mediaId . "," . $enabled . ",'" . DB_escapeString($status) . "',"
+        . $onDemand . "," . $broadcast . "," . $automaticRotation . "," . $allowDownload . ","
+        . $owner . "," . $groupId . "," . $permOwner . "," . $permGroup . "," . $permMembers . "," . $permAnon . ",'"
+        . DB_escapeString($now) . "')"
+    );
+
+    return !DB_error();
+}
+
 function RADIO_getMedia($id, $publishedOnly)
 {
     global $_TABLES;
@@ -1363,15 +1490,14 @@ function RADIO_getMedia($id, $publishedOnly)
         return false;
     }
     $where = "media_id=" . $id;
-    if ($publishedOnly) {
-        $where .= " AND status='published'";
-    }
     $result = DB_query("SELECT * FROM {$_TABLES['radio_media']} WHERE " . $where);
     if (DB_numRows($result) < 1) {
         return false;
     }
-    $row = RADIO_normalizeImportedMediaTitle(DB_fetchArray($result));
-    if ($publishedOnly && !RADIO_hasReadAccess($row)) {
+    $row = RADIO_mergeSiteMediaState(RADIO_normalizeImportedMediaTitle(DB_fetchArray($result)));
+    if ($publishedOnly && ($row['status'] !== 'published'
+        || empty($row['site_enabled'])
+        || !RADIO_hasReadAccess($row))) {
         return false;
     }
     return $row;
@@ -1499,9 +1625,11 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
     global $_TABLES;
 
     $limit = max(1, min(500, (int) $limit));
-    $where = $publishedOnly ? " WHERE status='published'" : ' WHERE 1=1';
+    $where = ($publishedOnly && !RADIO_sharedLibraryEnabled())
+        ? " WHERE status='published'"
+        : ' WHERE 1=1';
 
-    if ($publishedOnly) {
+    if ($publishedOnly && !RADIO_sharedLibraryEnabled()) {
         $where .= RADIO_mediaAvailabilitySql('on_demand', '');
         $where .= RADIO_permissionSql('radio_media', 0);
     }
@@ -1591,7 +1719,14 @@ function RADIO_getMediaList($limit, $publishedOnly, $sort = 'modified', $directi
     );
     $items = array();
     while ($row = DB_fetchArray($result)) {
-        $items[] = RADIO_normalizeImportedMediaTitle($row);
+        $row = RADIO_mergeSiteMediaState(RADIO_normalizeImportedMediaTitle($row));
+        if ($publishedOnly && ($row['status'] !== 'published'
+            || empty($row['site_enabled'])
+            || !RADIO_isOnDemandAvailable($row)
+            || !RADIO_hasReadAccess($row))) {
+            continue;
+        }
+        $items[] = $row;
     }
     return $items;
 }
@@ -1643,6 +1778,10 @@ function RADIO_updateMedia($id, $metadata)
     list($permOwner, $permGroup, $permMembers, $permAnon) = RADIO_permissionValues($metadata, $row);
     $now = date('Y-m-d H:i:s');
 
+    if (RADIO_sharedLibraryEnabled() && !RADIO_saveSiteMediaState($id, $metadata, $row)) {
+        return false;
+    }
+
     DB_query(
         "UPDATE {$_TABLES['radio_media']} SET "
         . "title='" . DB_escapeString(substr($title, 0, 255)) . "',"
@@ -1654,11 +1793,12 @@ function RADIO_updateMedia($id, $metadata)
         . "collection_name='" . DB_escapeString($collectionName) . "',"
         . "tags='" . DB_escapeString($tags) . "',"
         . "season_number=" . $seasonNumber . ",episode_number=" . $episodeNumber . ",cover_name='" . DB_escapeString($coverName) . "',"
-        . "status='" . DB_escapeString($status) . "',"
-        . "on_demand=" . $onDemand . ","
-        . "broadcast=" . $broadcast . ","
-        . "automatic_rotation=" . $automaticRotation . ","
-        . "allow_download=" . $allowDownload . ","
+        . (RADIO_sharedLibraryEnabled() ? "" :
+            "status='" . DB_escapeString($status) . "',"
+            . "on_demand=" . $onDemand . ","
+            . "broadcast=" . $broadcast . ","
+            . "automatic_rotation=" . $automaticRotation . ","
+            . "allow_download=" . $allowDownload . ",")
         . "duration=" . $duration . ","
         . "group_id=" . $groupId . ",perm_owner=" . $permOwner . ",perm_group=" . $permGroup . ",perm_members=" . $permMembers . ",perm_anon=" . $permAnon . ","
         . "modified='" . DB_escapeString($now) . "' "
@@ -1682,6 +1822,17 @@ function RADIO_deleteMedia($id)
     }
 
     DB_query("DELETE FROM {$_TABLES['radio_program_items']} WHERE media_id=" . (int) $id);
+
+    if (RADIO_sharedLibraryEnabled()) {
+        if (!RADIO_saveSiteMediaState($id, array('site_enabled' => 0), $row)) {
+            return false;
+        }
+        if (function_exists('PLG_itemDeleted')) {
+            PLG_itemDeleted(RADIO_externalId('media', (int) $id), 'radio');
+        }
+        return true;
+    }
+
     DB_query("DELETE FROM {$_TABLES['radio_media']} WHERE media_id=" . (int) $id);
     if (DB_error()) {
         return false;
