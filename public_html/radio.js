@@ -1453,6 +1453,36 @@
                     startQueueCrossfade();
                 }
 
+                function promoteQueuePreload(nextIndex) {
+                    if (nextIndex !== index + 1 || !items[nextIndex]
+                        || queuePreloadUrl !== (items[nextIndex].stream_url || '')
+                        || queuePreload.readyState < 2) {
+                        return false;
+                    }
+
+                    var previousAudio = audio;
+                    audio = queuePreload;
+                    queuePreload = previousAudio;
+                    index = nextIndex;
+                    started = false;
+                    queueMixing = false;
+                    queueFadeFrame = 0;
+
+                    audio.volume = 1;
+                    queuePreload.pause();
+                    queuePreload.volume = 1;
+                    queuePreloadUrl = '';
+
+                    refreshQueuePreload();
+                    updateUi();
+
+                    var playPromise = audio.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function () {});
+                    }
+                    return true;
+                }
+
                 function onReplayEnded(event) {
                     if (event.currentTarget !== audio || queueMixing) {
                         return;
@@ -1460,6 +1490,9 @@
                     flush();
                     var followingIndex = nextPlayableIndex(index + 1);
                     if (followingIndex >= 0) {
+                        if (promoteQueuePreload(followingIndex)) {
+                            return;
+                        }
                         started = false;
                         setItem(followingIndex, 0, true);
                     } else {
