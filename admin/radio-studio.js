@@ -170,6 +170,27 @@
                 li.classList.add('is-next');
             }
 
+            var type = document.createElement('span');
+            type.className = 'radio-admin__badge radio-studio__queue-type';
+            type.textContent = item.media_type_label || item.media_type || '';
+            li.appendChild(type);
+
+            var duration = document.createElement('span');
+            duration.className = 'radio-studio__queue-duration';
+            var durationSeconds = parseInt(item.duration || 0, 10) || 0;
+            if (durationSeconds > 0) {
+                var durationHours = Math.floor(durationSeconds / 3600);
+                var durationMinutes = Math.floor((durationSeconds % 3600) / 60);
+                var durationSecs = durationSeconds % 60;
+                duration.textContent =
+                    (durationHours < 10 ? '0' : '') + durationHours + ':'
+                    + (durationMinutes < 10 ? '0' : '') + durationMinutes + ':'
+                    + (durationSecs < 10 ? '0' : '') + durationSecs;
+            } else {
+                duration.textContent = '--:--';
+            }
+            li.appendChild(duration);
+
             var title = document.createElement('button');
             title.type = 'button';
             title.className = 'radio-studio__queue-title radio-studio__queue-seek';
@@ -189,15 +210,13 @@
             }(itemId)));
             li.appendChild(title);
 
-            var meta = document.createElement('span');
-            meta.className = 'radio-admin__muted';
             if (item.playable === false || item.playable === 0) {
-                meta.textContent = studio.getAttribute('data-queue-not-ready-label') || 'Not playable';
+                var state = document.createElement('span');
+                state.className = 'radio-admin__muted radio-studio__queue-state';
+                state.textContent = studio.getAttribute('data-queue-not-ready-label') || 'Not playable';
                 li.classList.add('is-not-ready');
-            } else if (parseInt(item.duration || 0, 10) > 0) {
-                meta.textContent = resultMeta(item);
+                li.appendChild(state);
             }
-            li.appendChild(meta);
 
             var actions = document.createElement('span');
             actions.className = 'radio-program-item__actions';
