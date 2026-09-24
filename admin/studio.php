@@ -119,6 +119,7 @@ foreach ($items as $item) {
         'media_id' => (int) $item['media_id'],
         'title' => $item['title'],
         'author' => isset($item['author']) ? $item['author'] : '',
+        'media_type' => isset($item['media_type']) ? $item['media_type'] : '',
         'duration' => $duration,
         'offset' => $offset,
         'playable' => $playable,
@@ -192,11 +193,17 @@ if (count($playlist) === 0) {
     $content .= '<ol class="radio-studio__queue">';
     foreach ($playlist as $index => $item) {
         $label = trim(($item['author'] !== '' ? $item['author'] . ' — ' : '') . $item['title']);
+        $typeLabel = RADIO_adminMediaTypeLabel($item['media_type']);
+
         $content .= '<li class="radio-studio__queue-item'
             . (!$item['playable'] ? ' is-not-ready' : '') . '">'
+            . '<div class="radio-studio__queue-main">'
             . '<button type="button" class="radio-studio__queue-title radio-studio__queue-seek"'
             . ' data-radio-studio-seek-item="' . (int) $item['item_id'] . '">'
-            . radio_studio_h($label) . '</button>';
+            . radio_studio_h($label) . '</button>'
+            . '<span class="radio-admin__badge radio-studio__queue-type">'
+            . radio_studio_h($typeLabel) . '</span>'
+            . '</div>';
 
         if (!$item['playable']) {
             $content .= '<span class="radio-admin__muted">'
