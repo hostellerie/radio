@@ -191,6 +191,8 @@ if ($canEdit) {
         . ' data-buffer-loading-label="' . radio_studio_h($LANG_RADIO['studio_buffer_loading']) . '"'
         . ' data-buffer-ready-label="' . radio_studio_h($LANG_RADIO['studio_buffer_ready']) . '"'
         . ' data-buffer-reserve-label="' . radio_studio_h($LANG_RADIO['studio_buffer_reserve']) . '"'
+        . ' data-buffer-next-label="' . radio_studio_h($LANG_RADIO['studio_buffer_next']) . '"'
+        . ' data-buffer-reserve-short-label="' . radio_studio_h($LANG_RADIO['studio_buffer_reserve_short']) . '"'
         . ' data-queue-empty-label="' . radio_studio_h($LANG_RADIO['studio_queue_empty']) . '"'
         . ' data-queue-not-ready-label="' . radio_studio_h($LANG_RADIO['studio_queue_not_ready']) . '"'
         . ' data-move-up-label="' . radio_studio_h($LANG_RADIO['move_up']) . '"'
