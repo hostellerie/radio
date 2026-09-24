@@ -4,6 +4,7 @@ ob_start();
 
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
