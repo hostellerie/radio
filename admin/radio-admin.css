@@ -304,3 +304,27 @@
         width:100%
     }
 }
+
+
+/* Semi-live Studio controls and strict left alignment for queue titles. */
+.radio-studio__queue-title.radio-studio__queue-seek{
+    justify-content:flex-start!important;
+    text-align:left!important
+}
+.radio-studio__broadcast-bar{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin:0 0 1rem
+}
+.radio-studio__broadcast-button.is-live{
+    font-weight:700
+}
+.radio-studio__broadcast-state{
+    font-size:.9rem;
+    color:#a34b00
+}
+.radio-program-preview.is-broadcasting .radio-studio__broadcast-state::before{
+    content:"● ";
+}
