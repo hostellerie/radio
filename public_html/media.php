@@ -1,5 +1,6 @@
 <?php
 require_once '../lib-common.php';
+RADIO_requirePublicAccess();
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $download = !empty($_GET['download']);
