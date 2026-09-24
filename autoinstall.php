@@ -32,6 +32,7 @@ function plugin_autoinstall_radio($pi_name)
         ),
         'tables' => array(
             'radio_media',
+            'radio_site_media',
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
@@ -79,6 +80,7 @@ function plugin_autouninstall_radio()
     return array(
         'tables' => array(
             'radio_media',
+            'radio_site_media',
             'radio_programs',
             'radio_program_items',
             'radio_schedule',
