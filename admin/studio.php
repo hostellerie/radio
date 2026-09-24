@@ -12,24 +12,95 @@ if (!SEC_hasRights('radio.schedule')) {
 
 global $LANG_RADIO, $_CONF;
 
-$programId = isset($_GET['program_id']) ? (int) $_GET['program_id'] : 0;
+function radio_studio_h($value)
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+$programId = isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0;
 $program = $programId > 0 ? RADIO_getProgram($programId, false) : false;
 
 if ($program === false || (!RADIO_hasReadAccess($program) && !RADIO_hasEditAccess($program))) {
     $content = COM_showMessageText($LANG_RADIO['program_not_found'], $LANG_RADIO['studio_title']);
     COM_output(COM_createHTMLDocument($content, array(
         'pagetitle' => $LANG_RADIO['studio_title'],
-        'headercode' => RADIO_publicStylesheetLink() . RADIO_publicScriptTag()
+        'headercode' => RADIO_adminStylesheetLink() . RADIO_publicStylesheetLink() . RADIO_publicScriptTag()
     )));
     exit;
 }
 
 $canEdit = RADIO_hasEditAccess($program);
+$message = '';
+
+/*
+ * Studio 0.5.1 deliberately uses normal same-page POST actions.
+ *
+ * This keeps playlist editing inside Geeklog's native form/CSRF lifecycle and
+ * avoids a second AJAX mutation layer. The page reload after a mutation is
+ * intentional: the saved playlist, player and search results always come from
+ * one server-rendered state.
+ */
+if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
+    if (!SEC_checkToken()) {
+        exit;
+    }
+
+    $action = trim((string) $_POST['studio_action']);
+    $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
+    $ok = false;
+
+    if ($action === 'remove' && $itemId > 0) {
+        $ok = RADIO_removeProgramItem($itemId, $programId);
+    } elseif (($action === 'move_up' || $action === 'move_down') && $itemId > 0) {
+        $ok = RADIO_moveProgramItem(
+            $itemId,
+            $programId,
+            $action === 'move_up' ? 'up' : 'down'
+        );
+    } elseif ($action === 'add') {
+        $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
+        $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
+        $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
+        $afterItemId = $position === 'next' ? $currentItemId : 0;
+        $ok = $mediaId > 0 && RADIO_addProgramItem($programId, $mediaId, $afterItemId);
+    }
+
+    if ($ok) {
+        COM_redirect(
+            $_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id='
+            . $programId . '&updated=1'
+        );
+    }
+
+    $message = COM_showMessageText($LANG_RADIO['studio_error'], $LANG_RADIO['studio_title']);
+}
+
+if (isset($_GET['updated']) && (int) $_GET['updated'] === 1) {
+    $message = COM_showMessageText($LANG_RADIO['studio_updated'], $LANG_RADIO['studio_title']);
+}
+
+$filters = array();
+foreach (array('q','type','category','collection','tag') as $key) {
+    $filters[$key] = isset($_GET[$key]) ? trim((string) $_GET[$key]) : '';
+}
+
 $classificationOptions = $canEdit ? RADIO_mediaClassificationOptions() : array(
     'categories' => array(),
     'collections' => array(),
     'tags' => array()
 );
+
+$searchFilters = array(
+    'q' => $filters['q'],
+    'type' => $filters['type'],
+    'category' => $filters['category'],
+    'collection' => $filters['collection'],
+    'tag' => $filters['tag'],
+    'status' => 'published',
+    'broadcast' => '1'
+);
+$searchRows = $canEdit ? RADIO_getMediaList(60, false, 'title', 'asc', $searchFilters) : array();
+
 $items = RADIO_getProgramItems($programId);
 $playlist = array();
 $chapters = '';
@@ -55,9 +126,7 @@ foreach ($items as $item) {
     );
 
     $chapterLabel = trim(
-        (isset($item['author']) && trim((string) $item['author']) !== ''
-            ? $item['author'] . ' — '
-            : '')
+        (!empty($item['author']) ? $item['author'] . ' — ' : '')
         . $item['title']
     );
 
@@ -65,55 +134,117 @@ foreach ($items as $item) {
         . ' data-radio-replay-chapter="' . (count($playlist) - 1) . '"'
         . ' data-radio-replay-offset="' . $offset . '">'
         . '<span class="radio-replay__chapter-time">' . gmdate('H:i:s', $offset) . '</span>'
-        . '<span class="radio-replay__chapter-title">'
-        . htmlspecialchars($chapterLabel, ENT_QUOTES, 'UTF-8')
-        . '</span></button></li>';
+        . '<span class="radio-replay__chapter-title">' . radio_studio_h($chapterLabel) . '</span>'
+        . '</button></li>';
 
     if ($playable) {
         $offset += $duration;
     }
 }
 
-$content = '<div class="radio-replay radio-program-preview">';
-$content .= '<p><a href="'
-    . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/programs.php?program_id=' . $programId, ENT_QUOTES, 'UTF-8')
-    . '">← ' . htmlspecialchars($LANG_RADIO['studio_back_to_metadata'], ENT_QUOTES, 'UTF-8') . '</a></p>';
-$content .= '<h1>' . htmlspecialchars($LANG_RADIO['studio_title'], ENT_QUOTES, 'UTF-8') . ': '
-    . htmlspecialchars($program['title'], ENT_QUOTES, 'UTF-8') . '</h1>';
-$content .= '<p class="radio-admin__muted">'
-    . htmlspecialchars($LANG_RADIO['studio_page_help'], ENT_QUOTES, 'UTF-8') . '</p>';
-
 $playlistJson = json_encode($playlist);
 $first = count($playlist) > 0 ? $playlist[0] : false;
+$token = $canEdit ? SEC_createToken() : '';
+
+$content = '<div class="radio-replay radio-program-preview">';
+$content .= '<p><a href="'
+    . radio_studio_h($_CONF['site_admin_url'] . '/plugins/radio/programs.php?program_id=' . $programId)
+    . '">← ' . radio_studio_h($LANG_RADIO['studio_back_to_metadata']) . '</a></p>';
+$content .= '<h1>' . radio_studio_h($LANG_RADIO['studio_title']) . ': '
+    . radio_studio_h($program['title']) . '</h1>';
+$content .= '<p class="radio-admin__muted">'
+    . radio_studio_h($LANG_RADIO['studio_page_help_simple']) . '</p>';
+$content .= $message;
 
 $content .= '<section class="radio-replay__player" data-radio-replay-player'
     . ' data-radio-program-id="' . $programId . '"'
-    . ' data-radio-replay-dynamic="' . ($canEdit ? '1' : '0') . '"'
+    . ' data-radio-replay-dynamic="0"'
     . ' data-radio-replay-track="0"'
     . ' data-radio-replay-source="studio"'
-    . ' data-radio-replay-items="'
-    . htmlspecialchars($playlistJson, ENT_QUOTES, 'UTF-8') . '">'
+    . ' data-radio-replay-items="' . radio_studio_h($playlistJson) . '">'
     . '<audio data-radio-replay-audio preload="metadata"'
-    . ($first ? ' src="' . htmlspecialchars($first['stream_url'], ENT_QUOTES, 'UTF-8') . '"' : '')
+    . ($first ? ' src="' . radio_studio_h($first['stream_url']) . '"' : '')
     . '></audio>'
     . '<div class="radio-replay__controls">'
     . '<button type="button" class="radio-replay__play" data-radio-replay-toggle'
-    . ' data-play-label="' . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '"'
-    . ' data-pause-label="' . htmlspecialchars($LANG_RADIO['public_pause'], ENT_QUOTES, 'UTF-8') . '">'
-    . htmlspecialchars($LANG_RADIO['public_listen'], ENT_QUOTES, 'UTF-8') . '</button>'
+    . ' data-play-label="' . radio_studio_h($LANG_RADIO['public_listen']) . '"'
+    . ' data-pause-label="' . radio_studio_h($LANG_RADIO['public_pause']) . '">'
+    . radio_studio_h($LANG_RADIO['public_listen']) . '</button>'
     . '<strong class="radio-replay__now" data-radio-replay-now>'
-    . ($first ? htmlspecialchars($first['title'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($LANG_RADIO['program_preview_empty'], ENT_QUOTES, 'UTF-8'))
+    . ($first ? radio_studio_h($first['title']) : radio_studio_h($LANG_RADIO['program_preview_empty']))
     . '</strong>'
     . '</div>'
     . '<label class="radio-replay__progress-label">'
-    . '<span class="radio-visually-hidden">' . htmlspecialchars($LANG_RADIO['replay_progress'], ENT_QUOTES, 'UTF-8') . '</span>'
+    . '<span class="radio-visually-hidden">' . radio_studio_h($LANG_RADIO['replay_progress']) . '</span>'
     . '<input type="range" min="0" max="' . max(0, $offset) . '" value="0" step="1"'
-    . ' data-radio-replay-progress aria-label="'
-    . htmlspecialchars($LANG_RADIO['replay_progress'], ENT_QUOTES, 'UTF-8') . '"></label>'
+    . ' data-radio-replay-progress aria-label="' . radio_studio_h($LANG_RADIO['replay_progress']) . '"></label>'
     . '<div class="radio-replay__time"><span data-radio-replay-current>00:00:00</span>'
     . '<span data-radio-replay-total>' . gmdate('H:i:s', $offset) . '</span></div>'
     . '<ol class="radio-replay__chapters radio-visually-hidden" aria-hidden="true">' . $chapters . '</ol>'
     . '</section>';
+
+$content .= '<section class="radio-studio__queue-panel"><h2>'
+    . radio_studio_h($LANG_RADIO['studio_queue_title']) . '</h2>';
+
+if (count($playlist) === 0) {
+    $content .= '<p class="radio-admin__muted">' . radio_studio_h($LANG_RADIO['studio_queue_empty']) . '</p>';
+} else {
+    $content .= '<ol class="radio-studio__queue">';
+    foreach ($playlist as $index => $item) {
+        $label = trim(($item['author'] !== '' ? $item['author'] . ' — ' : '') . $item['title']);
+        $content .= '<li class="radio-studio__queue-item'
+            . (!$item['playable'] ? ' is-not-ready' : '') . '">'
+            . '<button type="button" class="radio-studio__queue-title radio-studio__queue-seek"'
+            . ' data-radio-studio-seek-item="' . (int) $item['item_id'] . '">'
+            . radio_studio_h($label) . '</button>';
+
+        if (!$item['playable']) {
+            $content .= '<span class="radio-admin__muted">'
+                . radio_studio_h($LANG_RADIO['studio_queue_not_ready']) . '</span>';
+        } elseif ($item['duration'] > 0) {
+            $content .= '<span class="radio-admin__muted">' . gmdate('H:i:s', $item['duration']) . '</span>';
+        }
+
+        if ($canEdit) {
+            $content .= '<span class="radio-program-item__actions">';
+
+            $content .= '<form method="post" action="" class="radio-studio__inline-form">'
+                . '<input type="hidden" name="program_id" value="' . $programId . '">'
+                . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
+                . '<input type="hidden" name="studio_action" value="move_up">'
+                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
+                . '<button type="submit" class="radio-program-item__action"'
+                . ($index === 0 ? ' disabled' : '')
+                . ' title="' . radio_studio_h($LANG_RADIO['move_up']) . '" aria-label="'
+                . radio_studio_h($LANG_RADIO['move_up']) . '">↑</button></form>';
+
+            $content .= '<form method="post" action="" class="radio-studio__inline-form">'
+                . '<input type="hidden" name="program_id" value="' . $programId . '">'
+                . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
+                . '<input type="hidden" name="studio_action" value="move_down">'
+                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
+                . '<button type="submit" class="radio-program-item__action"'
+                . ($index === count($playlist) - 1 ? ' disabled' : '')
+                . ' title="' . radio_studio_h($LANG_RADIO['move_down']) . '" aria-label="'
+                . radio_studio_h($LANG_RADIO['move_down']) . '">↓</button></form>';
+
+            $content .= '<form method="post" action="" class="radio-studio__inline-form">'
+                . '<input type="hidden" name="program_id" value="' . $programId . '">'
+                . '<input type="hidden" name="item_id" value="' . (int) $item['item_id'] . '">'
+                . '<input type="hidden" name="studio_action" value="remove">'
+                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
+                . '<button type="submit" class="radio-program-item__action radio-program-item__action--remove"'
+                . ' title="' . radio_studio_h($LANG_RADIO['remove']) . '" aria-label="'
+                . radio_studio_h($LANG_RADIO['remove']) . '">−</button></form>';
+
+            $content .= '</span>';
+        }
+
+        $content .= '</li>';
+    }
+    $content .= '</ol>';
+}
+$content .= '</section>';
 
 if ($canEdit) {
     $typeItems = array();
@@ -121,82 +252,140 @@ if ($canEdit) {
         $typeItems[$type] = $LANG_RADIO['type_' . $type];
     }
 
-    $studioToken = SEC_createToken();
-    $content .= '<section class="radio-program-picker radio-studio" data-radio-studio'
-        . ' data-radio-program-id="' . $programId . '"'
-        . ' data-radio-studio-endpoint="'
-        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio-api.php', ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-radio-studio-mutation-endpoint="'
-        . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio-api.php?program_id=' . $programId, ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-radio-csrf-name="' . htmlspecialchars(CSRF_TOKEN, ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-radio-csrf-token="' . htmlspecialchars($studioToken, ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-empty-label="' . htmlspecialchars($LANG_RADIO['program_media_search_empty'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-play-next-label="' . htmlspecialchars($LANG_RADIO['studio_play_next'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-add-end-label="' . htmlspecialchars($LANG_RADIO['studio_add_end'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-searching-label="' . htmlspecialchars($LANG_RADIO['studio_searching'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-adding-label="' . htmlspecialchars($LANG_RADIO['studio_adding'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-added-label="' . htmlspecialchars($LANG_RADIO['studio_added'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-error-label="' . htmlspecialchars($LANG_RADIO['studio_error'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-buffer-loading-label="' . htmlspecialchars($LANG_RADIO['studio_buffer_loading'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-buffer-ready-label="' . htmlspecialchars($LANG_RADIO['studio_buffer_ready'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-buffer-reserve-label="' . htmlspecialchars($LANG_RADIO['studio_buffer_reserve'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-queue-empty-label="' . htmlspecialchars($LANG_RADIO['studio_queue_empty'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-queue-not-ready-label="' . htmlspecialchars($LANG_RADIO['studio_queue_not_ready'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-move-up-label="' . htmlspecialchars($LANG_RADIO['move_up'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-move-down-label="' . htmlspecialchars($LANG_RADIO['move_down'], ENT_QUOTES, 'UTF-8') . '"'
-        . ' data-remove-label="' . htmlspecialchars($LANG_RADIO['remove'], ENT_QUOTES, 'UTF-8') . '">'
-        . '<div class="radio-admin__panel-heading"><h2>'
-        . htmlspecialchars($LANG_RADIO['studio_title'], ENT_QUOTES, 'UTF-8') . '</h2>'
-        . '<span class="radio-studio__status-group">'
-        . '<span class="radio-admin__muted" data-radio-studio-buffer></span>'
-        . '<span class="radio-admin__muted" data-radio-studio-status></span>'
-        . '</span></div>'
-        . '<p class="radio-admin__muted">' . htmlspecialchars($LANG_RADIO['studio_help'], ENT_QUOTES, 'UTF-8') . '</p>'
-        . '<div class="radio-studio__queue-panel">'
-        . '<h3>' . htmlspecialchars($LANG_RADIO['studio_queue_title'], ENT_QUOTES, 'UTF-8') . '</h3>'
-        . '<div data-radio-studio-queue></div>'
-        . '</div>'
-        . '<form class="radio-program-picker__filters" data-radio-studio-search>'
+    $content .= '<section class="radio-program-picker radio-studio">'
+        . '<h2>' . radio_studio_h($LANG_RADIO['program_media_search_title']) . '</h2>'
+        . '<form class="radio-program-picker__filters" method="get" action="">'
+        . '<input type="hidden" name="program_id" value="' . $programId . '">'
         . '<div class="radio-program-picker__filter-grid">'
-        . '<label>' . htmlspecialchars($LANG_RADIO['filter_search'], ENT_QUOTES, 'UTF-8')
-        . '<input type="search" name="q" placeholder="'
-        . htmlspecialchars($LANG_RADIO['program_media_search_placeholder'], ENT_QUOTES, 'UTF-8') . '"></label>'
-        . '<label>' . htmlspecialchars($LANG_RADIO['type'], ENT_QUOTES, 'UTF-8')
-        . '<select name="type">' . RADIO_adminFilterSelectOptions($typeItems, '', $LANG_RADIO['filter_all']) . '</select></label>'
-        . '<label>' . htmlspecialchars($LANG_RADIO['category'], ENT_QUOTES, 'UTF-8')
-        . '<select name="category">' . RADIO_adminFilterSelectOptions($classificationOptions['categories'], '', $LANG_RADIO['filter_all']) . '</select></label>'
-        . '<label>' . htmlspecialchars($LANG_RADIO['collection'], ENT_QUOTES, 'UTF-8')
-        . '<select name="collection">' . RADIO_adminFilterSelectOptions($classificationOptions['collections'], '', $LANG_RADIO['filter_all']) . '</select></label>'
-        . '<label>' . htmlspecialchars($LANG_RADIO['tags'], ENT_QUOTES, 'UTF-8')
-        . '<select name="tag">' . RADIO_adminFilterSelectOptions($classificationOptions['tags'], '', $LANG_RADIO['filter_all']) . '</select></label>'
+        . '<label>' . radio_studio_h($LANG_RADIO['filter_search'])
+        . '<input type="search" name="q" value="' . radio_studio_h($filters['q']) . '" placeholder="'
+        . radio_studio_h($LANG_RADIO['program_media_search_placeholder']) . '"></label>'
+        . '<label>' . radio_studio_h($LANG_RADIO['type'])
+        . '<select name="type">' . RADIO_adminFilterSelectOptions($typeItems, $filters['type'], $LANG_RADIO['filter_all']) . '</select></label>'
+        . '<label>' . radio_studio_h($LANG_RADIO['category'])
+        . '<select name="category">' . RADIO_adminFilterSelectOptions($classificationOptions['categories'], $filters['category'], $LANG_RADIO['filter_all']) . '</select></label>'
+        . '<label>' . radio_studio_h($LANG_RADIO['collection'])
+        . '<select name="collection">' . RADIO_adminFilterSelectOptions($classificationOptions['collections'], $filters['collection'], $LANG_RADIO['filter_all']) . '</select></label>'
+        . '<label>' . radio_studio_h($LANG_RADIO['tags'])
+        . '<select name="tag">' . RADIO_adminFilterSelectOptions($classificationOptions['tags'], $filters['tag'], $LANG_RADIO['filter_all']) . '</select></label>'
         . '</div>'
-        . '<div class="radio-admin__toolbar"><button class="radio-admin__button radio-admin__button--primary" type="submit">'
-        . htmlspecialchars($LANG_RADIO['program_media_search_button'], ENT_QUOTES, 'UTF-8') . '</button></div>'
-        . '</form>'
-        . '<div class="radio-program-picker__results" data-radio-studio-results></div>'
-        . '</section>';
-}
+        . '<div class="radio-admin__toolbar">'
+        . '<button class="radio-admin__button radio-admin__button--primary" type="submit">'
+        . radio_studio_h($LANG_RADIO['program_media_search_button']) . '</button>'
+        . '<a class="radio-admin__button" href="'
+        . radio_studio_h($_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id=' . $programId)
+        . '">' . radio_studio_h($LANG_RADIO['filter_reset']) . '</a>'
+        . '</div></form>';
 
+    $visibleResults = array();
+    foreach ($searchRows as $row) {
+        if (RADIO_hasReadAccess($row) && RADIO_isBroadcastAvailable($row)) {
+            $visibleResults[] = $row;
+        }
+    }
+
+    $content .= '<p class="radio-admin__muted">'
+        . sprintf(radio_studio_h($LANG_RADIO['program_media_search_count']), count($visibleResults))
+        . '</p><div class="radio-program-picker__results">';
+
+    if (count($visibleResults) === 0) {
+        $content .= '<p class="radio-admin__muted">'
+            . radio_studio_h($LANG_RADIO['program_media_search_empty']) . '</p>';
+    } else {
+        foreach ($visibleResults as $row) {
+            $meta = array();
+            if (!empty($row['author'])) {
+                $meta[] = $row['author'];
+            }
+            $meta[] = RADIO_adminMediaTypeLabel($row['media_type']);
+            if (!empty($row['duration'])) {
+                $meta[] = gmdate('H:i:s', (int) $row['duration']);
+            }
+
+            $content .= '<article class="radio-program-picker__item">'
+                . '<div class="radio-program-picker__info"><strong>'
+                . radio_studio_h($row['title']) . '</strong>'
+                . '<div class="radio-admin__muted">' . radio_studio_h(implode(' · ', $meta)) . '</div>'
+                . RADIO_adminClassificationHtml($row)
+                . '</div><div class="radio-studio__result-actions">';
+
+            $content .= '<form method="post" action="" class="radio-studio__inline-form">'
+                . '<input type="hidden" name="program_id" value="' . $programId . '">'
+                . '<input type="hidden" name="media_id" value="' . (int) $row['media_id'] . '">'
+                . '<input type="hidden" name="studio_action" value="add">'
+                . '<input type="hidden" name="position" value="next">'
+                . '<input type="hidden" name="current_item_id" value="0" data-radio-current-item-input>'
+                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
+                . '<button class="radio-admin__button" type="submit">'
+                . radio_studio_h($LANG_RADIO['studio_play_next']) . '</button></form>';
+
+            $content .= '<form method="post" action="" class="radio-studio__inline-form">'
+                . '<input type="hidden" name="program_id" value="' . $programId . '">'
+                . '<input type="hidden" name="media_id" value="' . (int) $row['media_id'] . '">'
+                . '<input type="hidden" name="studio_action" value="add">'
+                . '<input type="hidden" name="position" value="end">'
+                . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
+                . '<button class="radio-program-picker__add" type="submit" title="'
+                . radio_studio_h(sprintf($LANG_RADIO['program_media_add_title'], $row['title']))
+                . '" aria-label="' . radio_studio_h(sprintf($LANG_RADIO['program_media_add_title'], $row['title']))
+                . '">+</button></form>';
+
+            $content .= '</div></article>';
+        }
+    }
+
+    $content .= '</div></section>';
+}
 
 $content .= '</div>';
 
-$studioScript = '';
-if ($canEdit) {
-    $studioPath = !empty($_CONF['path_admin'])
-        ? rtrim($_CONF['path_admin'], '/\\') . '/plugins/radio/radio-studio.js'
-        : '';
-    if ($studioPath === '' || !is_file($studioPath)) {
-        $studioPath = rtrim($_CONF['path'], '/\\') . '/plugins/radio/admin/radio-studio.js';
+$studioSimpleScript = <<<'JS'
+<script>
+(function () {
+    'use strict';
+    var player = document.querySelector('[data-radio-replay-player]');
+    if (!player) {
+        return;
     }
-    $studioScript = '<script defer src="'
-        . htmlspecialchars(rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/radio-studio.js', ENT_QUOTES, 'UTF-8')
-        . '?v=' . rawurlencode(RADIO_assetVersion($studioPath)) . '"></script>' . "\n";
-}
+
+    document.addEventListener('click', function (event) {
+        var button = event.target;
+        while (button && button !== document && !button.hasAttribute('data-radio-studio-seek-item')) {
+            button = button.parentNode;
+        }
+        if (!button || button === document) {
+            return;
+        }
+
+        var itemId = parseInt(button.getAttribute('data-radio-studio-seek-item') || '0', 10) || 0;
+        if (!itemId) {
+            return;
+        }
+
+        var customEvent;
+        if (typeof CustomEvent === 'function') {
+            customEvent = new CustomEvent('radio:seek-item', {detail: {item_id: itemId}});
+        } else {
+            customEvent = document.createEvent('CustomEvent');
+            customEvent.initCustomEvent('radio:seek-item', false, false, {item_id: itemId});
+        }
+        player.dispatchEvent(customEvent);
+    });
+
+    document.addEventListener('submit', function (event) {
+        var input = event.target.querySelector('[data-radio-current-item-input]');
+        if (input) {
+            input.value = player.getAttribute('data-radio-current-item-id') || '0';
+        }
+    });
+}());
+</script>
+JS;
 
 COM_output(COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['studio_title'] . ' - ' . $program['title'],
     'headercode' => RADIO_adminStylesheetLink()
         . RADIO_publicStylesheetLink()
         . RADIO_publicScriptTag()
-        . $studioScript
+        . $studioSimpleScript
 )));
