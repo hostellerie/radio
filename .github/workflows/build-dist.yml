@@ -45,6 +45,14 @@ jobs:
       - name: Plugin API contract check
         run: php tests/plugin_api_contract.php
 
+      - name: Validate Radio JavaScript syntax
+        run: |
+          node --check public_html/radio.js
+          node --check public_html/radio-block.js
+          node --check public_html/radio-player.js
+          node --check admin/radio-admin.js
+          node --check admin/radio-studio.js
+
       - name: Bootstrap runtime contract check
         run: php tests/bootstrap_runtime.php
 
@@ -148,6 +156,25 @@ jobs:
           (cd build && zip -r -q "../dist/$ARCHIVE" radio)
 
           unzip -l "dist/$ARCHIVE"
+
+      - name: Validate archive JavaScript matches source
+        shell: bash
+        run: |
+          ARCHIVE="dist/${{ steps.metadata.outputs.archive }}"
+          rm -rf archive-check
+          mkdir -p archive-check
+          unzip -q "$ARCHIVE" -d archive-check
+
+          node --check archive-check/radio/public_html/radio.js
+          node --check archive-check/radio/public_html/radio-block.js
+          node --check archive-check/radio/public_html/radio-player.js
+          node --check archive-check/radio/admin/radio-admin.js
+          node --check archive-check/radio/admin/radio-studio.js
+
+          cmp public_html/radio.js archive-check/radio/public_html/radio.js
+          cmp admin/radio-studio.js archive-check/radio/admin/radio-studio.js
+
+          rm -rf archive-check
 
       - name: Reject hidden archive entries
         run: |
