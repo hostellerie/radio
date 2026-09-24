@@ -389,7 +389,7 @@ radio_contract_require(
     strpos($publicPlayer, 'queuePreload = new Audio()') !== false
         && strpos($publicPlayer, 'queueReserve = new Audio()') !== false
         && strpos($publicPlayer, "radio:buffer-status") !== false
-        && strpos($programPreview, 'data-radio-studio-buffer') !== false
+        && strpos($studioPage, 'data-radio-studio-buffer') !== false
         && strpos($studioJs, "player.addEventListener('radio:buffer-status'") !== false,
     'Radio programme preview and Studio must prebuffer N+1/N+2 and expose buffer readiness.'
 );
