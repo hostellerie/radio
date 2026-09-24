@@ -364,6 +364,14 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function finishQueueTransitionAtEnded') !== false
+        && strpos($publicPlayer, 'if (followingIndex >= 0 && queueMixing)') !== false
+        && strpos($publicPlayer, 'window.cancelAnimationFrame(queueFadeFrame)') !== false
+        && strpos($publicPlayer, 'finishQueueTransitionAtEnded(followingIndex)') !== false,
+    'Radio Studio must finalize an in-progress crossfade when the current track ends instead of freezing while queueMixing stays active.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function maintainQueueBuffers') !== false
         && strpos($publicPlayer, 'window.setInterval(maintainQueueBuffers, 10000)') !== false
         && strpos($publicPlayer, 'function advanceQueueAudioRole') !== false
