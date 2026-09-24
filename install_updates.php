@@ -27,6 +27,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.5.0' => array(
         'next' => '0.5.1',
         'callback' => 'radio_update_0_5_0_to_0_5_1'
+    ),
+    '0.5.1' => array(
+        'next' => '0.6.0',
+        'callback' => 'radio_update_0_5_1_to_0_6_0'
     )
 );
 
@@ -211,6 +215,34 @@ function radio_update_0_5_0_to_0_5_1()
 
     return radio_column_exists($table, 'metadata_mtime')
         && radio_column_exists($table, 'shared_hidden');
+}
+
+function radio_update_0_5_1_to_0_6_0()
+{
+    global $_TABLES;
+
+    $table = $_TABLES['radio_broadcast_sessions'];
+    $result = DB_query("SHOW TABLES LIKE '" . DB_escapeString($table) . "'");
+    if (!DB_error() && DB_numRows($result) > 0) {
+        return true;
+    }
+
+    DB_query("CREATE TABLE " . $table . " (
+      session_id int(10) unsigned NOT NULL auto_increment,
+      program_id int(10) unsigned NOT NULL,
+      current_item_id int(10) unsigned NOT NULL default '0',
+      state varchar(16) NOT NULL default 'active',
+      owner_id int(10) unsigned NOT NULL default '2',
+      started_at datetime NOT NULL,
+      item_started_at datetime NOT NULL,
+      stopped_at datetime default NULL,
+      updated_at datetime NOT NULL,
+      PRIMARY KEY (session_id),
+      KEY state_updated (state,updated_at),
+      KEY program_state (program_id,state)
+    ) ENGINE=MyISAM");
+
+    return !DB_error();
 }
 
 function radio_apply_updates($installedVersion, $targetVersion)
