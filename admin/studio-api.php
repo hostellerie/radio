@@ -1,8 +1,14 @@
 <?php
+define('RADIO_STUDIO_API', true);
 ob_start();
 
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+}
 
 $GLOBALS['_RADIO_STUDIO_WARNINGS'] = array();
 
@@ -58,8 +64,20 @@ register_shutdown_function(function () {
 
 function radio_studio_json($data, $status)
 {
+    $unexpectedOutput = '';
     if (ob_get_level() > 0) {
+        $unexpectedOutput = (string) ob_get_contents();
         @ob_clean();
+    }
+
+    if ($unexpectedOutput !== '' && preg_match('/<\s*!DOCTYPE|<\s*html|<\s*body/i', $unexpectedOutput)) {
+        error_log(
+            'Radio Studio API discarded unexpected HTML output: '
+            . substr(preg_replace('/\s+/', ' ', strip_tags($unexpectedOutput)), 0, 500)
+        );
+        if (is_array($data) && !isset($data['discarded_html'])) {
+            $data['discarded_html'] = true;
+        }
     }
 
     if (!is_array($data)) {
