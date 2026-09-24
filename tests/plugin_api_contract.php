@@ -281,38 +281,30 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($studioApi, "if (\$studioAction === 'add')") !== false
-        && strpos($studioApi, "\$afterItemId = \$position === 'next' ? \$currentItemId : 0") !== false
-        && strpos($studioApi, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
-        && strpos($studioApi, "if (\$studioAction === 'remove')") !== false
-        && strpos($studioApi, "if (\$studioAction === 'move_up' || \$studioAction === 'move_down')") !== false
-        && strpos($studioApi, 'function radio_studio_check_token') !== false
-        && strpos($studioApi, "\$_TABLES['tokens']") !== false
-        && strpos($studioApi, "DB_delete(\$_TABLES['tokens'], 'token', \$token)") !== false
-        && strpos($studioApi, "'csrf_token'") !== false
-        && strpos($studioJs, "data.error === 'invalid_token'") !== false
-        && strpos($studioJs, "body.set('studio_action', 'add')") !== false
-        && strpos($studioJs, "mutateItem('remove'") !== false
-        && strpos($studioJs, "mutateItem('move_up'") !== false
-        && strpos($studioJs, "mutateItem('move_down'") !== false
-        && strpos($studioJs, 'renderQueue(data.items || [])') !== false,
-    'Radio Studio add, remove and reorder actions must persist through one CSRF-protected Studio API and immediately refresh the saved queue.'
+    strpos($studioPage, "isset(\$_POST['studio_action'])") !== false
+        && strpos($studioPage, 'SEC_checkToken()') !== false
+        && strpos($studioPage, 'RADIO_addProgramItem($programId, $mediaId, $afterItemId)') !== false
+        && strpos($studioPage, 'RADIO_removeProgramItem($itemId, $programId)') !== false
+        && strpos($studioPage, 'RADIO_moveProgramItem(') !== false
+        && strpos($studioPage, 'name="studio_action" value="remove"') !== false
+        && strpos($studioPage, 'name="studio_action" value="move_up"') !== false
+        && strpos($studioPage, 'name="studio_action" value="move_down"') !== false
+        && strpos($studioPage, 'name="studio_action" value="add"') !== false
+        && strpos($studioPage, 'data-radio-current-item-input') !== false
+        && strpos($studioPage, 'data-radio-studio-endpoint') === false
+        && strpos($studioPage, 'radio-studio.js') === false,
+    'Radio Studio mutations must use native same-page Geeklog forms instead of the AJAX mutation layer.'
 );
 
 radio_contract_require(
     strpos($functions, 'function RADIO_normalizeProgramItemOrder') !== false
         && strpos($functions, 'function RADIO_addProgramItem($programId, $mediaId, $afterItemId = 0)') !== false
-        && strpos($studioApi, "if (\$action === 'state')") !== false
-        && strpos($studioApi, "if (\$action === 'search')") !== false
-        && strpos($studioJs, "body.set('current_item_id'") !== false
-        && strpos($studioJs, "addMedia(item.media_id, 'next')") !== false
-        && strpos($studioJs, "addMedia(item.media_id, 'end')") !== false
-        && strpos($studioJs, "window.setInterval(syncState, 3000)") !== false
-        && strpos($studioPage, 'data-radio-replay-dynamic=') !== false
-        && strpos($studioPage, 'data-radio-replay-track="0"') !== false
-        && strpos($publicPlayer, "root.addEventListener('radio:playlist-update'") !== false
-        && strpos($publicPlayer, 'data-radio-current-item-id') !== false,
-    'Radio Studio must keep live playlist state synchronized without reloading the current audio.'
+        && strpos($studioPage, "name=\"position\" value=\"next\"") !== false
+        && strpos($studioPage, "name=\"position\" value=\"end\"") !== false
+        && strpos($studioPage, "player.getAttribute('data-radio-current-item-id')") !== false
+        && strpos($studioPage, "radio:seek-item") !== false
+        && strpos($publicPlayer, "root.addEventListener('radio:seek-item'") !== false,
+    'Radio Studio must preserve Play next and queue navigation with a minimal client helper while mutations stay server-side.'
 );
 
 radio_contract_require(
@@ -323,11 +315,8 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($publicPlayer, 'queuePreload = new Audio()') !== false
-        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false
-        && strpos($publicPlayer, "radio:buffer-status") !== false
-        && strpos($studioPage, 'data-radio-studio-buffer') !== false
-        && strpos($studioJs, "player.addEventListener('radio:buffer-status'") !== false,
-    'Radio Studio must prebuffer N+1/N+2 and expose buffer readiness.'
+        && strpos($publicPlayer, 'queueReserve = new Audio()') !== false,
+    'Radio replay player must keep N+1/N+2 prebuffering support.'
 );
 
 radio_contract_require(
