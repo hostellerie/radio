@@ -48,6 +48,25 @@ $_SQL[] = "CREATE TABLE {$_TABLES['radio_media']} (
   KEY collection_name (collection_name(64))
 ) ENGINE=MyISAM;";
 
+$_SQL[] = "CREATE TABLE {$_TABLES['radio_site_media']} (
+  media_id int(10) unsigned NOT NULL,
+  enabled tinyint(1) unsigned NOT NULL default '1',
+  status varchar(24) NOT NULL default 'published',
+  on_demand tinyint(1) unsigned NOT NULL default '1',
+  broadcast tinyint(1) unsigned NOT NULL default '1',
+  automatic_rotation tinyint(1) unsigned NOT NULL default '1',
+  allow_download tinyint(1) unsigned NOT NULL default '1',
+  owner_id int(10) unsigned NOT NULL default '2',
+  group_id mediumint(8) unsigned NOT NULL default '1',
+  perm_owner tinyint(1) unsigned NOT NULL default '3',
+  perm_group tinyint(1) unsigned NOT NULL default '2',
+  perm_members tinyint(1) unsigned NOT NULL default '2',
+  perm_anon tinyint(1) unsigned NOT NULL default '2',
+  modified datetime NOT NULL,
+  PRIMARY KEY (media_id),
+  KEY enabled_status (enabled,status)
+) ENGINE=MyISAM;";
+
 $_SQL[] = "CREATE TABLE {$_TABLES['radio_programs']} (
   program_id int(10) unsigned NOT NULL auto_increment,
   title varchar(255) NOT NULL default '',
