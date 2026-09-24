@@ -17,6 +17,9 @@
     var queue = studio.querySelector('[data-radio-studio-queue]');
     var status = studio.querySelector('[data-radio-studio-status]');
     var bufferStatus = studio.querySelector('[data-radio-studio-buffer]');
+    var broadcastButton = studio.querySelector('[data-radio-studio-broadcast]');
+    var broadcastState = studio.querySelector('[data-radio-studio-broadcast-state]');
+    var broadcastActive = false;
     var version = '';
     var pollTimer = 0;
 
@@ -61,6 +64,30 @@
             tokenValue = data.csrf_token;
             studio.setAttribute('data-radio-csrf-token', tokenValue);
         }
+    }
+
+    function updateBroadcast(data) {
+        if (!data) {
+            return;
+        }
+
+        broadcastActive = !!data.broadcast_active;
+
+        if (broadcastButton) {
+            broadcastButton.textContent = broadcastActive
+                ? (studio.getAttribute('data-broadcast-stop-label') || 'Stop broadcast')
+                : (studio.getAttribute('data-broadcast-start-label') || 'Broadcast');
+            broadcastButton.classList.toggle('is-live', broadcastActive);
+            broadcastButton.setAttribute('aria-pressed', broadcastActive ? 'true' : 'false');
+        }
+
+        if (broadcastState) {
+            broadcastState.textContent = broadcastActive
+                ? (studio.getAttribute('data-broadcast-active-label') || 'Semi-live broadcast active')
+                : '';
+        }
+
+        studio.classList.toggle('is-broadcasting', broadcastActive);
     }
 
     function dispatchPlaylist(items) {
@@ -360,6 +387,7 @@
             })
             .then(function (data) {
                 updateToken(data);
+                updateBroadcast(data);
                 if (!data.ok) {
                     throw new Error(data.error || 'search_failed');
                 }
@@ -397,6 +425,7 @@
             .then(function (result) {
                 var data = result.data || {};
                 updateToken(data);
+                updateBroadcast(data);
 
                 if (!data.ok) {
                     if (data.error === 'invalid_token' && !retried && tokenName && tokenValue) {
@@ -488,6 +517,23 @@
                 }
             })
             .catch(function () {});
+    }
+
+    if (broadcastButton) {
+        broadcastButton.addEventListener('click', function () {
+            var body = new URLSearchParams();
+            body.set('program_id', programId);
+            body.set('studio_action', broadcastActive ? 'broadcast_stop' : 'broadcast_start');
+            body.set('current_item_id', player.getAttribute('data-radio-current-item-id') || '0');
+
+            setStatus('');
+            mutate(
+                body,
+                broadcastActive
+                    ? (studio.getAttribute('data-broadcast-stopped-label') || 'Broadcast stopped')
+                    : (studio.getAttribute('data-broadcast-started-label') || 'Broadcast started')
+            );
+        });
     }
 
     if (form) {
