@@ -28,6 +28,33 @@ $_TABLES['radio_program_items'] = $_DB_table_prefix . 'radio_program_items';
 $_TABLES['radio_schedule'] = $_DB_table_prefix . 'radio_schedule';
 $_TABLES['radio_events'] = $_DB_table_prefix . 'radio_events';
 $_TABLES['radio_sources'] = $_DB_table_prefix . 'radio_sources';
+
+function RADIO_isEnabled()
+{
+    global $_RADIO_CONF;
+    return !isset($_RADIO_CONF['enabled']) || !empty($_RADIO_CONF['enabled']);
+}
+
+function RADIO_publicAccessAllowed()
+{
+    return RADIO_isEnabled() || SEC_hasRights('radio.admin');
+}
+
+function RADIO_requirePublicAccess()
+{
+    if (RADIO_publicAccessAllowed()) {
+        return;
+    }
+
+    if (function_exists('http_response_code')) {
+        http_response_code(403);
+    } else {
+        header('HTTP/1.1 403 Forbidden');
+    }
+    header('Cache-Control: no-store, max-age=0');
+    exit;
+}
+
 $_TABLES['radio_source_sync_log'] = $_DB_table_prefix . 'radio_source_sync_log';
 
 if (!isset($_RADIO_CONF) || !is_array($_RADIO_CONF)) {
@@ -105,12 +132,14 @@ function plugin_getfootercode_radio()
     $path = RADIO_requestPath();
     $footer = '';
 
-    if (RADIO_isPublicHtmlPage($path)) {
-        $footer .= RADIO_publicScriptTag();
-    }
+    if (RADIO_isEnabled()) {
+        if (RADIO_isPublicHtmlPage($path)) {
+            $footer .= RADIO_publicScriptTag();
+        }
 
-    if (!empty($GLOBALS['_RADIO_NEEDS_BLOCK_JS'])) {
-        $footer .= RADIO_blockScriptTag();
+        if (!empty($GLOBALS['_RADIO_NEEDS_BLOCK_JS'])) {
+            $footer .= RADIO_blockScriptTag();
+        }
     }
 
     if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')
@@ -3188,6 +3217,9 @@ function RADIO_feedCollectionOptions($limit)
 
 function plugin_getfeednames_radio()
 {
+    if (!RADIO_publicAccessAllowed()) {
+        return array();
+    }
     return array(
         array('id' => 'podcast', 'name' => 'Radio Podcasts')
     );
@@ -3195,6 +3227,11 @@ function plugin_getfeednames_radio()
 
 function plugin_getfeedcontent_radio($feed, &$link, &$update, $feedType = '', $feedVersion = '')
 {
+    if (!RADIO_publicAccessAllowed()) {
+        $link = '';
+        $update = '';
+        return array();
+    }
     global $_TABLES;
 
     $link = RADIO_podcastFeedUrl();
@@ -3270,6 +3307,10 @@ function plugin_feedupdatecheck_radio(
     $updatedTopic = '',
     $updatedId = ''
 ) {
+    if (!RADIO_publicAccessAllowed()) {
+        return true;
+    }
+
     if ($updatedType === 'radio' && $updatedId !== '') {
         return false;
     }
@@ -4428,6 +4469,9 @@ function plugin_getcapabilities_radio()
 
 function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
 {
+    if (!RADIO_publicAccessAllowed()) {
+        return array();
+    }
     global $_TABLES, $_CONF;
     $fields = array_map('trim', explode(',', $what));
 
@@ -4772,10 +4816,6 @@ function plugin_getheadercode_radio()
 {
     global $_RADIO_CONF;
 
-    if (isset($_RADIO_CONF['enabled']) && !$_RADIO_CONF['enabled']) {
-        return '';
-    }
-
     $path = RADIO_requestPath();
     $isAdmin = strpos($path, '/admin/plugins/radio/') !== false;
     $configGroup = '';
@@ -4789,6 +4829,10 @@ function plugin_getheadercode_radio()
 
     if ($isAdmin || $isRadioConfig) {
         return RADIO_adminStylesheetLink();
+    }
+
+    if (!RADIO_isEnabled()) {
+        return '';
     }
 
     $header = '';
@@ -5146,6 +5190,9 @@ function plugin_whatsnewsupported_radio()
 
 function plugin_getwhatsnew_radio()
 {
+    if (!RADIO_publicAccessAllowed()) {
+        return '';
+    }
     global $_RADIO_CONF, $LANG_RADIO;
 
     if (!RADIO_isDatabaseCurrent()) {
@@ -5211,6 +5258,9 @@ function RADIO_compareItemModifiedDesc($a, $b)
 
 function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
 {
+    if (!RADIO_publicAccessAllowed()) {
+        return array();
+    }
     global $_TABLES, $_CONF;
 
     if (!RADIO_isDatabaseCurrent()) {
@@ -5256,6 +5306,9 @@ function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
 
 function plugin_getrelateditems_radio($tids, $max, $trim)
 {
+    if (!RADIO_publicAccessAllowed()) {
+        return array();
+    }
     global $_TABLES;
 
     if (!isset($_TABLES['topic_assignments']) || !is_array($tids) || empty($tids)) {
