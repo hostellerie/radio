@@ -876,6 +876,11 @@
                 var queueBufferTimer = 0;
                 var queuePreloadLastKick = 0;
                 var queueReserveLastKick = 0;
+                var queuePreloadFetchUrl = '';
+                var queueReserveFetchUrl = '';
+                var queuePreloadBlobUrl = '';
+                var queueReserveBlobUrl = '';
+                var queueActiveBlobUrl = '';
                 queuePreload.preload = 'auto';
                 queueReserve.preload = 'auto';
 
@@ -933,6 +938,79 @@
                     element.pause();
                     element.removeAttribute('src');
                     element.load();
+                }
+
+                function revokeQueueBlob(url) {
+                    if (url && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        try {
+                            window.URL.revokeObjectURL(url);
+                        } catch (error) {}
+                    }
+                }
+
+                function prefetchQueueItem(item, role) {
+                    if (!item || item.source_kind !== 'local' || !item.stream_url
+                        || typeof fetch !== 'function' || !window.URL
+                        || typeof window.URL.createObjectURL !== 'function') {
+                        return;
+                    }
+
+                    var logicalUrl = item.stream_url;
+                    var isReserve = role === 'reserve';
+                    var currentFetchUrl = isReserve ? queueReserveFetchUrl : queuePreloadFetchUrl;
+                    var currentBlobUrl = isReserve ? queueReserveBlobUrl : queuePreloadBlobUrl;
+
+                    if (currentFetchUrl === logicalUrl || currentBlobUrl !== '') {
+                        return;
+                    }
+
+                    if (isReserve) {
+                        queueReserveFetchUrl = logicalUrl;
+                    } else {
+                        queuePreloadFetchUrl = logicalUrl;
+                    }
+
+                    fetch(logicalUrl, {
+                        credentials: 'same-origin',
+                        cache: 'force-cache'
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('HTTP ' + response.status);
+                            }
+                            return response.blob();
+                        })
+                        .then(function (blob) {
+                            var stillCurrent = isReserve
+                                ? queueReserveUrl === logicalUrl
+                                : queuePreloadUrl === logicalUrl;
+                            if (!stillCurrent) {
+                                return;
+                            }
+
+                            var objectUrl = window.URL.createObjectURL(blob);
+                            var element = isReserve ? queueReserve : queuePreload;
+
+                            if (isReserve) {
+                                revokeQueueBlob(queueReserveBlobUrl);
+                                queueReserveBlobUrl = objectUrl;
+                            } else {
+                                revokeQueueBlob(queuePreloadBlobUrl);
+                                queuePreloadBlobUrl = objectUrl;
+                            }
+
+                            element.src = objectUrl;
+                            element.preload = 'auto';
+                            element.load();
+                            emitQueueBufferStatus();
+                        })
+                        .catch(function () {
+                            if (isReserve) {
+                                queueReserveFetchUrl = '';
+                            } else {
+                                queuePreloadFetchUrl = '';
+                            }
+                        });
                 }
 
                 function queueBufferTarget(item, minimum, maximum) {
@@ -994,6 +1072,9 @@
                     if (!reserve || !reserve.stream_url || !next) {
                         if (queueReserveUrl !== '') {
                             clearQueueAudio(queueReserve);
+                            revokeQueueBlob(queueReserveBlobUrl);
+                            queueReserveBlobUrl = '';
+                            queueReserveFetchUrl = '';
                             queueReserveUrl = '';
                         }
                         emitQueueBufferStatus();
@@ -1008,10 +1089,14 @@
 
                     if (queueReserveUrl !== reserve.stream_url) {
                         clearQueueAudio(queueReserve);
+                        revokeQueueBlob(queueReserveBlobUrl);
+                        queueReserveBlobUrl = '';
+                        queueReserveFetchUrl = '';
                         queueReserveUrl = reserve.stream_url;
                         queueReserve.src = queueReserveUrl;
                         queueReserve.preload = 'auto';
                         queueReserve.load();
+                        prefetchQueueItem(reserve, 'reserve');
                     }
                     emitQueueBufferStatus();
                 }
@@ -1021,6 +1106,9 @@
                     if (!next || !next.stream_url) {
                         if (queuePreloadUrl !== '') {
                             clearQueueAudio(queuePreload);
+                            revokeQueueBlob(queuePreloadBlobUrl);
+                            queuePreloadBlobUrl = '';
+                            queuePreloadFetchUrl = '';
                             queuePreloadUrl = '';
                         }
                         if (queueReserveUrl !== '') {
@@ -1033,10 +1121,14 @@
 
                     if (queuePreloadUrl !== next.stream_url) {
                         clearQueueAudio(queuePreload);
+                        revokeQueueBlob(queuePreloadBlobUrl);
+                        queuePreloadBlobUrl = '';
+                        queuePreloadFetchUrl = '';
                         queuePreloadUrl = next.stream_url;
                         queuePreload.src = queuePreloadUrl;
                         queuePreload.preload = 'auto';
                         queuePreload.load();
+                        prefetchQueueItem(next, 'preload');
                     }
                     maybePreloadQueueReserve();
                 }
@@ -1113,12 +1205,21 @@
                     var previousAudio = audio;
                     var bufferedReserve = queueReserve;
                     var bufferedReserveUrl = queueReserveUrl;
+                    var bufferedReserveBlobUrl = queueReserveBlobUrl;
+                    var previousActiveBlobUrl = queueActiveBlobUrl;
 
                     audio = queuePreload;
+                    queueActiveBlobUrl = queuePreloadBlobUrl;
+
                     queuePreload = bufferedReserve;
                     queuePreloadUrl = bufferedReserveUrl;
+                    queuePreloadBlobUrl = bufferedReserveBlobUrl;
+                    queuePreloadFetchUrl = bufferedReserveUrl;
+
                     queueReserve = previousAudio;
                     queueReserveUrl = '';
+                    queueReserveBlobUrl = '';
+                    queueReserveFetchUrl = '';
 
                     index = nextIndex;
                     started = false;
@@ -1129,6 +1230,9 @@
                     queuePreload.volume = 1;
                     queueReserve.pause();
                     queueReserve.volume = 1;
+                    queueReserve.removeAttribute('src');
+                    queueReserve.load();
+                    revokeQueueBlob(previousActiveBlobUrl);
 
                     refreshQueuePreload();
                     maintainQueueBuffers();
@@ -1580,6 +1684,9 @@
                         window.clearInterval(queueBufferTimer);
                     }
                     stopQueueFade();
+                    revokeQueueBlob(queueActiveBlobUrl);
+                    revokeQueueBlob(queuePreloadBlobUrl);
+                    revokeQueueBlob(queueReserveBlobUrl);
                     flush();
                 });
                 updateProgressBounds();
