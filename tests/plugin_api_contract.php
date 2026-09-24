@@ -364,6 +364,15 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function maintainQueueBuffers') !== false
+        && strpos($publicPlayer, 'window.setInterval(maintainQueueBuffers, 10000)') !== false
+        && strpos($publicPlayer, 'function advanceQueueAudioRole') !== false
+        && strpos($publicPlayer, 'queuePreload = bufferedReserve') !== false
+        && strpos($publicPlayer, 'queueReserve = previousAudio') !== false,
+    'Radio Studio must keep N+1/N+2 buffers warm during long tracks and rotate the buffered reserve forward without discarding it.'
+);
+
+radio_contract_require(
     strpos($legacyPreview, '/plugins/radio/studio.php') !== false
         && strpos($legacyPreview, "header('Location: ' . \$url, true, 302)") !== false,
     'Legacy preview.php URLs must redirect to the canonical Studio page.'
