@@ -894,7 +894,9 @@
                     var wet = null;
                     var programmeGain = null;
                     var stereoPanner = null;
+                    var headroomGain = null;
                     var master = null;
+                    var masterLimiter = null;
                     var analyser = null;
                     var scopeData = null;
                     var scopeFreq = null;
@@ -963,8 +965,18 @@
                                 stereoPanner.pan.value = 0;
                             }
 
+                            headroomGain = context.createGain();
+                            headroomGain.gain.value = 1;
+
                             master = context.createGain();
                             master.gain.value = 1;
+
+                            masterLimiter = context.createDynamicsCompressor();
+                            masterLimiter.threshold.value = -1;
+                            masterLimiter.knee.value = 0;
+                            masterLimiter.ratio.value = 20;
+                            masterLimiter.attack.value = 0.003;
+                            masterLimiter.release.value = 0.12;
 
                             analyser = context.createAnalyser();
                             analyser.fftSize = 512;
@@ -993,12 +1005,14 @@
 
                             if (stereoPanner) {
                                 programmeGain.connect(stereoPanner);
-                                stereoPanner.connect(master);
+                                stereoPanner.connect(headroomGain);
                             } else {
-                                programmeGain.connect(master);
+                                programmeGain.connect(headroomGain);
                             }
+                            headroomGain.connect(master);
 
-                            master.connect(analyser);
+                            master.connect(masterLimiter);
+                            masterLimiter.connect(analyser);
                             analyser.connect(context.destination);
 
                             ready = true;
@@ -1240,6 +1254,9 @@
                         if (stereoPanner) {
                             stereoPanner.pan.value = 0;
                         }
+                        if (headroomGain) {
+                            headroomGain.gain.value = 1;
+                        }
                     }
 
                     audio.addEventListener('play', function () {
@@ -1272,6 +1289,10 @@
                             } else if (control === 'pan') {
                                 if (stereoPanner) {
                                     stereoPanner.pan.value = Math.max(-1, Math.min(1, (parseFloat(value || 0) || 0) / 100));
+                                }
+                            } else if (control === 'headroom') {
+                                if (headroomGain) {
+                                    headroomGain.gain.value = value ? Math.pow(10, -3 / 20) : 1;
                                 }
                             } else if (control === 'echo') {
                                 wet.gain.value = value ? 0.28 : 0;
