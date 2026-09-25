@@ -1254,9 +1254,7 @@
                         if (stereoPanner) {
                             stereoPanner.pan.value = 0;
                         }
-                        if (headroomGain) {
-                            headroomGain.gain.value = 1;
-                        }
+
                     }
 
                     audio.addEventListener('play', function () {
@@ -1292,7 +1290,8 @@
                                 }
                             } else if (control === 'headroom') {
                                 if (headroomGain) {
-                                    headroomGain.gain.value = value ? Math.pow(10, -3 / 20) : 1;
+                                    var headroomDb = Math.max(-10, Math.min(10, parseFloat(value || 0) || 0));
+                                    headroomGain.gain.value = Math.pow(10, headroomDb / 20);
                                 }
                             } else if (control === 'echo') {
                                 wet.gain.value = value ? 0.28 : 0;
