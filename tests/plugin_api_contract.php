@@ -910,9 +910,12 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($publicPlayer, 'sample.gain = context.createGain();') !== false
-        && strpos($publicPlayer, 'Math.pow(10, 4 / 20)') !== false
+        && strpos($publicPlayer, 'Math.pow(10, 8 / 20)') !== false
+        && strpos($publicPlayer, 'programmeGain = context.createGain();') !== false
+        && strpos($publicPlayer, 'Math.pow(10, -6 / 20)') !== false
+        && strpos($publicPlayer, 'linearRampToValueAtTime(1, releaseTime + 0.28)') !== false
         && strpos($publicPlayer, 'sample.gain.connect(master);') !== false,
-    'Radio Studio jingle pads must use a dedicated gain stage for clearer live playback.'
+    'Radio Studio jingle pads must sit clearly above programme audio using dedicated gain and temporary ducking.'
 );
 
 
