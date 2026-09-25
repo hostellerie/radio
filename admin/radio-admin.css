@@ -400,6 +400,17 @@
     touch-action:pan-x!important;
     accent-color:currentColor
 }
+
+.radio-studio__djfx-pan-control{
+    align-content:start
+}
+.radio-studio__djfx-pan{
+    align-self:end
+}
+.radio-studio__djfx-pan input[type="range"]{
+    width:100%!important;
+    min-width:0!important
+}
 .radio-studio__djfx-pushes{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -458,6 +469,10 @@
 }
 .radio-studio__djfx-pad-trigger{
     display:flex;
+    box-sizing:border-box;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
     flex-direction:column;
     align-items:flex-start;
     justify-content:center;
@@ -486,6 +501,8 @@
 .radio-studio__djfx-pad-trigger strong{
     display:block;
     width:100%;
+    min-width:0;
+    max-width:100%;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap
@@ -669,6 +686,24 @@ body.radio-studio-focus-active{
         height:58px;
         transform:rotate(-90deg)
     }
+}
+
+.radio-program-preview.radio-studio--focus .radio-studio__djfx-pan-control{
+    grid-template-rows:auto 1fr;
+    min-height:300px
+}
+.radio-program-preview.radio-studio--focus .radio-studio__djfx-pan{
+    align-self:center;
+    width:100%
+}
+.radio-program-preview.radio-studio--focus .radio-studio__djfx-pan input[type="range"]{
+    width:100%!important;
+    height:54px!important;
+    min-height:54px!important;
+    writing-mode:horizontal-tb!important;
+    direction:ltr!important;
+    transform:none!important;
+    touch-action:pan-x!important
 }
 .radio-program-preview.radio-studio--focus .radio-studio__djfx-effect{
     min-width:96px;
