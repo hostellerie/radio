@@ -376,6 +376,7 @@ if (count($playlist) === 0) {
                 . '<input type="hidden" name="studio_action" value="move_up">'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
                 . '<button type="submit" class="radio-program-item__action"'
+                . ' data-radio-studio-action="move_up" data-radio-studio-item-id="' . (int) $item['item_id'] . '"'
                 . ($index === 0 ? ' disabled' : '')
                 . ' title="' . radio_studio_h($LANG_RADIO['move_up']) . '" aria-label="'
                 . radio_studio_h($LANG_RADIO['move_up']) . '">↑</button></form>';
@@ -386,6 +387,7 @@ if (count($playlist) === 0) {
                 . '<input type="hidden" name="studio_action" value="move_down">'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
                 . '<button type="submit" class="radio-program-item__action"'
+                . ' data-radio-studio-action="move_down" data-radio-studio-item-id="' . (int) $item['item_id'] . '"'
                 . ($index === count($playlist) - 1 ? ' disabled' : '')
                 . ' title="' . radio_studio_h($LANG_RADIO['move_down']) . '" aria-label="'
                 . radio_studio_h($LANG_RADIO['move_down']) . '">↓</button></form>';
@@ -396,6 +398,7 @@ if (count($playlist) === 0) {
                 . '<input type="hidden" name="studio_action" value="remove">'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
                 . '<button type="submit" class="radio-program-item__action radio-program-item__action--remove"'
+                . ' data-radio-studio-action="remove" data-radio-studio-item-id="' . (int) $item['item_id'] . '"'
                 . ' title="' . radio_studio_h($LANG_RADIO['remove']) . '" aria-label="'
                 . radio_studio_h($LANG_RADIO['remove']) . '">−</button></form>';
 
@@ -478,7 +481,8 @@ if ($canEdit) {
                 . '<input type="hidden" name="position" value="next">'
                 . '<input type="hidden" name="current_item_id" value="0" data-radio-current-item-input>'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
-                . '<button class="radio-admin__button" type="submit">'
+                . '<button class="radio-admin__button" type="submit"'
+                . ' data-radio-studio-add="' . (int) $row['media_id'] . '" data-radio-studio-position="next">'
                 . radio_studio_h($LANG_RADIO['studio_play_next']) . '</button></form>';
 
             $content .= '<form method="post" action="" class="radio-studio__inline-form">'
@@ -487,7 +491,8 @@ if ($canEdit) {
                 . '<input type="hidden" name="studio_action" value="add">'
                 . '<input type="hidden" name="position" value="end">'
                 . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_studio_h($token) . '">'
-                . '<button class="radio-program-picker__add" type="submit" title="'
+                . '<button class="radio-program-picker__add" type="submit"'
+                . ' data-radio-studio-add="' . (int) $row['media_id'] . '" data-radio-studio-position="end" title="'
                 . radio_studio_h(sprintf($LANG_RADIO['program_media_add_title'], $row['title']))
                 . '" aria-label="' . radio_studio_h(sprintf($LANG_RADIO['program_media_add_title'], $row['title']))
                 . '">+</button></form>';
