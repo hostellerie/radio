@@ -892,6 +892,7 @@
                     var delay = null;
                     var feedback = null;
                     var wet = null;
+                    var programmeGain = null;
                     var master = null;
                     var analyser = null;
                     var scopeData = null;
@@ -951,6 +952,9 @@
                             wet = context.createGain();
                             wet.gain.value = 0;
 
+                            programmeGain = context.createGain();
+                            programmeGain.gain.value = 1;
+
                             master = context.createGain();
                             master.gain.value = 1;
 
@@ -971,13 +975,15 @@
                             lowPass.connect(highPass);
 
                             highPass.connect(dry);
-                            dry.connect(master);
+                            dry.connect(programmeGain);
 
                             highPass.connect(delay);
                             delay.connect(feedback);
                             feedback.connect(delay);
                             delay.connect(wet);
-                            wet.connect(master);
+                            wet.connect(programmeGain);
+
+                            programmeGain.connect(master);
 
                             master.connect(analyser);
                             analyser.connect(context.destination);
@@ -1140,8 +1146,8 @@
                             try {
                                 sample.source = context.createMediaElementSource(sample.audio);
                                 sample.gain = context.createGain();
-                                // Pads should cut through the programme mix without sounding aggressively louder.
-                                sample.gain.gain.value = Math.pow(10, 4 / 20);
+                                // Pads are intentionally forward in the monitor mix.
+                                sample.gain.gain.value = Math.pow(10, 8 / 20);
                                 sample.source.connect(sample.gain);
                                 sample.gain.connect(master);
                             } catch (error) {
@@ -1152,6 +1158,24 @@
                         try {
                             sample.audio.currentTime = 0;
                         } catch (error) {}
+
+                        // Briefly duck the programme while a pad jingle plays so speech/cues stay intelligible.
+                        if (programmeGain && context) {
+                            var nowTime = context.currentTime;
+                            programmeGain.gain.cancelScheduledValues(nowTime);
+                            programmeGain.gain.setValueAtTime(programmeGain.gain.value, nowTime);
+                            programmeGain.gain.linearRampToValueAtTime(Math.pow(10, -6 / 20), nowTime + 0.06);
+                        }
+
+                        sample.audio.onended = function () {
+                            if (!programmeGain || !context) {
+                                return;
+                            }
+                            var releaseTime = context.currentTime;
+                            programmeGain.gain.cancelScheduledValues(releaseTime);
+                            programmeGain.gain.setValueAtTime(programmeGain.gain.value, releaseTime);
+                            programmeGain.gain.linearRampToValueAtTime(1, releaseTime + 0.28);
+                        };
 
                         var promise = sample.audio.play();
                         if (promise && typeof promise.catch === 'function') {
