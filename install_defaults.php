@@ -9,6 +9,8 @@ $_RADIO_DEFAULT = array(
     'public_title' => 'Radio',
     'default_replay_days' => 30,
     'allow_downloads' => 1,
+    'media_delivery_mode' => 'auto',
+    'x_accel_internal_prefix' => '',
     'on_demand_enabled' => 1,
     'max_upload_mb' => 100,
     'fallback_enabled' => 1,
@@ -38,6 +40,8 @@ function RADIO_configSortOrder()
         'public_title' => 20,
         'default_replay_days' => 30,
         'allow_downloads' => 40,
+        'media_delivery_mode' => 42,
+        'x_accel_internal_prefix' => 44,
         'on_demand_enabled' => 45,
         'max_upload_mb' => 50,
         'fallback_enabled' => 60,
@@ -63,10 +67,14 @@ function RADIO_configSortOrder()
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode'), true)
         ? 'select'
         : 'text';
-    $select = $name === 'transition_mode' ? 1 : ($name === 'library_mode' ? 2 : 0);
+    $select = $name === 'transition_mode'
+        ? 1
+        : ($name === 'library_mode'
+            ? 2
+            : ($name === 'media_delivery_mode' ? 3 : 0));
 
     $c->add($name, $default, $type, 0, 0, $select, $sort, true, 'radio', 0);
 }
