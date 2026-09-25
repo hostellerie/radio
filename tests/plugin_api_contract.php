@@ -895,3 +895,21 @@ radio_contract_require(
         && strpos($studioJs, "dispatchDjFx('sample-play', {pad: pad})") !== false,
     'Radio Studio pads must assign their selected jingle to the Web Audio sample engine before playback.'
 );
+
+
+radio_contract_require(
+    strpos($studioPage, 'data-radio-djfx-push="low"') !== false
+        && strpos($studioPage, 'data-radio-djfx-push="mid"') !== false
+        && strpos($studioPage, 'data-radio-djfx-push="high"') !== false
+        && strpos($studioPage, 'data-radio-djfx-push="filter"') !== false
+        && strpos($studioJs, 'var djPushTimers = {};') !== false
+        && strpos($studioJs, '}, 220);') !== false,
+    'Radio Studio must expose momentary +/-10 DJ FX push controls that automatically return to zero.'
+);
+
+radio_contract_require(
+    strpos($publicPlayer, 'sample.gain = context.createGain();') !== false
+        && strpos($publicPlayer, 'Math.pow(10, 4 / 20)') !== false
+        && strpos($publicPlayer, 'sample.gain.connect(master);') !== false,
+    'Radio Studio jingle pads must use a dedicated gain stage for clearer live playback.'
+);
