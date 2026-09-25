@@ -254,7 +254,6 @@ function RADIO_recordStatEvent($mediaId, $programId, $eventType, $source, $secon
     );
 
     if (!DB_error()) {
-        RADIO_purgeOldStats();
         return true;
     }
     return false;
@@ -2430,6 +2429,85 @@ function RADIO_playbackMime($row)
         : 'application/octet-stream';
 }
 
+function RADIO_mediaDeliveryMode()
+{
+    global $_RADIO_CONF;
+
+    $mode = isset($_RADIO_CONF['media_delivery_mode'])
+        ? strtolower(trim((string) $_RADIO_CONF['media_delivery_mode']))
+        : 'auto';
+
+    if (!in_array($mode, array('auto','php','xsendfile','xaccel'), true)) {
+        $mode = 'auto';
+    }
+
+    if ($mode !== 'auto') {
+        return $mode;
+    }
+
+    // Only auto-enable server offload when support can be detected safely.
+    if (function_exists('apache_get_modules')) {
+        $modules = @apache_get_modules();
+        if (is_array($modules)) {
+            foreach ($modules as $module) {
+                $module = strtolower((string) $module);
+                if ($module === 'mod_xsendfile' || $module === 'xsendfile_module') {
+                    return 'xsendfile';
+                }
+            }
+        }
+    }
+
+    return 'php';
+}
+
+function RADIO_xAccelInternalUri($path)
+{
+    global $_RADIO_CONF;
+
+    $prefix = isset($_RADIO_CONF['x_accel_internal_prefix'])
+        ? trim((string) $_RADIO_CONF['x_accel_internal_prefix'])
+        : '';
+
+    if ($prefix === '') {
+        return '';
+    }
+
+    $prefix = '/' . trim($prefix, '/') . '/';
+    return $prefix . rawurlencode(basename((string) $path));
+}
+
+function RADIO_sendMediaViaWebServer($path, $mime, $filename, $download)
+{
+    $mode = RADIO_mediaDeliveryMode();
+    if ($mode === 'php') {
+        return false;
+    }
+
+    header('Content-Type: ' . $mime);
+    header('Accept-Ranges: bytes');
+    header('X-Content-Type-Options: nosniff');
+
+    $disposition = $download ? 'attachment' : 'inline';
+    header('Content-Disposition: ' . $disposition . '; filename="' . str_replace('"', '', $filename) . '"');
+
+    if ($mode === 'xsendfile') {
+        header('X-Sendfile: ' . $path);
+        exit;
+    }
+
+    if ($mode === 'xaccel') {
+        $internal = RADIO_xAccelInternalUri($path);
+        if ($internal === '') {
+            return false;
+        }
+        header('X-Accel-Redirect: ' . $internal);
+        exit;
+    }
+
+    return false;
+}
+
 function RADIO_sendMedia($row, $download)
 {
     global $_RADIO_CONF;
@@ -2456,6 +2534,13 @@ function RADIO_sendMedia($row, $download)
 
     if ($download && !RADIO_downloadAllowed($row)) {
         return false;
+    }
+
+    $mime = RADIO_playbackMime($row);
+    $filename = basename($row['original_name']);
+
+    if (RADIO_sendMediaViaWebServer($path, $mime, $filename, $download)) {
+        return true;
     }
 
     $size = filesize($path);
@@ -2502,13 +2587,11 @@ function RADIO_sendMedia($row, $download)
         header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
     }
 
-    $mime = RADIO_playbackMime($row);
     header('Content-Type: ' . $mime);
     header('Accept-Ranges: bytes');
     header('Content-Length: ' . (($end - $start) + 1));
     header('X-Content-Type-Options: nosniff');
 
-    $filename = basename($row['original_name']);
     $disposition = $download ? 'attachment' : 'inline';
     header('Content-Disposition: ' . $disposition . '; filename="' . str_replace('"', '', $filename) . '"');
 
@@ -2522,7 +2605,7 @@ function RADIO_sendMedia($row, $download)
 
     $remaining = ($end - $start) + 1;
     while ($remaining > 0 && !feof($handle)) {
-        $length = min(8192, $remaining);
+        $length = min(262144, $remaining);
         $buffer = fread($handle, $length);
         if ($buffer === false || $buffer === '') {
             break;
