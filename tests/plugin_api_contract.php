@@ -473,10 +473,10 @@ radio_contract_require(
     strpos($functions, "RADIO_buildFreshRotationSequence(\$date, \$cycleStart)") !== false
         && strpos($functions, "microtime(true)") !== false
         && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
-        && strpos($functions, "round(\$seconds / 2)") !== false
+        && strpos($functions, "\$overlap = 0.5;") !== false
         && strpos($functions, "'next_next_media'") !== false
         && strpos($nowEndpoint, "'next_next_media'") !== false,
-    'Each protected Radio rotation cycle must receive a fresh order, jingle-to-music must use a shorter crossfade, and live state must expose N+2.'
+    'Each protected Radio rotation cycle must receive a fresh order, jingle-to-music must use the fixed half-second crossfade, and live state must expose N+2.'
 );
 
 radio_contract_require(
