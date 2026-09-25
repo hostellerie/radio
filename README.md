@@ -60,3 +60,31 @@ Current transition baseline:
 - PHP 5.6 through PHP 8.3 syntax/runtime checks in CI
 
 See `ROADMAP.md` and `docs/PRE_RELEASE_TESTING.md` for the current development and release checklist.
+
+## Efficient local media delivery
+
+Radio can keep media files outside the public web root while letting the web server deliver
+the audio after Geeklog has checked access.
+
+Configuration `media_delivery_mode` supports:
+
+- `auto` (default): uses `X-Sendfile` only when Apache support can be detected safely; otherwise PHP is used.
+- `php`: always stream through PHP.
+- `xsendfile`: emit `X-Sendfile` after Radio permission checks. The web server must be configured to allow the Radio storage path.
+- `xaccel`: emit `X-Accel-Redirect`. Configure `x_accel_internal_prefix` and map that internal Nginx location to the Radio storage directory.
+
+Example Nginx mapping:
+
+```nginx
+location /_radio_media/ {
+    internal;
+    alias /absolute/path/to/radio/media/;
+}
+```
+
+Then set `x_accel_internal_prefix` to `/_radio_media/`.
+
+When server offload is enabled, PHP performs authentication/authorization and immediately
+hands the file transfer to Apache/Nginx instead of staying busy for the complete audio
+request. The PHP fallback uses larger chunks, and statistics retention cleanup is no
+longer run for every listener event.
