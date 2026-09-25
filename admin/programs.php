@@ -85,9 +85,10 @@ $content .= '<section class="radio-programs-editor"><h2>' . htmlspecialchars($se
 
 if ($selected) {
     $content .= '<div class="radio-admin__toolbar">'
+        . '<span aria-hidden="true">▶</span> '
         . '<a class="radio-admin__button radio-admin__button--secondary" href="'
         . htmlspecialchars($_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id=' . $selectedId, ENT_QUOTES, 'UTF-8')
-        . '">▶ ' . htmlspecialchars($LANG_RADIO['open_studio'], ENT_QUOTES, 'UTF-8') . '</a>'
+        . '">' . htmlspecialchars($LANG_RADIO['open_studio'], ENT_QUOTES, 'UTF-8') . '</a>'
         . '</div>';
 }
 
