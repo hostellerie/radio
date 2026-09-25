@@ -1053,10 +1053,32 @@
                             var bandTop = Math.round(height * 0.73);
                             var bars = 72;
                             var barWidth = width / bars;
+                            var nyquist = context.sampleRate / 2;
+                            var minHz = 40;
+                            var maxHz = Math.min(18000, nyquist);
+                            var logMin = Math.log(minHz);
+                            var logMax = Math.log(maxHz);
                             ctx.fillStyle = 'rgba(97,231,199,.55)';
+
+                            /*
+                             * Audio spectra are much easier to read on a logarithmic
+                             * frequency axis. A linear FFT-bin mapping wastes most of
+                             * the right side on ultrasonic/high-frequency bins where
+                             * normal programme audio has very little energy.
+                             */
                             for (var b = 0; b < bars; b++) {
-                                var freqIndex = Math.floor(b * scopeFreq.length / bars);
-                                var level = scopeFreq[freqIndex] / 255;
+                                var lowHz = Math.exp(logMin + (logMax - logMin) * b / bars);
+                                var highHz = Math.exp(logMin + (logMax - logMin) * (b + 1) / bars);
+                                var startIndex = Math.max(0, Math.floor(lowHz / nyquist * scopeFreq.length));
+                                var endIndex = Math.min(
+                                    scopeFreq.length - 1,
+                                    Math.max(startIndex, Math.ceil(highHz / nyquist * scopeFreq.length))
+                                );
+                                var peak = 0;
+                                for (var fi = startIndex; fi <= endIndex; fi++) {
+                                    peak = Math.max(peak, scopeFreq[fi]);
+                                }
+                                var level = peak / 255;
                                 var barHeight = Math.max(1, level * (height - bandTop));
                                 ctx.fillRect(
                                     b * barWidth,
