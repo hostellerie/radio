@@ -506,8 +506,8 @@ body.radio-djmode-active{
     inset:0;
     z-index:2147483000;
     display:grid;
-    grid-template-rows:auto minmax(120px,22vh) minmax(280px,1fr) auto auto;
-    gap:1rem;
+    grid-template-rows:auto minmax(120px,20vh) auto auto auto;
+    gap:1.25rem;
     padding:1rem 1.25rem 1.15rem;
     box-sizing:border-box;
     overflow:auto;
@@ -580,7 +580,8 @@ body.radio-djmode-active{
     display:grid;
     grid-template-columns:minmax(0,1fr) minmax(120px,160px);
     gap:1rem;
-    min-height:300px
+    min-height:330px;
+    padding-bottom:.75rem
 }
 .radio-studio__djmode-faders{
     display:grid;
@@ -616,7 +617,7 @@ body.radio-djmode-active{
 .radio-studio__djmode-fader input[type="range"]{
     width:58px;
     height:100%;
-    min-height:220px;
+    min-height:200px;
     margin:0;
     padding:0 12px;
     writing-mode:vertical-lr;
@@ -660,7 +661,10 @@ body.radio-djmode-active{
 .radio-studio__djmode-pads{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:1rem
+    gap:1rem;
+    margin-top:.5rem;
+    position:relative;
+    z-index:2
 }
 .radio-studio__djmode-pads button{
     min-height:92px;
@@ -769,5 +773,76 @@ body.radio-djmode-active{
     }
     .radio-studio__djmode-footer{
         grid-template-columns:1fr
+    }
+}
+
+
+/* Programme administration: responsive two-column layout. */
+.radio-programs-layout{
+    display:grid;
+    grid-template-columns:minmax(220px,30%) minmax(0,1fr);
+    gap:1.5rem;
+    align-items:start
+}
+.radio-programs-list,
+.radio-programs-editor{
+    min-width:0
+}
+.radio-programs-list ul{
+    margin:0;
+    padding-left:1.25rem
+}
+.radio-programs-list li,
+.radio-programs-list a{
+    overflow-wrap:anywhere
+}
+.radio-programs-form,
+.radio-programs-form label,
+.radio-programs-form fieldset{
+    min-width:0;
+    max-width:100%
+}
+.radio-programs-form input[type="text"],
+.radio-programs-form input[type="file"],
+.radio-programs-form textarea,
+.radio-programs-form select{
+    box-sizing:border-box;
+    max-width:100%
+}
+.radio-programs-form input[type="text"],
+.radio-programs-form textarea{
+    width:100%
+}
+.radio-programs-form fieldset{
+    overflow-x:auto
+}
+.radio-programs-form table{
+    max-width:100%
+}
+.radio-programs-cover{
+    display:block;
+    width:auto;
+    max-width:220px;
+    max-height:220px;
+    height:auto
+}
+@media(max-width:820px){
+    .radio-programs-layout{
+        grid-template-columns:1fr;
+        gap:1rem
+    }
+    .radio-programs-list{
+        padding-bottom:.75rem;
+        border-bottom:1px solid rgba(127,127,127,.18)
+    }
+}
+@media(max-width:560px){
+    .radio-programs-form input[type="file"],
+    .radio-programs-form select,
+    .radio-programs-form button{
+        max-width:100%
+    }
+    .radio-programs-cover{
+        max-width:100%
     }
 }
