@@ -801,21 +801,20 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($studioPage, 'data-radio-djmode-open') !== false
-        && strpos($studioPage, 'data-radio-djmode') !== false
-        && strpos($studioPage, 'data-radio-djmode-fx="low"') !== false
-        && strpos($studioPage, 'data-radio-djmode-fx="filter"') !== false
-        && strpos($studioPage, 'data-radio-djmode-pad="4"') !== false
-        && strpos($studioPage, 'data-radio-djfx-scope') !== false,
-    'Radio Studio must expose a fullscreen touch DJ performance surface with faders, pads and oscilloscope.'
+    strpos($studioPage, 'data-radio-studio-focus') !== false
+        && strpos($studioPage, 'data-radio-djfx-scope') !== false
+        && strpos($studioPage, 'data-radio-djmode') === false
+        && strpos($studioPage, 'data-radio-djmode-fx') === false,
+    'Radio Studio must use one complete interface with an optional dark focus theme and no duplicate DJ control tree.'
 );
 
 radio_contract_require(
-    strpos($studioJs, 'function setDjMode') !== false
-        && strpos($studioJs, "document.body.classList.toggle('radio-djmode-active'") !== false
-        && strpos($studioJs, 'function syncDjModeControl') !== false
-        && strpos($studioJs, "window.setInterval(updateDjModeStatus, 250)") !== false,
-    'Radio Studio DJ mode must reuse the live Studio state without reloading playback.'
+    strpos($studioJs, 'function setStudioFocus') !== false
+        && strpos($studioJs, "document.body.classList.toggle('radio-studio-focus-active'") !== false
+        && strpos($studioJs, "studio.classList.toggle('radio-studio--focus'") !== false
+        && strpos($studioJs, 'syncDjModeControl') === false
+        && strpos($studioJs, 'refreshDjModePads') === false,
+    'Radio Studio focus mode must only change presentation and must not synchronize duplicate controls.'
 );
 
 radio_contract_require(
@@ -834,10 +833,10 @@ radio_contract_require(
 );
 
 radio_contract_require(
-    strpos($studioJs, 'function refreshDjModePads') !== false
-        && strpos($studioJs, "dispatchDjFx('activate', 1)") !== false
-        && strpos($studioJs, "refreshDjModePads();") !== false,
-    'Radio DJ mode must activate the Web Audio analyser and restore pad assignments whenever fullscreen mode opens.'
+    strpos($studioJs, "dispatchDjFx('activate', 1)") !== false
+        && strpos($publicPlayer, "audio.addEventListener('play', function ()") !== false
+        && strpos($publicPlayer, "context.resume().catch(function () {})") !== false,
+    'Radio Studio must activate its shared analyser from playback or focus without a second player.'
 );
 
 
@@ -854,8 +853,8 @@ radio_contract_require(
 radio_contract_require(
     strpos($studioJs, 'function updateDjValue(range)') !== false
         && strpos($studioJs, 'if (!range || !djFx)') !== false
-        && strpos($studioJs, 'function syncDjModeControl') !== false,
-    'Radio Studio DJ mode value helper must be available outside the normal DJ FX block so fullscreen controls cannot fail with a ReferenceError.'
+        && strpos($studioJs, 'function syncDjModeControl') === false,
+    'Radio Studio must keep one DJ value helper and one set of FX controls.'
 );
 
 
