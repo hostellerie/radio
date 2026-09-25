@@ -1097,6 +1097,7 @@
                             samples[pad] = {
                                 audio: sampleAudio,
                                 source: null,
+                                gain: null,
                                 url: ''
                             };
                         }
@@ -1138,7 +1139,11 @@
                         if (!sample.source) {
                             try {
                                 sample.source = context.createMediaElementSource(sample.audio);
-                                sample.source.connect(master);
+                                sample.gain = context.createGain();
+                                // Pads should cut through the programme mix without sounding aggressively louder.
+                                sample.gain.gain.value = Math.pow(10, 4 / 20);
+                                sample.source.connect(sample.gain);
+                                sample.gain.connect(master);
                             } catch (error) {
                                 return;
                             }
