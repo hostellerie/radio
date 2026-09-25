@@ -935,14 +935,12 @@ radio_contract_require(
 
 
 radio_contract_require(
-    strpos($studioPage, 'data-radio-djfx-spring="pan"') !== false
-        && strpos($studioPage, 'data-radio-djfx-spring="filter"') === false
-        && strpos($studioJs, "var djSpringControls = djFx.querySelectorAll('[data-radio-djfx-spring]');") !== false
-        && strpos($studioJs, "spring.addEventListener('input', applySpring)") !== false
-        && strpos($studioJs, "dispatchDjFx(control, 0)") !== false
+    strpos($studioPage, 'data-radio-djfx="pan"') !== false
+        && strpos($studioPage, 'radio-studio__djfx-pan-center') !== false
+        && strpos($studioPage, 'data-radio-djfx-spring="pan"') === false
         && strpos($publicPlayer, 'context.createStereoPanner') !== false
         && strpos($publicPlayer, "control === 'pan'") !== false,
-    'Radio Studio must provide an independent spring-loaded true stereo pan control, separate from FILTER.'
+    'Radio Studio must provide a persistent true stereo pan control with a visible centered detent.'
 );
 
 
