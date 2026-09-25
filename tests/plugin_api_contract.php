@@ -934,3 +934,12 @@ radio_contract_require(
         && strpos($studioPage, 'data-radio-djfx-push="filter" data-radio-djfx-push-value="90"') !== false,
     'Radio Studio filter momentary controls must use a strong +/-90 sweep on the -100..100 filter scale.'
 );
+
+
+radio_contract_require(
+    strpos($uploadAdmin, "$batchMediaType = isset($_POST['media_type'])") !== false
+        && strpos($uploadAdmin, "'jingle'") !== false
+        && strpos($uploadAdmin, "$metadata['media_type'] = $batchMediaType;") !== false
+        && strpos($functions, "'music', 'podcast', 'interview', 'show', 'chronicle', 'jingle', 'announcement', 'promo'") !== false,
+    'Radio batch uploader must preserve a selected Jingle media type for every uploaded file.'
+);
