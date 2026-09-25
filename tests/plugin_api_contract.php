@@ -996,11 +996,13 @@ radio_contract_require(
     strpos($studioPage, 'radio-studio__djfx-filter-control') !== false
         && strpos($studioPage, 'radio-studio__djfx-pan-inline') !== false
         && strpos($studioPage, 'radio-studio__djfx-actions') !== false
-        && strpos($studioPage, 'data-radio-djfx-button="headroom"') !== false
-        && strpos($studioJs, "control === 'echo' || control === 'headroom'") !== false
+        && strpos($studioPage, 'data-radio-djfx="headroom"') !== false
+        && strpos($studioPage, 'min="-10" max="10"') !== false
+        && strpos($studioJs, "getAttribute('data-radio-djfx') === 'headroom'") !== false
         && strpos($publicPlayer, 'headroomGain = context.createGain();') !== false
-        && strpos($publicPlayer, 'Math.pow(10, -3 / 20)') !== false
+        && strpos($publicPlayer, 'Math.max(-10, Math.min(10') !== false
+        && strpos($publicPlayer, 'Math.pow(10, headroomDb / 20)') !== false
         && strpos($publicPlayer, 'masterLimiter = context.createDynamicsCompressor();') !== false
         && strpos($publicPlayer, 'masterLimiter.threshold.value = -1;') !== false,
-    'Radio Studio must group stereo pan under FILTER, stack compact FX actions, and provide selectable headroom with master limiting.'
+    'Radio Studio must group stereo pan under FILTER, stack Echo/Reset, and provide independent -10..+10 dB headroom with master limiting.'
 );
