@@ -69,9 +69,19 @@ if (isset($_POST['upload_media'])) {
                 $failures[] = basename($files[0]['name']) . ': ' . $LANG_RADIO[$key];
             }
         } else {
+            $batchMediaType = isset($_POST['media_type']) ? (string) $_POST['media_type'] : 'music';
+            $batchAllowedTypes = array(
+                'music', 'podcast', 'interview', 'show',
+                'chronicle', 'jingle', 'announcement', 'promo'
+            );
+            if (!in_array($batchMediaType, $batchAllowedTypes, true)) {
+                $batchMediaType = 'music';
+            }
+
             foreach ($files as $file) {
                 $error = '';
                 $metadata = $_POST;
+                $metadata['media_type'] = $batchMediaType;
                 $metadata['title'] = '';
                 $metadata['description'] = '';
                 $metadata['season_number'] = 0;
