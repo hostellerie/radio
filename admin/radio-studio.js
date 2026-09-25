@@ -118,6 +118,8 @@
         var value = parseFloat(range.value || '0') || 0;
         if (control === 'filter') {
             output.textContent = value > 0 ? '+' + value : String(value);
+        } else if (control === 'pan') {
+            output.textContent = value < 0 ? 'L' + Math.abs(value) : (value > 0 ? 'R' + value : 'C');
         } else {
             output.textContent = (value > 0 ? '+' : '') + value + ' dB';
         }
@@ -140,6 +142,20 @@
             (function (spring) {
                 var control = spring.getAttribute('data-radio-djfx-spring') || '';
                 var range = djFx.querySelector('[data-radio-djfx="' + control + '"]');
+                var springOutput = djFx.querySelector('[data-radio-djfx-value="' + control + '"]');
+
+                function updateSpringValue(value) {
+                    if (!springOutput) {
+                        return;
+                    }
+                    if (control === 'pan') {
+                        springOutput.textContent = value < 0
+                            ? 'L' + Math.abs(value)
+                            : (value > 0 ? 'R' + value : 'C');
+                    } else {
+                        springOutput.textContent = value > 0 ? '+' + value : String(value);
+                    }
+                }
 
                 function applySpring() {
                     var value = parseFloat(spring.value || '0') || 0;
@@ -147,6 +163,7 @@
                         range.value = String(value);
                         updateDjValue(range);
                     }
+                    updateSpringValue(value);
                     dispatchDjFx(control, value);
                 }
 
@@ -156,6 +173,7 @@
                         range.value = '0';
                         updateDjValue(range);
                     }
+                    updateSpringValue(0);
                     dispatchDjFx(control, 0);
                 }
 
