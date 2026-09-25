@@ -302,6 +302,7 @@ $LANG_RADIO = array(
     'studio_djfx_filter' => 'Filtre',
     'studio_djfx_pan' => 'Panoramique stéréo',
     'studio_djfx_echo' => 'Écho',
+    'studio_djfx_headroom' => 'Marge −3 dB',
     'studio_djfx_reset' => 'Reset',
     'studio_djfx_pad_empty' => 'Affecter un jingle…',
     'studio_djfx_pad_play' => 'Jouer',
