@@ -344,7 +344,7 @@
 }
 .radio-studio__djfx-controls{
     display:grid;
-    grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(104px,132px);
+    grid-template-columns:repeat(5,minmax(130px,1fr)) minmax(104px,132px);
     gap:1rem;
     align-items:stretch
 }
@@ -421,7 +421,7 @@
 }
 .radio-studio__djfx-actions{
     display:grid;
-    grid-template-rows:repeat(3,minmax(0,1fr));
+    grid-template-rows:repeat(2,minmax(0,1fr));
     gap:.55rem;
     min-width:104px
 }
@@ -537,9 +537,17 @@
     display:block;
     margin-top:.75rem
 }
-@media(max-width:1100px){
+@media(max-width:1200px){
     .radio-studio__djfx-controls{
-        grid-template-columns:repeat(2,minmax(150px,1fr)) minmax(104px,132px)
+        grid-template-columns:repeat(3,minmax(150px,1fr))
+    }
+    .radio-studio__djfx-actions{
+        grid-column:auto
+    }
+}
+@media(max-width:800px){
+    .radio-studio__djfx-controls{
+        grid-template-columns:repeat(2,minmax(140px,1fr))
     }
     .radio-studio__djfx-actions{
         grid-column:auto
@@ -662,7 +670,7 @@ body.radio-studio-focus-active{
     height:160px
 }
 .radio-program-preview.radio-studio--focus .radio-studio__djfx-controls{
-    grid-template-columns:repeat(4,minmax(110px,1fr)) minmax(108px,132px);
+    grid-template-columns:repeat(5,minmax(100px,1fr)) minmax(108px,132px);
     align-items:stretch;
     gap:1rem
 }
