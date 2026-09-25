@@ -132,8 +132,19 @@
         for (var djIndex = 0; djIndex < djRanges.length; djIndex++) {
             updateDjValue(djRanges[djIndex]);
             djRanges[djIndex].addEventListener('input', function () {
+                var control = this.getAttribute('data-radio-djfx') || '';
+                var value = parseFloat(this.value || '0') || 0;
+
+                if (control === 'pan') {
+                    var snap = parseFloat(this.getAttribute('data-radio-djfx-center-snap') || '0') || 0;
+                    if (snap > 0 && Math.abs(value) <= snap) {
+                        value = 0;
+                        this.value = '0';
+                    }
+                }
+
                 updateDjValue(this);
-                dispatchDjFx(this.getAttribute('data-radio-djfx') || '', parseFloat(this.value || '0') || 0);
+                dispatchDjFx(control, value);
             });
         }
 
