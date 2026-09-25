@@ -1126,6 +1126,7 @@
                                 audio: sampleAudio,
                                 source: null,
                                 gain: null,
+                                compressor: null,
                                 url: ''
                             };
                         }
@@ -1168,10 +1169,19 @@
                             try {
                                 sample.source = context.createMediaElementSource(sample.audio);
                                 sample.gain = context.createGain();
-                                // Pads are intentionally forward in the monitor mix.
-                                sample.gain.gain.value = Math.pow(10, 8 / 20);
+                                sample.compressor = context.createDynamicsCompressor();
+
+                                // Keep pads clearly in front without overdriving hot jingles.
+                                sample.gain.gain.value = Math.pow(10, 5 / 20);
+                                sample.compressor.threshold.value = -6;
+                                sample.compressor.knee.value = 3;
+                                sample.compressor.ratio.value = 8;
+                                sample.compressor.attack.value = 0.003;
+                                sample.compressor.release.value = 0.18;
+
                                 sample.source.connect(sample.gain);
-                                sample.gain.connect(master);
+                                sample.gain.connect(sample.compressor);
+                                sample.compressor.connect(master);
                             } catch (error) {
                                 return;
                             }
@@ -1186,7 +1196,7 @@
                             var nowTime = context.currentTime;
                             programmeGain.gain.cancelScheduledValues(nowTime);
                             programmeGain.gain.setValueAtTime(programmeGain.gain.value, nowTime);
-                            programmeGain.gain.linearRampToValueAtTime(Math.pow(10, -6 / 20), nowTime + 0.06);
+                            programmeGain.gain.linearRampToValueAtTime(Math.pow(10, -4 / 20), nowTime + 0.06);
                         }
 
                         sample.audio.onended = function () {
