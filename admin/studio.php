@@ -313,7 +313,7 @@ if ($canEdit) {
         . '<span aria-hidden="true">L</span>'
         . '<span class="radio-studio__djfx-pan-range">'
         . '<input type="range" min="-100" max="100" value="0" step="1"'
-        . ' data-radio-djfx="pan" aria-label="' . radio_studio_h($LANG_RADIO['studio_djfx_pan']) . '">'
+        . ' data-radio-djfx="pan" data-radio-djfx-center-snap="5" aria-label="' . radio_studio_h($LANG_RADIO['studio_djfx_pan']) . '">'
         . '<span class="radio-studio__djfx-pan-center" aria-hidden="true"></span>'
         . '</span>'
         . '<span aria-hidden="true">R</span>'
