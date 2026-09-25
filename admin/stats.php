@@ -12,6 +12,9 @@ if (!SEC_hasRights('radio.admin')) {
 
 global $LANG_RADIO, $_CONF;
 
+// Retention cleanup is administrative maintenance, not per-listener work.
+RADIO_purgeOldStats();
+
 $days = isset($_GET['days']) ? (int) $_GET['days'] : 30;
 if (!in_array($days, array(7, 30, 90), true)) {
     $days = 30;
