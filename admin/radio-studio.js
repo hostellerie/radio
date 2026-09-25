@@ -204,6 +204,10 @@
                 url: url,
                 label: label
             });
+
+            if (djMode && djMode.classList.contains('is-active')) {
+                refreshDjModePads();
+            }
         }
 
         var padSelects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
@@ -293,6 +297,44 @@
         }
     }
 
+    function refreshDjModePads() {
+        if (!djMode || !djFx) {
+            return;
+        }
+
+        var selects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
+        for (var i = 0; i < selects.length; i++) {
+            var select = selects[i];
+            var pad = parseInt(select.getAttribute('data-radio-djfx-pad-select') || '0', 10) || 0;
+            if (!pad) {
+                continue;
+            }
+
+            var option = select.options[select.selectedIndex] || null;
+            var mediaId = parseInt(select.value || '0', 10) || 0;
+            var url = option ? (option.getAttribute('data-stream-url') || '') : '';
+            var label = option ? (option.textContent || '') : '';
+
+            var modeLabel = djMode.querySelector('[data-radio-djmode-pad-label="' + pad + '"]');
+            var modeButton = djMode.querySelector('[data-radio-djmode-pad="' + pad + '"]');
+
+            if (modeLabel) {
+                modeLabel.textContent = mediaId && label ? label : 'PAD ' + pad;
+            }
+            if (modeButton) {
+                modeButton.disabled = !mediaId || !url;
+                modeButton.classList.toggle('is-assigned', !!mediaId && !!url);
+            }
+
+            dispatchDjFx('sample-assign', {
+                pad: pad,
+                media_id: mediaId,
+                url: url,
+                label: label
+            });
+        }
+    }
+
     function setDjMode(active) {
         if (!djMode) {
             return;
@@ -312,6 +354,8 @@
             djModeTimer = 0;
         }
         if (active) {
+            refreshDjModePads();
+            dispatchDjFx('activate', 1);
             updateDjModeStatus();
             djModeTimer = window.setInterval(updateDjModeStatus, 250);
         }
