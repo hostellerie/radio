@@ -1495,7 +1495,7 @@
                     }
 
                     var overlap = activeOverlap();
-                    if (overlap < 1) {
+                    if (overlap <= 0) {
                         return;
                     }
 
