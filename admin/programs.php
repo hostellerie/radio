@@ -64,8 +64,8 @@ $token = SEC_createToken();
 
 $content = '';
 
-$content .= '<div style="display:grid;grid-template-columns:minmax(220px,30%) 1fr;gap:1.5rem;align-items:start">';
-$content .= '<div><h2>' . htmlspecialchars($LANG_RADIO['program_list'], ENT_QUOTES, 'UTF-8') . '</h2>';
+$content .= '<div class="radio-programs-layout">';
+$content .= '<aside class="radio-programs-list"><h2>' . htmlspecialchars($LANG_RADIO['program_list'], ENT_QUOTES, 'UTF-8') . '</h2>';
 $content .= '<p><a href="?program_id=0">' . htmlspecialchars($LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</a></p>';
 if (count($programs) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['program_list_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
@@ -78,9 +78,9 @@ if (count($programs) === 0) {
     }
     $content .= '</ul>';
 }
-$content .= '</div>';
+$content .= '</aside>';
 
-$content .= '<div><h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_program'] : $LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</h2>'
+$content .= '<section class="radio-programs-editor"><h2>' . htmlspecialchars($selected ? $LANG_RADIO['edit_program'] : $LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</h2>'
     ;
 
 if ($selected) {
@@ -91,15 +91,15 @@ if ($selected) {
         . '</div>';
 }
 
-$content .= '<form method="post" enctype="multipart/form-data" action="">'
+$content .= '<form method="post" enctype="multipart/form-data" action="" class="radio-programs-form">'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['title'], ENT_QUOTES, 'UTF-8')
-    . '<br><input type="text" name="program_title" maxlength="255" required style="width:100%" value="'
+    . '<br><input type="text" name="program_title" maxlength="255" required value="'
     . htmlspecialchars($selected ? $selected['title'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
-    . ($selected && !empty($selected['cover_name']) ? '<p><img src="' . htmlspecialchars(RADIO_coverUrl('program',$selectedId), ENT_QUOTES, 'UTF-8') . '" alt="" style="max-width:220px;max-height:220px"></p>' : '')
-    . '<p><label>' . htmlspecialchars($LANG_RADIO['host'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="program_host" maxlength="255" style="width:100%" value="' . htmlspecialchars($selected ? $selected['host'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
+    . ($selected && !empty($selected['cover_name']) ? '<p><img class="radio-programs-cover" src="' . htmlspecialchars(RADIO_coverUrl('program',$selectedId), ENT_QUOTES, 'UTF-8') . '" alt=""></p>' : '')
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['host'], ENT_QUOTES, 'UTF-8') . '<br><input type="text" name="program_host" maxlength="255" value="' . htmlspecialchars($selected ? $selected['host'] : '', ENT_QUOTES, 'UTF-8') . '"></label></p>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['cover'], ENT_QUOTES, 'UTF-8') . '<br><input type="file" name="cover_file" accept=".jpg,.jpeg,.png,.webp,image/*"></label></p>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['description'], ENT_QUOTES, 'UTF-8')
-    . '<br><textarea name="program_description" rows="5" style="width:100%">'
+    . '<br><textarea name="program_description" rows="5">
     . htmlspecialchars($selected ? $selected['description'] : '', ENT_QUOTES, 'UTF-8') . '</textarea></label></p>'
     . '<p><label>' . htmlspecialchars($LANG_RADIO['status'], ENT_QUOTES, 'UTF-8')
     . ' <select name="program_status"><option value="draft"' . (!$selected || $selected['status'] === 'draft' ? ' selected' : '') . '>'
@@ -121,7 +121,7 @@ if ($selected) {
 }
 $content .= '</form>';
 
-$content .= '</div></div>';
+$content .= '</section></div>';
 $content = RADIO_adminRenderPage(
     'programs',
     $LANG_RADIO['programs'],
