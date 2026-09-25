@@ -297,6 +297,42 @@
         }
     } catch (error) {}
 
+    function bindStudioActionDelegation() {
+        document.addEventListener('click', function (event) {
+            var button = event.target;
+            while (button && button !== document
+                && !button.hasAttribute('data-radio-studio-action')
+                && !button.hasAttribute('data-radio-studio-add')) {
+                button = button.parentNode;
+            }
+
+            if (!button || button === document || button.disabled) {
+                return;
+            }
+
+            if (button.hasAttribute('data-radio-studio-action')) {
+                event.preventDefault();
+                var action = button.getAttribute('data-radio-studio-action') || '';
+                var itemId = parseInt(button.getAttribute('data-radio-studio-item-id') || '0', 10) || 0;
+                if (itemId && (action === 'move_up' || action === 'move_down' || action === 'remove')) {
+                    mutateItem(action, itemId);
+                }
+                return;
+            }
+
+            if (button.hasAttribute('data-radio-studio-add')) {
+                event.preventDefault();
+                var mediaId = parseInt(button.getAttribute('data-radio-studio-add') || '0', 10) || 0;
+                var position = button.getAttribute('data-radio-studio-position') || 'end';
+                if (mediaId) {
+                    addMedia(mediaId, position);
+                }
+            }
+        });
+    }
+
+    bindStudioActionDelegation();
+
     function interceptStudioInlineForms() {
         document.addEventListener('submit', function (event) {
             var form = event.target;
@@ -540,9 +576,8 @@
             up.title = studio.getAttribute('data-move-up-label') || 'Move up';
             up.setAttribute('aria-label', up.title);
             up.disabled = i === 0;
-            up.addEventListener('click', (function (id) {
-                return function () { mutateItem('move_up', id); };
-            }(itemId)));
+            up.setAttribute('data-radio-studio-action', 'move_up');
+            up.setAttribute('data-radio-studio-item-id', itemId);
             actions.appendChild(up);
 
             var down = document.createElement('button');
@@ -552,9 +587,8 @@
             down.title = studio.getAttribute('data-move-down-label') || 'Move down';
             down.setAttribute('aria-label', down.title);
             down.disabled = i === items.length - 1;
-            down.addEventListener('click', (function (id) {
-                return function () { mutateItem('move_down', id); };
-            }(itemId)));
+            down.setAttribute('data-radio-studio-action', 'move_down');
+            down.setAttribute('data-radio-studio-item-id', itemId);
             actions.appendChild(down);
 
             var remove = document.createElement('button');
@@ -563,9 +597,8 @@
             remove.textContent = '−';
             remove.title = studio.getAttribute('data-remove-label') || 'Remove';
             remove.setAttribute('aria-label', remove.title);
-            remove.addEventListener('click', (function (id) {
-                return function () { mutateItem('remove', id); };
-            }(itemId)));
+            remove.setAttribute('data-radio-studio-action', 'remove');
+            remove.setAttribute('data-radio-studio-item-id', itemId);
             actions.appendChild(remove);
 
             li.appendChild(actions);
@@ -625,9 +658,8 @@
                 next.type = 'button';
                 next.className = 'radio-admin__button';
                 next.textContent = studio.getAttribute('data-play-next-label') || 'Play next';
-                next.addEventListener('click', function () {
-                    addMedia(item.media_id, 'next');
-                });
+                next.setAttribute('data-radio-studio-add', item.media_id);
+                next.setAttribute('data-radio-studio-position', 'next');
                 actions.appendChild(next);
 
                 var end = document.createElement('button');
@@ -636,9 +668,8 @@
                 end.textContent = '+';
                 end.title = studio.getAttribute('data-add-end-label') || 'Add to end';
                 end.setAttribute('aria-label', end.title);
-                end.addEventListener('click', function () {
-                    addMedia(item.media_id, 'end');
-                });
+                end.setAttribute('data-radio-studio-add', item.media_id);
+                end.setAttribute('data-radio-studio-position', 'end');
                 actions.appendChild(end);
 
                 row.appendChild(info);
