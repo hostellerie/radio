@@ -423,6 +423,8 @@ $LANG_confignames['radio'] = array(
     'public_title' => 'Titre public',
     'default_replay_days' => 'Durée de replay par défaut (jours)',
     'allow_downloads' => 'Autoriser globalement les téléchargements ?',
+    'media_delivery_mode' => 'Livraison des médias locaux',
+    'x_accel_internal_prefix' => 'Préfixe interne média Nginx',
     'on_demand_enabled' => 'Activer l’écoute à la demande ?',
     'block_enabled' => 'Activer le bloc dynamique Radio ?',
     'block_isleft' => 'Afficher le bloc Radio à gauche ?',
@@ -447,5 +449,11 @@ $LANG_confignames['radio'] = array(
 $LANG_configselects['radio'] = array(
     0 => array('Activé' => 1, 'Désactivé' => 0),
     1 => array('Coupure nette' => 'hard', 'Sans blanc' => 'gapless', 'Crossfade intelligent' => 'crossfade'),
-    2 => array('Locale' => 'local', 'Médias partagés' => 'shared_media')
+    2 => array('Locale' => 'local', 'Médias partagés' => 'shared_media'),
+    3 => array(
+        'Automatique (détection sûre)' => 'auto',
+        'Secours PHP' => 'php',
+        'Apache / LiteSpeed X-Sendfile' => 'xsendfile',
+        'Nginx X-Accel-Redirect' => 'xaccel'
+    )
 );
