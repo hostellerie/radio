@@ -910,12 +910,14 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($publicPlayer, 'sample.gain = context.createGain();') !== false
-        && strpos($publicPlayer, 'Math.pow(10, 8 / 20)') !== false
+        && strpos($publicPlayer, 'Math.pow(10, 5 / 20)') !== false
+        && strpos($publicPlayer, 'sample.compressor = context.createDynamicsCompressor();') !== false
+        && strpos($publicPlayer, 'sample.compressor.threshold.value = -6;') !== false
         && strpos($publicPlayer, 'programmeGain = context.createGain();') !== false
-        && strpos($publicPlayer, 'Math.pow(10, -6 / 20)') !== false
+        && strpos($publicPlayer, 'Math.pow(10, -4 / 20)') !== false
         && strpos($publicPlayer, 'linearRampToValueAtTime(1, releaseTime + 0.28)') !== false
-        && strpos($publicPlayer, 'sample.gain.connect(master);') !== false,
-    'Radio Studio jingle pads must sit clearly above programme audio using dedicated gain and temporary ducking.'
+        && strpos($publicPlayer, 'sample.compressor.connect(master);') !== false,
+    'Radio Studio jingle pads must stay clearly above programme audio without clipping, using moderate gain, ducking and limiting.'
 );
 
 
