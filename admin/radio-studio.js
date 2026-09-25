@@ -38,20 +38,39 @@
         }
         detail = detail || {};
 
+        var currentRemaining = Math.max(0, parseFloat(detail.current_remaining || 0) || 0);
         var nextBuffered = Math.max(0, Math.round(parseFloat(detail.next_buffered || 0) || 0));
         var reserveBuffered = Math.max(0, Math.round(parseFloat(detail.reserve_buffered || 0) || 0));
         var nextDuration = Math.max(0, parseInt(detail.next_duration || 0, 10) || 0);
         var reserveDuration = Math.max(0, parseInt(detail.reserve_duration || 0, 10) || 0);
+        var currentLabel = studio.getAttribute('data-buffer-current-label') || 'Current';
+        var remainingLabel = studio.getAttribute('data-buffer-remaining-label') || 'remaining';
         var nextLabel = studio.getAttribute('data-buffer-next-label') || 'Next';
         var reserveLabel = studio.getAttribute('data-buffer-reserve-short-label') || 'Reserve';
         var loadingLabel = studio.getAttribute('data-buffer-loading-label') || 'Buffering';
 
-        if (!detail.next_title && !detail.reserve_title) {
+        if (!detail.current_title && !detail.next_title && !detail.reserve_title) {
             bufferStatus.textContent = loadingLabel;
             return;
         }
 
+        function compactTime(seconds) {
+            seconds = Math.max(0, Math.ceil(parseFloat(seconds || 0) || 0));
+            var minutes = Math.floor(seconds / 60);
+            var secs = seconds % 60;
+            return (minutes < 10 ? '0' : '') + minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
         var parts = [];
+        if (detail.current_title) {
+            var currentPart = currentLabel + ': '
+                + (detail.current_type ? detail.current_type + ' · ' : '')
+                + detail.current_title;
+            if (currentRemaining > 0) {
+                currentPart += ' · ' + compactTime(currentRemaining) + ' ' + remainingLabel;
+            }
+            parts.push(currentPart);
+        }
         if (detail.next_title) {
             var nextPart = nextLabel + ': '
                 + (detail.next_type ? detail.next_type + ' · ' : '')
