@@ -300,6 +300,7 @@ $LANG_RADIO = array(
     'studio_djfx_mid' => 'Mid',
     'studio_djfx_high' => 'High',
     'studio_djfx_filter' => 'Filter',
+    'studio_djfx_pan' => 'Stereo pan',
     'studio_djfx_echo' => 'Echo',
     'studio_djfx_reset' => 'Reset',
     'studio_djfx_pad_empty' => 'Assign a jingle…',
