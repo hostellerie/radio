@@ -824,3 +824,18 @@ radio_contract_require(
         && strpos($publicPlayer, "root.querySelector('[data-radio-djfx-scope]')") !== false,
     'Radio Studio DJ mode oscilloscope must be driven by the existing Web Audio graph.'
 );
+
+
+radio_contract_require(
+    strpos($programsPage, 'radio-programs-layout') !== false
+        && strpos($programsPage, 'radio-programs-editor') !== false
+        && strpos($programsPage, 'radio-programs-form') !== false,
+    'Radio programme administration must use responsive layout classes instead of a fixed inline grid.'
+);
+
+radio_contract_require(
+    strpos($studioJs, 'function refreshDjModePads') !== false
+        && strpos($studioJs, "dispatchDjFx('activate', 1)") !== false
+        && strpos($studioJs, "refreshDjModePads();") !== false,
+    'Radio DJ mode must activate the Web Audio analyser and restore pad assignments whenever fullscreen mode opens.'
+);
