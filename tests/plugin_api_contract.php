@@ -967,3 +967,12 @@ radio_contract_require(
         && strpos($studioJs, 'compactTime(currentRemaining)') !== false,
     'Radio Studio must show current-track remaining time and preserve fractional transition overlaps.'
 );
+
+
+radio_contract_require(
+    strpos($publicPlayer, 'var minHz = 40;') !== false
+        && strpos($publicPlayer, 'var maxHz = Math.min(18000, nyquist);') !== false
+        && strpos($publicPlayer, 'Math.exp(logMin + (logMax - logMin)') !== false
+        && strpos($publicPlayer, 'peak = Math.max(peak, scopeFreq[fi]);') !== false,
+    'Radio Studio spectrum must use a logarithmic audible-frequency scale so the full histogram width remains useful.'
+);
