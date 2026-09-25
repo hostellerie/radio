@@ -4211,7 +4211,8 @@ function RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
     if ($currentType === 'music' && $nextType === 'music') {
         $overlap = $seconds;
     } elseif ($currentType === 'jingle' && $nextType === 'music') {
-        $overlap = max(1, (int) round($seconds / 2));
+        // Keep the jingle intelligible, then let the music enter just before it ends.
+        $overlap = 0.5;
     } else {
         return 0;
     }
