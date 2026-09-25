@@ -893,6 +893,7 @@
                     var feedback = null;
                     var wet = null;
                     var programmeGain = null;
+                    var stereoPanner = null;
                     var master = null;
                     var analyser = null;
                     var scopeData = null;
@@ -955,6 +956,13 @@
                             programmeGain = context.createGain();
                             programmeGain.gain.value = 1;
 
+                            stereoPanner = typeof context.createStereoPanner === 'function'
+                                ? context.createStereoPanner()
+                                : null;
+                            if (stereoPanner) {
+                                stereoPanner.pan.value = 0;
+                            }
+
                             master = context.createGain();
                             master.gain.value = 1;
 
@@ -983,7 +991,12 @@
                             delay.connect(wet);
                             wet.connect(programmeGain);
 
-                            programmeGain.connect(master);
+                            if (stereoPanner) {
+                                programmeGain.connect(stereoPanner);
+                                stereoPanner.connect(master);
+                            } else {
+                                programmeGain.connect(master);
+                            }
 
                             master.connect(analyser);
                             analyser.connect(context.destination);
@@ -1224,6 +1237,9 @@
                         high.gain.value = 0;
                         wet.gain.value = 0;
                         setFilter(0);
+                        if (stereoPanner) {
+                            stereoPanner.pan.value = 0;
+                        }
                     }
 
                     audio.addEventListener('play', function () {
@@ -1253,6 +1269,10 @@
                                 high.gain.value = Math.max(-12, Math.min(12, value || 0));
                             } else if (control === 'filter') {
                                 setFilter(value);
+                            } else if (control === 'pan') {
+                                if (stereoPanner) {
+                                    stereoPanner.pan.value = Math.max(-1, Math.min(1, (parseFloat(value || 0) || 0) / 100));
+                                }
                             } else if (control === 'echo') {
                                 wet.gain.value = value ? 0.28 : 0;
                             } else if (control === 'reset') {
