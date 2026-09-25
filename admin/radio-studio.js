@@ -184,6 +184,13 @@
                 padButton.classList.toggle('is-assigned', !!mediaId && !!url);
             }
 
+            // Keep the sample engine fed from the single Studio pad assignment.
+            dispatchDjFx('sample-assign', {
+                pad: pad,
+                media_id: mediaId,
+                url: url,
+                label: label
+            });
         }
 
         var padSelects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
