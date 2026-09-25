@@ -1238,7 +1238,24 @@
                 function emitQueueBufferStatus() {
                     var nextItem = index + 1 < items.length ? items[index + 1] : null;
                     var reserveItem = index + 2 < items.length ? items[index + 2] : null;
+                    var currentItem = items[index] || null;
+                    var declaredCurrentDuration = currentItem
+                        ? (parseFloat(currentItem.duration || 0) || 0)
+                        : 0;
+                    var actualCurrentDuration = isFinite(audio.duration) && audio.duration > 0
+                        ? audio.duration
+                        : declaredCurrentDuration;
+                    var currentPosition = Math.max(0, parseFloat(audio.currentTime || 0) || 0);
+                    var currentRemaining = actualCurrentDuration > 0
+                        ? Math.max(0, actualCurrentDuration - currentPosition)
+                        : 0;
+
                     var detail = {
+                        current_title: currentItem ? (currentItem.title || '') : '',
+                        current_type: currentItem ? (currentItem.media_type_label || currentItem.media_type || '') : '',
+                        current_duration: actualCurrentDuration,
+                        current_position: currentPosition,
+                        current_remaining: currentRemaining,
                         next_buffered: queueBufferedAhead(queuePreload),
                         next_ready: queuePreload.readyState >= 3,
                         next_title: nextItem ? (nextItem.title || '') : '',
@@ -1428,7 +1445,7 @@
                     if (!items[index]) {
                         return 0;
                     }
-                    return Math.max(0, parseInt(items[index].transition_overlap || 0, 10) || 0);
+                    return Math.max(0, parseFloat(items[index].transition_overlap || 0) || 0);
                 }
 
                 function stopQueueFade() {
@@ -1640,6 +1657,7 @@
                         ? (toggle.getAttribute('data-play-label') || 'Play')
                         : (toggle.getAttribute('data-pause-label') || 'Pause');
                     updateActiveChapter();
+                    emitQueueBufferStatus();
                 }
 
                 function flush() {
