@@ -839,3 +839,13 @@ radio_contract_require(
         && strpos($studioJs, "refreshDjModePads();") !== false,
     'Radio DJ mode must activate the Web Audio analyser and restore pad assignments whenever fullscreen mode opens.'
 );
+
+
+radio_contract_require(
+    strpos($studioJs, 'function interceptStudioInlineForms') !== false
+        && strpos($studioJs, "form.classList.contains('radio-studio__inline-form')") !== false
+        && strpos($studioJs, "event.preventDefault()") !== false
+        && strpos($studioJs, "mutateItem(action, itemId)") !== false
+        && strpos($studioJs, "addMedia(mediaId, position)") !== false,
+    'Radio Studio must intercept server-rendered playlist forms and keep Play next, add, move and remove actions AJAX-only without a page reload.'
+);
