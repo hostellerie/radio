@@ -849,3 +849,11 @@ radio_contract_require(
         && strpos($studioJs, "addMedia(mediaId, position)") !== false,
     'Radio Studio must intercept server-rendered playlist forms and keep Play next, add, move and remove actions AJAX-only without a page reload.'
 );
+
+
+radio_contract_require(
+    strpos($studioJs, 'function updateDjValue(range)') !== false
+        && strpos($studioJs, 'if (!range || !djFx)') !== false
+        && strpos($studioJs, 'function syncDjModeControl') !== false,
+    'Radio Studio DJ mode value helper must be available outside the normal DJ FX block so fullscreen controls cannot fail with a ReferenceError.'
+);
