@@ -376,6 +376,28 @@
     margin:0;
     touch-action:pan-x
 }
+.radio-studio__djfx-pushes{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.5rem;
+    width:100%
+}
+.radio-studio__djfx-pushes button{
+    min-height:46px;
+    padding:.55rem .4rem;
+    border:1px solid rgba(127,127,127,.32);
+    border-radius:.4rem;
+    background:rgba(127,127,127,.06);
+    color:inherit;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+    touch-action:manipulation
+}
+.radio-studio__djfx-pushes button.is-active{
+    transform:translateY(1px);
+    box-shadow:inset 0 0 0 2px currentColor
+}
 .radio-studio__djfx-effect{
     min-width:84px;
     min-height:56px!important;
@@ -635,6 +657,16 @@ body.radio-studio-focus-active{
 .radio-program-preview.radio-studio--focus .radio-studio__djfx-effect.is-active{
     background:#35584f!important;
     border-color:#68dcc2!important
+}
+.radio-program-preview.radio-studio--focus .radio-studio__djfx-pushes button{
+    min-height:54px;
+    border-color:rgba(255,255,255,.2);
+    background:#1b212b;
+    color:#fff
+}
+.radio-program-preview.radio-studio--focus .radio-studio__djfx-pushes button.is-active{
+    background:#35584f;
+    border-color:#68dcc2
 }
 .radio-program-preview.radio-studio--focus .radio-studio__djfx-pad{
     border-color:rgba(255,255,255,.13);
