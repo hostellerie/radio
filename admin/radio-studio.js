@@ -92,23 +92,26 @@
         player.dispatchEvent(event);
     }
 
+    function updateDjValue(range) {
+        if (!range || !djFx) {
+            return;
+        }
+        var control = range.getAttribute('data-radio-djfx') || '';
+        var output = djFx.querySelector('[data-radio-djfx-value="' + control + '"]');
+        if (!output) {
+            return;
+        }
+        var value = parseFloat(range.value || '0') || 0;
+        if (control === 'filter') {
+            output.textContent = value > 0 ? '+' + value : String(value);
+        } else {
+            output.textContent = (value > 0 ? '+' : '') + value + ' dB';
+        }
+    }
+
     var djFx = studio.querySelector('[data-radio-studio-djfx]');
     if (djFx) {
         var djRanges = djFx.querySelectorAll('[data-radio-djfx]');
-
-        function updateDjValue(range) {
-            var control = range.getAttribute('data-radio-djfx') || '';
-            var output = djFx.querySelector('[data-radio-djfx-value="' + control + '"]');
-            if (!output) {
-                return;
-            }
-            var value = parseFloat(range.value || '0') || 0;
-            if (control === 'filter') {
-                output.textContent = value > 0 ? '+' + value : String(value);
-            } else {
-                output.textContent = (value > 0 ? '+' : '') + value + ' dB';
-            }
-        }
 
         for (var djIndex = 0; djIndex < djRanges.length; djIndex++) {
             updateDjValue(djRanges[djIndex]);
