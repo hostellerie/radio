@@ -888,3 +888,10 @@ radio_contract_require(
         && strpos($adminCss, 'background:#11161e!important') !== false,
     'Radio Studio dark focus mode must restyle the replay player surface instead of inheriting the light Eclipse surface.'
 );
+
+
+radio_contract_require(
+    strpos($studioJs, "dispatchDjFx('sample-assign'") !== false
+        && strpos($studioJs, "dispatchDjFx('sample-play', {pad: pad})") !== false,
+    'Radio Studio pads must assign their selected jingle to the Web Audio sample engine before playback.'
+);
