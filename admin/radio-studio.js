@@ -114,6 +114,37 @@
             });
         }
 
+        var djPushTimers = {};
+        var djPushButtons = djFx.querySelectorAll('[data-radio-djfx-push]');
+        for (var pushIndex = 0; pushIndex < djPushButtons.length; pushIndex++) {
+            djPushButtons[pushIndex].addEventListener('click', function () {
+                var control = this.getAttribute('data-radio-djfx-push') || '';
+                var value = parseFloat(this.getAttribute('data-radio-djfx-push-value') || '0') || 0;
+                var range = djFx.querySelector('[data-radio-djfx="' + control + '"]');
+                if (!control || !range) {
+                    return;
+                }
+
+                if (djPushTimers[control]) {
+                    window.clearTimeout(djPushTimers[control]);
+                }
+
+                range.value = String(value);
+                updateDjValue(range);
+                dispatchDjFx(control, value);
+                this.classList.add('is-active');
+
+                var button = this;
+                djPushTimers[control] = window.setTimeout(function () {
+                    range.value = '0';
+                    updateDjValue(range);
+                    dispatchDjFx(control, 0);
+                    button.classList.remove('is-active');
+                    djPushTimers[control] = 0;
+                }, 220);
+            });
+        }
+
         var djButtons = djFx.querySelectorAll('[data-radio-djfx-button]');
         for (var djButtonIndex = 0; djButtonIndex < djButtons.length; djButtonIndex++) {
             djButtons[djButtonIndex].addEventListener('click', function () {
