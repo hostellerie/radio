@@ -857,3 +857,21 @@ radio_contract_require(
         && strpos($studioJs, 'function syncDjModeControl') !== false,
     'Radio Studio DJ mode value helper must be available outside the normal DJ FX block so fullscreen controls cannot fail with a ReferenceError.'
 );
+
+
+radio_contract_require(
+    strpos($defaults, "'media_delivery_mode' => 'auto'") !== false
+        && strpos($defaults, "'x_accel_internal_prefix' => ''") !== false
+        && strpos($functions, 'function RADIO_mediaDeliveryMode') !== false
+        && strpos($functions, 'function RADIO_sendMediaViaWebServer') !== false
+        && strpos($functions, "header('X-Sendfile: ' . $path)") !== false
+        && strpos($functions, "header('X-Accel-Redirect: ' . $internal)") !== false
+        && strpos($functions, 'min(262144, $remaining)') !== false,
+    'Radio local media delivery must support safe web-server offload with a larger PHP fallback buffer.'
+);
+
+radio_contract_require(
+    strpos($functions, 'RADIO_purgeOldStats();') === false
+        && strpos(file_get_contents($root . '/admin/stats.php'), 'RADIO_purgeOldStats();') !== false,
+    'Radio statistics retention cleanup must not run on every listener event.'
+);
