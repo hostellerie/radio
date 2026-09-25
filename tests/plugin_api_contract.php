@@ -300,7 +300,8 @@ radio_contract_require(
         && strpos($studioApi, "if (\$studioAction === 'remove')") !== false
         && strpos($studioApi, "if (\$studioAction === 'move_up' || \$studioAction === 'move_down')") !== false
         && strpos($studioJs, "body.set('studio_action', 'add')") !== false
-        && strpos($studioJs, "mutateItem('remove'") !== false,
+        && strpos($studioJs, 'function bindStudioActionDelegation') !== false
+        && strpos($studioJs, "mutateItem(action, itemId)") !== false,
     'Radio Studio mutations must use live AJAX updates without reloading the playing Studio page.'
 );
 
