@@ -226,7 +226,7 @@
         for (var djButtonIndex = 0; djButtonIndex < djButtons.length; djButtonIndex++) {
             djButtons[djButtonIndex].addEventListener('click', function () {
                 var control = this.getAttribute('data-radio-djfx-button') || '';
-                if (control === 'echo' || control === 'headroom') {
+                if (control === 'echo') {
                     var active = this.getAttribute('aria-pressed') !== 'true';
                     this.setAttribute('aria-pressed', active ? 'true' : 'false');
                     this.classList.toggle('is-active', active);
@@ -236,13 +236,16 @@
 
                 if (control === 'reset') {
                     for (var resetIndex = 0; resetIndex < djRanges.length; resetIndex++) {
+                        if (djRanges[resetIndex].getAttribute('data-radio-djfx') === 'headroom') {
+                            continue;
+                        }
                         djRanges[resetIndex].value = '0';
                         updateDjValue(djRanges[resetIndex]);
                     }
-                    var toggleButtons = djFx.querySelectorAll('[data-radio-djfx-button="echo"], [data-radio-djfx-button="headroom"]');
-                    for (var toggleIndex = 0; toggleIndex < toggleButtons.length; toggleIndex++) {
-                        toggleButtons[toggleIndex].setAttribute('aria-pressed', 'false');
-                        toggleButtons[toggleIndex].classList.remove('is-active');
+                    var echoButton = djFx.querySelector('[data-radio-djfx-button="echo"]');
+                    if (echoButton) {
+                        echoButton.setAttribute('aria-pressed', 'false');
+                        echoButton.classList.remove('is-active');
                     }
 
                     var springControls = djFx.querySelectorAll('[data-radio-djfx-spring]');
