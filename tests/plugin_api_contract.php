@@ -913,3 +913,16 @@ radio_contract_require(
         && strpos($publicPlayer, 'sample.gain.connect(master);') !== false,
     'Radio Studio jingle pads must use a dedicated gain stage for clearer live playback.'
 );
+
+
+radio_contract_require(
+    strpos($studioPage, 'data-radio-studio-action="move_up"') !== false
+        && strpos($studioPage, 'data-radio-studio-action="move_down"') !== false
+        && strpos($studioPage, 'data-radio-studio-action="remove"') !== false
+        && strpos($studioPage, 'data-radio-studio-position="next"') !== false
+        && strpos($studioPage, 'data-radio-studio-position="end"') !== false
+        && strpos($studioJs, 'function bindStudioActionDelegation') !== false
+        && strpos($studioJs, "button.hasAttribute('data-radio-studio-action')") !== false
+        && strpos($studioJs, "button.hasAttribute('data-radio-studio-add')") !== false,
+    'Radio Studio queue and media actions must use one delegated click contract for server-rendered and dynamic controls.'
+);
