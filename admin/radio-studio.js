@@ -135,6 +135,44 @@
             });
         }
 
+        var djSpringControls = djFx.querySelectorAll('[data-radio-djfx-spring]');
+        for (var springIndex = 0; springIndex < djSpringControls.length; springIndex++) {
+            (function (spring) {
+                var control = spring.getAttribute('data-radio-djfx-spring') || '';
+                var range = djFx.querySelector('[data-radio-djfx="' + control + '"]');
+
+                function applySpring() {
+                    var value = parseFloat(spring.value || '0') || 0;
+                    if (range) {
+                        range.value = String(value);
+                        updateDjValue(range);
+                    }
+                    dispatchDjFx(control, value);
+                }
+
+                function releaseSpring() {
+                    spring.value = '0';
+                    if (range) {
+                        range.value = '0';
+                        updateDjValue(range);
+                    }
+                    dispatchDjFx(control, 0);
+                }
+
+                spring.addEventListener('input', applySpring);
+                spring.addEventListener('change', releaseSpring);
+                spring.addEventListener('pointerup', releaseSpring);
+                spring.addEventListener('pointercancel', releaseSpring);
+                spring.addEventListener('touchend', releaseSpring);
+                spring.addEventListener('keyup', function (event) {
+                    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+                        || event.key === 'Home' || event.key === 'End') {
+                        releaseSpring();
+                    }
+                });
+            }(djSpringControls[springIndex]));
+        }
+
         var djPushTimers = {};
         var djPushButtons = djFx.querySelectorAll('[data-radio-djfx-push]');
         for (var pushIndex = 0; pushIndex < djPushButtons.length; pushIndex++) {
