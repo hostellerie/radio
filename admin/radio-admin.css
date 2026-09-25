@@ -546,8 +546,24 @@ body.radio-studio-focus-active{
     color:#a7b0bd!important
 }
 .radio-program-preview.radio-studio--focus .radio-replay,
+.radio-program-preview.radio-studio--focus .radio-replay__player,
 .radio-program-preview.radio-studio--focus .radio-studio__queue-panel,
 .radio-program-preview.radio-studio--focus .radio-program-picker,
+
+.radio-program-preview.radio-studio--focus .radio-replay__player{
+    max-width:none;
+    background:#11161e!important;
+    border-color:rgba(255,255,255,.14)!important;
+    box-shadow:none!important
+}
+.radio-program-preview.radio-studio--focus .radio-replay__now,
+.radio-program-preview.radio-studio--focus .radio-replay__time{
+    color:#eef2f7!important
+}
+.radio-program-preview.radio-studio--focus .radio-replay__progress-label input[type="range"]{
+    accent-color:#67d9c0
+}
+
 .radio-program-preview.radio-studio--focus .radio-studio__djfx{
     border-color:rgba(255,255,255,.12)!important;
     background:rgba(255,255,255,.025)!important
