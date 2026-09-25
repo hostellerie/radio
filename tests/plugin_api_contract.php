@@ -927,3 +927,10 @@ radio_contract_require(
         && strpos($studioJs, "button.hasAttribute('data-radio-studio-add')") !== false,
     'Radio Studio queue and media actions must use one delegated click contract for server-rendered and dynamic controls.'
 );
+
+
+radio_contract_require(
+    strpos($studioPage, 'data-radio-djfx-push="filter" data-radio-djfx-push-value="-90"') !== false
+        && strpos($studioPage, 'data-radio-djfx-push="filter" data-radio-djfx-push-value="90"') !== false,
+    'Radio Studio filter momentary controls must use a strong +/-90 sweep on the -100..100 filter scale.'
+);
