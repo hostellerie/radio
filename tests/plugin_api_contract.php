@@ -881,3 +881,10 @@ radio_contract_require(
         && strpos($publicPlayer, "document.querySelector('[data-radio-djfx-scope]')") !== false,
     'Radio DJ oscilloscope must find its canvas outside the replay player subtree.'
 );
+
+
+radio_contract_require(
+    strpos($adminCss, '.radio-program-preview.radio-studio--focus .radio-replay__player') !== false
+        && strpos($adminCss, 'background:#11161e!important') !== false,
+    'Radio Studio dark focus mode must restyle the replay player surface instead of inheriting the light Eclipse surface.'
+);
