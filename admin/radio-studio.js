@@ -23,6 +23,8 @@
     var broadcastCurrentItemId = 0;
     var version = '';
     var pollTimer = 0;
+    var mutationInFlight = 0;
+    var stateRevision = 0;
 
     function setStatus(message) {
         if (status) {
@@ -716,6 +718,9 @@
     }
 
     function mutate(body, successLabel, retried) {
+        mutationInFlight++;
+        stateRevision++;
+
         if (tokenName && tokenValue) {
             body.set(tokenName, tokenValue);
         }
@@ -768,6 +773,7 @@
                 }
 
                 version = data.version || version;
+                stateRevision++;
                 renderQueue(data.items || []);
                 dispatchPlaylist(data.items || []);
                 setStatus(successLabel || '');
@@ -782,6 +788,11 @@
                 setStatus(detail && detail !== 'mutation_failed'
                     ? generic + ' (' + detail + ')'
                     : generic);
+            })
+            .then(function () {
+                mutationInFlight = Math.max(0, mutationInFlight - 1);
+            }, function () {
+                mutationInFlight = Math.max(0, mutationInFlight - 1);
             });
     }
 
@@ -811,6 +822,11 @@
     }
 
     function syncState() {
+        if (mutationInFlight > 0) {
+            return;
+        }
+
+        var requestRevision = stateRevision;
         fetch(studioUrl('state'), {
             credentials: 'same-origin',
             cache: 'no-store'
@@ -819,6 +835,10 @@
                 return response.json();
             })
             .then(function (data) {
+                // Ignore a state response that started before a playlist mutation.
+                if (requestRevision !== stateRevision || mutationInFlight > 0) {
+                    return;
+                }
                 updateToken(data);
                 if (!data.ok) {
                     return;
