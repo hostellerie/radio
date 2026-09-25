@@ -937,9 +937,9 @@ radio_contract_require(
 
 
 radio_contract_require(
-    strpos($uploadAdmin, "$batchMediaType = isset($_POST['media_type'])") !== false
+    strpos($uploadAdmin, '$batchMediaType = isset($_POST[\'media_type\'])') !== false
         && strpos($uploadAdmin, "'jingle'") !== false
-        && strpos($uploadAdmin, "$metadata['media_type'] = $batchMediaType;") !== false
+        && strpos($uploadAdmin, '$metadata[\'media_type\'] = $batchMediaType;') !== false
         && strpos($functions, "'music', 'podcast', 'interview', 'show', 'chronicle', 'jingle', 'announcement', 'promo'") !== false,
     'Radio batch uploader must preserve a selected Jingle media type for every uploaded file.'
 );
