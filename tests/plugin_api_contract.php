@@ -930,9 +930,11 @@ radio_contract_require(
 
 
 radio_contract_require(
-    strpos($studioPage, 'data-radio-djfx-push="filter" data-radio-djfx-push-value="-90"') !== false
-        && strpos($studioPage, 'data-radio-djfx-push="filter" data-radio-djfx-push-value="90"') !== false,
-    'Radio Studio filter momentary controls must use a strong +/-90 sweep on the -100..100 filter scale.'
+    strpos($studioPage, 'data-radio-djfx-spring="filter"') !== false
+        && strpos($studioJs, "var djSpringControls = djFx.querySelectorAll('[data-radio-djfx-spring]');") !== false
+        && strpos($studioJs, "spring.addEventListener('input', applySpring)") !== false
+        && strpos($studioJs, "dispatchDjFx(control, 0)") !== false,
+    'Radio Studio filter quick sweep must use a horizontal spring-loaded slider that returns to zero.'
 );
 
 
