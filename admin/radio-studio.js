@@ -226,11 +226,11 @@
         for (var djButtonIndex = 0; djButtonIndex < djButtons.length; djButtonIndex++) {
             djButtons[djButtonIndex].addEventListener('click', function () {
                 var control = this.getAttribute('data-radio-djfx-button') || '';
-                if (control === 'echo') {
+                if (control === 'echo' || control === 'headroom') {
                     var active = this.getAttribute('aria-pressed') !== 'true';
                     this.setAttribute('aria-pressed', active ? 'true' : 'false');
                     this.classList.toggle('is-active', active);
-                    dispatchDjFx('echo', active ? 1 : 0);
+                    dispatchDjFx(control, active ? 1 : 0);
                     return;
                 }
 
@@ -239,10 +239,19 @@
                         djRanges[resetIndex].value = '0';
                         updateDjValue(djRanges[resetIndex]);
                     }
-                    var echoButton = djFx.querySelector('[data-radio-djfx-button="echo"]');
-                    if (echoButton) {
-                        echoButton.setAttribute('aria-pressed', 'false');
-                        echoButton.classList.remove('is-active');
+                    var toggleButtons = djFx.querySelectorAll('[data-radio-djfx-button="echo"], [data-radio-djfx-button="headroom"]');
+                    for (var toggleIndex = 0; toggleIndex < toggleButtons.length; toggleIndex++) {
+                        toggleButtons[toggleIndex].setAttribute('aria-pressed', 'false');
+                        toggleButtons[toggleIndex].classList.remove('is-active');
+                    }
+
+                    var springControls = djFx.querySelectorAll('[data-radio-djfx-spring]');
+                    for (var springResetIndex = 0; springResetIndex < springControls.length; springResetIndex++) {
+                        springControls[springResetIndex].value = '0';
+                    }
+                    var panOutput = djFx.querySelector('[data-radio-djfx-value="pan"]');
+                    if (panOutput) {
+                        panOutput.textContent = 'C';
                     }
                 }
 
