@@ -192,10 +192,10 @@ radio_contract_require(
         && strpos($functions, 'function RADIO_transitionOverlap') !== false
         && strpos($functions, "\$currentType === 'music' && \$nextType === 'music'") !== false
         && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
-        && strpos($functions, "round(\$seconds / 2)") !== false
+        && strpos($functions, "\$overlap = 0.5;") !== false
         && strpos($nowEndpoint, "'next_media'") !== false
         && strpos($nowEndpoint, "'transition_seconds'") !== false,
-    'Radio must expose configurable gapless/crossfade transitions with full music-to-music overlap and shorter jingle-to-music overlap.'
+    'Radio must expose configurable music-to-music crossfade and a fixed half-second jingle-to-music overlap.'
 );
 
 $versionFile = file_get_contents($root . '/version.php');
@@ -951,4 +951,14 @@ radio_contract_require(
         && strpos($studioJs, 'if (mutationInFlight > 0)') !== false
         && strpos($studioJs, 'requestRevision !== stateRevision') !== false,
     'Radio Studio polling must ignore stale state responses while playlist mutations are in flight.'
+);
+
+
+radio_contract_require(
+    strpos($publicPlayer, 'current_remaining: currentRemaining') !== false
+        && strpos($publicPlayer, 'parseFloat(items[index].transition_overlap || 0)') !== false
+        && strpos($publicPlayer, 'if (overlap <= 0)') !== false
+        && strpos($studioJs, "data-buffer-current-label") !== false
+        && strpos($studioJs, 'compactTime(currentRemaining)') !== false,
+    'Radio Studio must show current-track remaining time and preserve fractional transition overlaps.'
 );
