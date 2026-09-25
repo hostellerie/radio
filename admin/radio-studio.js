@@ -69,14 +69,7 @@
     }
 
     player.addEventListener('radio:buffer-status', function (event) {
-        var detail = event && event.detail ? event.detail : {};
-        setBufferStatus(detail);
-        if (djModeNext) {
-            djModeNext.textContent = detail.next_title || '—';
-        }
-        if (djModeReserve) {
-            djModeReserve.textContent = detail.reserve_title || '—';
-        }
+        setBufferStatus(event && event.detail ? event.detail : {});
     });
 
 
@@ -191,26 +184,6 @@
                 padButton.classList.toggle('is-assigned', !!mediaId && !!url);
             }
 
-            var modePadLabel = djMode ? djMode.querySelector('[data-radio-djmode-pad-label="' + pad + '"]') : null;
-            var modePadButton = djMode ? djMode.querySelector('[data-radio-djmode-pad="' + pad + '"]') : null;
-            if (modePadLabel) {
-                modePadLabel.textContent = mediaId && label ? label : 'PAD ' + pad;
-            }
-            if (modePadButton) {
-                modePadButton.disabled = !mediaId || !url;
-                modePadButton.classList.toggle('is-assigned', !!mediaId && !!url);
-            }
-
-            dispatchDjFx('sample-assign', {
-                pad: pad,
-                media_id: mediaId,
-                url: url,
-                label: label
-            });
-
-            if (djMode && djMode.classList.contains('is-active')) {
-                refreshDjModePads();
-            }
         }
 
         var padSelects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
@@ -242,242 +215,49 @@
     }
 
 
-    var djMode = studio.querySelector('[data-radio-djmode]');
-    var djModeOpen = studio.querySelector('[data-radio-djmode-open]');
-    var djModeClose = studio.querySelector('[data-radio-djmode-close]');
-    var djModeNow = studio.querySelector('[data-radio-djmode-now]');
-    var djModeTime = studio.querySelector('[data-radio-djmode-time]');
-    var djModeNext = studio.querySelector('[data-radio-djmode-next]');
-    var djModeReserve = studio.querySelector('[data-radio-djmode-reserve]');
-    var djModeLive = studio.querySelector('[data-radio-djmode-live]');
-    var djModeTimer = 0;
-    var djModeStorageKey = 'radio.djmode.' + programId;
+    var focusButton = studio.querySelector('[data-radio-studio-focus]');
+    var focusStorageKey = 'radio.studio.focus.' + programId;
 
-    function djValueText(control, value) {
-        value = parseFloat(value || 0) || 0;
-        if (control === 'filter') {
-            return value > 0 ? '+' + value : String(value);
-        }
-        return (value > 0 ? '+' : '') + value + ' dB';
-    }
-
-    function syncDjModeControl(control, value, source) {
-        var normal = djFx ? djFx.querySelector('[data-radio-djfx="' + control + '"]') : null;
-        var mode = djMode ? djMode.querySelector('[data-radio-djmode-fx="' + control + '"]') : null;
-        var output = djMode ? djMode.querySelector('[data-radio-djmode-value="' + control + '"]') : null;
-
-        if (normal && source !== normal) {
-            normal.value = value;
-            updateDjValue(normal);
-        }
-        if (mode && source !== mode) {
-            mode.value = value;
-        }
-        if (output) {
-            output.textContent = djValueText(control, value);
-        }
-    }
-
-    function updateDjModeStatus() {
-        if (!djMode || djMode.getAttribute('aria-hidden') === 'true') {
-            return;
-        }
-
-        var nowEl = player.querySelector('[data-radio-replay-now]');
-        var currentEl = player.querySelector('[data-radio-replay-current]');
-        var totalEl = player.querySelector('[data-radio-replay-total]');
-
-        if (djModeNow && nowEl) {
-            djModeNow.textContent = nowEl.textContent || '';
-        }
-        if (djModeTime) {
-            djModeTime.textContent = (currentEl ? currentEl.textContent : '')
-                + (totalEl ? ' / ' + totalEl.textContent : '');
-        }
-        if (djModeLive) {
-            djModeLive.textContent = broadcastActive ? '● LIVE' : '';
-            djModeLive.classList.toggle('is-live', broadcastActive);
-        }
-    }
-
-    function refreshDjModePads() {
-        if (!djMode || !djFx) {
-            return;
-        }
-
-        var selects = djFx.querySelectorAll('[data-radio-djfx-pad-select]');
-        for (var i = 0; i < selects.length; i++) {
-            var select = selects[i];
-            var pad = parseInt(select.getAttribute('data-radio-djfx-pad-select') || '0', 10) || 0;
-            if (!pad) {
-                continue;
-            }
-
-            var option = select.options[select.selectedIndex] || null;
-            var mediaId = parseInt(select.value || '0', 10) || 0;
-            var url = option ? (option.getAttribute('data-stream-url') || '') : '';
-            var label = option ? (option.textContent || '') : '';
-
-            var modeLabel = djMode.querySelector('[data-radio-djmode-pad-label="' + pad + '"]');
-            var modeButton = djMode.querySelector('[data-radio-djmode-pad="' + pad + '"]');
-
-            if (modeLabel) {
-                modeLabel.textContent = mediaId && label ? label : 'PAD ' + pad;
-            }
-            if (modeButton) {
-                modeButton.disabled = !mediaId || !url;
-                modeButton.classList.toggle('is-assigned', !!mediaId && !!url);
-            }
-
-            dispatchDjFx('sample-assign', {
-                pad: pad,
-                media_id: mediaId,
-                url: url,
-                label: label
-            });
-        }
-    }
-
-    function setDjMode(active) {
-        if (!djMode) {
-            return;
-        }
+    function setStudioFocus(active) {
         active = !!active;
-        djMode.setAttribute('aria-hidden', active ? 'false' : 'true');
-        djMode.classList.toggle('is-active', active);
-        document.documentElement.classList.toggle('radio-djmode-active', active);
-        document.body.classList.toggle('radio-djmode-active', active);
+        document.documentElement.classList.toggle('radio-studio-focus-active', active);
+        document.body.classList.toggle('radio-studio-focus-active', active);
+        studio.classList.toggle('radio-studio--focus', active);
+
+        if (focusButton) {
+            focusButton.setAttribute('aria-pressed', active ? 'true' : 'false');
+            focusButton.textContent = active
+                ? (focusButton.getAttribute('data-focus-off-label') || 'Exit dark focus')
+                : (focusButton.getAttribute('data-focus-on-label') || 'Dark focus');
+        }
 
         try {
-            window.localStorage.setItem(djModeStorageKey, active ? '1' : '0');
+            window.localStorage.setItem(focusStorageKey, active ? '1' : '0');
         } catch (error) {}
 
-        if (djModeTimer) {
-            window.clearInterval(djModeTimer);
-            djModeTimer = 0;
-        }
         if (active) {
-            refreshDjModePads();
+            // The analyser shares the same Web Audio graph as the Studio player.
             dispatchDjFx('activate', 1);
-            updateDjModeStatus();
-            djModeTimer = window.setInterval(updateDjModeStatus, 250);
         }
     }
 
-    if (djModeOpen) {
-        djModeOpen.addEventListener('click', function () {
-            setDjMode(true);
+    if (focusButton) {
+        focusButton.addEventListener('click', function () {
+            setStudioFocus(!studio.classList.contains('radio-studio--focus'));
         });
     }
-    if (djModeClose) {
-        djModeClose.addEventListener('click', function () {
-            setDjMode(false);
-        });
-    }
+
     document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && djMode && djMode.classList.contains('is-active')) {
-            setDjMode(false);
+        if (event.key === 'Escape' && studio.classList.contains('radio-studio--focus')) {
+            setStudioFocus(false);
         }
     });
 
-    if (djMode) {
-        var djModeFaders = djMode.querySelectorAll('[data-radio-djmode-fx]');
-        for (var modeFaderIndex = 0; modeFaderIndex < djModeFaders.length; modeFaderIndex++) {
-            (function (fader) {
-                var control = fader.getAttribute('data-radio-djmode-fx') || '';
-                var normal = djFx ? djFx.querySelector('[data-radio-djfx="' + control + '"]') : null;
-                if (normal) {
-                    fader.value = normal.value;
-                }
-                syncDjModeControl(control, fader.value, fader);
-
-                fader.addEventListener('input', function () {
-                    var value = parseFloat(this.value || '0') || 0;
-                    syncDjModeControl(control, value, this);
-                    dispatchDjFx(control, value);
-                });
-
-                fader.addEventListener('dblclick', function () {
-                    this.value = '0';
-                    syncDjModeControl(control, 0, this);
-                    dispatchDjFx(control, 0);
-                });
-            }(djModeFaders[modeFaderIndex]));
+    try {
+        if (window.localStorage.getItem(focusStorageKey) === '1') {
+            setStudioFocus(true);
         }
-
-        var modeButtons = djMode.querySelectorAll('[data-radio-djmode-button]');
-        for (var modeButtonIndex = 0; modeButtonIndex < modeButtons.length; modeButtonIndex++) {
-            modeButtons[modeButtonIndex].addEventListener('click', function () {
-                var control = this.getAttribute('data-radio-djmode-button') || '';
-                if (control === 'echo') {
-                    var active = this.getAttribute('aria-pressed') !== 'true';
-                    this.setAttribute('aria-pressed', active ? 'true' : 'false');
-                    this.classList.toggle('is-active', active);
-
-                    var normalEcho = djFx ? djFx.querySelector('[data-radio-djfx-button="echo"]') : null;
-                    if (normalEcho) {
-                        normalEcho.setAttribute('aria-pressed', active ? 'true' : 'false');
-                        normalEcho.classList.toggle('is-active', active);
-                    }
-                    dispatchDjFx('echo', active ? 1 : 0);
-                    return;
-                }
-
-                if (control === 'reset') {
-                    for (var faderIndex = 0; faderIndex < djModeFaders.length; faderIndex++) {
-                        var fader = djModeFaders[faderIndex];
-                        var faderControl = fader.getAttribute('data-radio-djmode-fx') || '';
-                        fader.value = '0';
-                        syncDjModeControl(faderControl, 0, fader);
-                    }
-
-                    var modeEcho = djMode.querySelector('[data-radio-djmode-button="echo"]');
-                    if (modeEcho) {
-                        modeEcho.setAttribute('aria-pressed', 'false');
-                        modeEcho.classList.remove('is-active');
-                    }
-                    var regularEcho = djFx ? djFx.querySelector('[data-radio-djfx-button="echo"]') : null;
-                    if (regularEcho) {
-                        regularEcho.setAttribute('aria-pressed', 'false');
-                        regularEcho.classList.remove('is-active');
-                    }
-                    dispatchDjFx('reset', 1);
-                }
-            });
-        }
-
-        for (var savedPadNumber = 1; savedPadNumber <= 4; savedPadNumber++) {
-            var savedModePad = savedPads[savedPadNumber] || null;
-            var savedModeLabel = djMode.querySelector('[data-radio-djmode-pad-label="' + savedPadNumber + '"]');
-            var savedModeButton = djMode.querySelector('[data-radio-djmode-pad="' + savedPadNumber + '"]');
-            if (savedModeLabel) {
-                savedModeLabel.textContent = savedModePad && savedModePad.media_id && savedModePad.label
-                    ? savedModePad.label
-                    : 'PAD ' + savedPadNumber;
-            }
-            if (savedModeButton) {
-                var savedReady = !!(savedModePad && savedModePad.media_id && savedModePad.url);
-                savedModeButton.disabled = !savedReady;
-                savedModeButton.classList.toggle('is-assigned', savedReady);
-            }
-        }
-
-        var modePads = djMode.querySelectorAll('[data-radio-djmode-pad]');
-        for (var modePadIndex = 0; modePadIndex < modePads.length; modePadIndex++) {
-            modePads[modePadIndex].addEventListener('click', function () {
-                var pad = parseInt(this.getAttribute('data-radio-djmode-pad') || '0', 10) || 0;
-                if (pad && !this.disabled) {
-                    dispatchDjFx('sample-play', {pad: pad});
-                }
-            });
-        }
-
-        try {
-            if (window.localStorage.getItem(djModeStorageKey) === '1') {
-                setDjMode(true);
-            }
-        } catch (error) {}
-    }
+    } catch (error) {}
 
     function interceptStudioInlineForms() {
         document.addEventListener('submit', function (event) {
