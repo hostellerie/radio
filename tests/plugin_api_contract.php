@@ -875,3 +875,10 @@ radio_contract_require(
         && strpos(file_get_contents($root . '/admin/stats.php'), 'RADIO_purgeOldStats();') !== false,
     'Radio statistics retention cleanup must not run on every listener event.'
 );
+
+
+radio_contract_require(
+    strpos($publicPlayer, "root.closest('[data-radio-studio]')") !== false
+        && strpos($publicPlayer, "document.querySelector('[data-radio-djfx-scope]')") !== false,
+    'Radio DJ oscilloscope must find its canvas outside the replay player subtree.'
+);
