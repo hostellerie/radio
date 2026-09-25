@@ -935,11 +935,14 @@ radio_contract_require(
 
 
 radio_contract_require(
-    strpos($studioPage, 'data-radio-djfx-spring="filter"') !== false
+    strpos($studioPage, 'data-radio-djfx-spring="pan"') !== false
+        && strpos($studioPage, 'data-radio-djfx-spring="filter"') === false
         && strpos($studioJs, "var djSpringControls = djFx.querySelectorAll('[data-radio-djfx-spring]');") !== false
         && strpos($studioJs, "spring.addEventListener('input', applySpring)") !== false
-        && strpos($studioJs, "dispatchDjFx(control, 0)") !== false,
-    'Radio Studio filter quick sweep must use a horizontal spring-loaded slider that returns to zero.'
+        && strpos($studioJs, "dispatchDjFx(control, 0)") !== false
+        && strpos($publicPlayer, 'context.createStereoPanner') !== false
+        && strpos($publicPlayer, "control === 'pan'") !== false,
+    'Radio Studio must provide an independent spring-loaded true stereo pan control, separate from FILTER.'
 );
 
 
@@ -977,4 +980,13 @@ radio_contract_require(
         && strpos($publicPlayer, 'Math.exp(logMin + (logMax - logMin)') !== false
         && strpos($publicPlayer, 'peak = Math.max(peak, scopeFreq[fi]);') !== false,
     'Radio Studio spectrum must use a logarithmic audible-frequency scale so the full histogram width remains useful.'
+);
+
+
+radio_contract_require(
+    strpos($adminCss, '.radio-studio__djfx-pad-trigger{') !== false
+        && strpos($adminCss, 'max-width:100%') !== false
+        && strpos($adminCss, '.radio-studio__djfx-pad-trigger strong{') !== false
+        && strpos($adminCss, 'text-overflow:ellipsis') !== false,
+    'Radio Studio jingle pad labels must stay contained inside their pad cards.'
 );
