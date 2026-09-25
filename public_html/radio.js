@@ -999,7 +999,13 @@
                             return;
                         }
 
-                        var canvas = root.querySelector('[data-radio-djfx-scope]');
+                        var studioRoot = root.closest ? root.closest('[data-radio-studio]') : null;
+                        var canvas = studioRoot
+                            ? studioRoot.querySelector('[data-radio-djfx-scope]')
+                            : null;
+                        if (!canvas) {
+                            canvas = document.querySelector('[data-radio-djfx-scope]');
+                        }
                         if (!canvas || !canvas.getContext) {
                             return;
                         }
