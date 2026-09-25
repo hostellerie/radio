@@ -943,3 +943,12 @@ radio_contract_require(
         && strpos($functions, "'music', 'podcast', 'interview', 'show', 'chronicle', 'jingle', 'announcement', 'promo'") !== false,
     'Radio batch uploader must preserve a selected Jingle media type for every uploaded file.'
 );
+
+
+radio_contract_require(
+    strpos($studioJs, 'var mutationInFlight = 0;') !== false
+        && strpos($studioJs, 'var stateRevision = 0;') !== false
+        && strpos($studioJs, 'if (mutationInFlight > 0)') !== false
+        && strpos($studioJs, 'requestRevision !== stateRevision') !== false,
+    'Radio Studio polling must ignore stale state responses while playlist mutations are in flight.'
+);
