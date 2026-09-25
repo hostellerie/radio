@@ -1165,6 +1165,12 @@
                         setFilter(0);
                     }
 
+                    audio.addEventListener('play', function () {
+                        if (setup() && context && context.state === 'suspended') {
+                            context.resume().catch(function () {});
+                        }
+                    });
+
                     return {
                         apply: function (control, value) {
                             if (control === 'sample-assign') {
