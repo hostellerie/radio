@@ -476,6 +476,45 @@
         } catch (error) {}
     }
 
+    function interceptStudioInlineForms() {
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form || !form.classList || !form.classList.contains('radio-studio__inline-form')) {
+                return;
+            }
+
+            var actionInput = form.querySelector('input[name="studio_action"]');
+            if (!actionInput) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var action = actionInput.value || '';
+            var itemInput = form.querySelector('input[name="item_id"]');
+            var mediaInput = form.querySelector('input[name="media_id"]');
+            var positionInput = form.querySelector('input[name="position"]');
+
+            if (action === 'remove' || action === 'move_up' || action === 'move_down') {
+                var itemId = itemInput ? (parseInt(itemInput.value || '0', 10) || 0) : 0;
+                if (itemId) {
+                    mutateItem(action, itemId);
+                }
+                return;
+            }
+
+            if (action === 'add') {
+                var mediaId = mediaInput ? (parseInt(mediaInput.value || '0', 10) || 0) : 0;
+                var position = positionInput ? (positionInput.value || 'end') : 'end';
+                if (mediaId) {
+                    addMedia(mediaId, position);
+                }
+            }
+        });
+    }
+
+    interceptStudioInlineForms();
+
     function updateToken(data) {
         if (!data) {
             return;
