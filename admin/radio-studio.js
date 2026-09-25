@@ -215,9 +215,6 @@
     }
 
 
-    // One Studio, one audio graph: keep the oscilloscope available in both themes.
-    dispatchDjFx('activate', 1);
-
     var focusButton = studio.querySelector('[data-radio-studio-focus]');
     var focusStorageKey = 'radio.studio.focus.' + programId;
 
