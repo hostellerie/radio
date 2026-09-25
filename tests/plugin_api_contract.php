@@ -990,3 +990,17 @@ radio_contract_require(
         && strpos($adminCss, 'text-overflow:ellipsis') !== false,
     'Radio Studio jingle pad labels must stay contained inside their pad cards.'
 );
+
+
+radio_contract_require(
+    strpos($studioPage, 'radio-studio__djfx-filter-control') !== false
+        && strpos($studioPage, 'radio-studio__djfx-pan-inline') !== false
+        && strpos($studioPage, 'radio-studio__djfx-actions') !== false
+        && strpos($studioPage, 'data-radio-djfx-button="headroom"') !== false
+        && strpos($studioJs, "control === 'echo' || control === 'headroom'") !== false
+        && strpos($publicPlayer, 'headroomGain = context.createGain();') !== false
+        && strpos($publicPlayer, 'Math.pow(10, -3 / 20)') !== false
+        && strpos($publicPlayer, 'masterLimiter = context.createDynamicsCompressor();') !== false
+        && strpos($publicPlayer, 'masterLimiter.threshold.value = -1;') !== false,
+    'Radio Studio must group stereo pan under FILTER, stack compact FX actions, and provide selectable headroom with master limiting.'
+);
