@@ -4831,7 +4831,7 @@ function plugin_getcapabilities_radio()
 
 function plugin_getiteminfo_radio($id, $what, $uid = 0, $options = array())
 {
-    if (!RADIO_publicAccessAllowed()) {
+    if (!RADIO_isEnabled()) {
         return array();
     }
     global $_TABLES, $_CONF;
