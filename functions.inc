@@ -5535,6 +5535,10 @@ function plugin_whatsnewsupported_radio()
 {
     global $_RADIO_CONF, $LANG_RADIO, $LANG_WHATSNEW;
 
+    if (!RADIO_isEnabled()) {
+        return false;
+    }
+
     if (isset($_RADIO_CONF['whatsnew_enabled']) && empty($_RADIO_CONF['whatsnew_enabled'])) {
         return false;
     }
@@ -5552,7 +5556,7 @@ function plugin_whatsnewsupported_radio()
 
 function plugin_getwhatsnew_radio()
 {
-    if (!RADIO_publicAccessAllowed()) {
+    if (!RADIO_isEnabled()) {
         return '';
     }
     global $_RADIO_CONF, $LANG_RADIO;
