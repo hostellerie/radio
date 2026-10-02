@@ -978,12 +978,16 @@
 
     function statePollDelay() {
         if (document.hidden) {
-            return 30000;
+            return 120000;
         }
 
-        var base = broadcastActive ? 7000 : 12000;
-        var jitter = Math.floor(Math.random() * 3001) - 1500;
-        return Math.max(5000, base + jitter);
+        /*
+         * Audio continuity is entirely local to the Studio player.
+         * State polling is only a safety net for changes made elsewhere.
+         */
+        var base = broadcastActive ? 30000 : 60000;
+        var jitter = Math.floor(Math.random() * 10001) - 5000;
+        return Math.max(20000, base + jitter);
     }
 
     function scheduleStatePoll(delay) {
