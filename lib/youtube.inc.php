@@ -193,20 +193,25 @@ function RADIO_youtubeTarget($timestamp)
     }
 
     $allowed = array_flip($config['schedule_ids']);
-    $occurrences = RADIO_getOccurrences($timestamp, $timestamp + 1, true);
-    foreach ($occurrences as $occurrence) {
-        if (!isset($allowed[(int) $occurrence['schedule_id']])) {
+    $date = date('Y-m-d', $timestamp);
+    $schedules = RADIO_getSchedules(false);
+    foreach ($schedules as $schedule) {
+        $scheduleId = (int) $schedule['schedule_id'];
+        if (empty($schedule['enabled']) || !isset($allowed[$scheduleId])) {
             continue;
         }
-        if ($occurrence['program_status'] !== 'published') {
+        if ($schedule['program_status'] !== 'published') {
             continue;
         }
-        if ($occurrence['start'] <= $timestamp && $occurrence['end'] > $timestamp) {
+        $occurrence = RADIO_scheduleOccurrence($schedule, $date);
+        if ($occurrence !== false
+            && $occurrence['start'] <= $timestamp
+            && $occurrence['end'] > $timestamp) {
             return array(
-                'key' => 'schedule:' . (int) $occurrence['schedule_id'] . ':' . (int) $occurrence['start'],
+                'key' => 'schedule:' . $scheduleId . ':' . (int) $occurrence['start'],
                 'program_id' => (int) $occurrence['program_id'],
                 'program_title' => $occurrence['program_title'],
-                'schedule_id' => (int) $occurrence['schedule_id'],
+                'schedule_id' => $scheduleId,
                 'start' => (int) $occurrence['start'],
                 'end' => (int) $occurrence['end'],
                 'elapsed' => max(0, $timestamp - (int) $occurrence['start']),
@@ -224,7 +229,7 @@ function RADIO_youtubeProgramFiles($programId, &$error)
     $result = array();
 
     foreach ($items as $item) {
-        if (!RADIO_isBroadcastAvailable($item) || !RADIO_hasReadAccess($item)) {
+        if (!RADIO_isBroadcastAvailable($item)) {
             continue;
         }
         if (RADIO_sourceKind($item) !== 'local' || empty($item['storage_name'])) {
