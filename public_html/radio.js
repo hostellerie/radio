@@ -329,8 +329,11 @@
         }
 
         function bufferTarget(item, minimum, maximum) {
-            var duration = item ? (parseInt(item.duration || 0, 10) || 0) : 0;
-            var target = duration > 0 ? Math.max(minimum, duration * 0.12) : minimum;
+            var duration = item ? (parseFloat(item.duration || 0) || 0) : 0;
+            if (duration > 0 && duration <= maximum) {
+                return duration;
+            }
+            var target = duration > 0 ? Math.max(minimum, duration * 0.20) : minimum;
             return Math.min(maximum, target);
         }
 
@@ -368,7 +371,7 @@
                 return;
             }
 
-            var target = bufferTarget(nextMedia, 3, 12);
+            var target = bufferTarget(nextMedia, 8, 30);
             if (standby.readyState < 3 && bufferedAhead(standby) < target) {
                 return;
             }
@@ -389,12 +392,12 @@
 
         function prepare(data) {
             mode = data && data.transition_mode ? data.transition_mode : 'hard';
-            seconds = data ? (parseInt(data.transition_seconds || 0, 10) || 0) : 0;
+            seconds = data ? (parseFloat(data.transition_seconds || 0) || 0) : 0;
             slotDuration = data && data.current_media
-                ? (parseInt(data.current_media.slot_duration || data.current_media.duration || 0, 10) || 0)
+                ? (parseFloat(data.current_media.slot_duration || data.current_media.duration || 0) || 0)
                 : 0;
             currentDuration = data && data.current_media
-                ? (parseInt(data.current_media.duration || 0, 10) || 0)
+                ? (parseFloat(data.current_media.duration || 0) || 0)
                 : 0;
             nextMedia = data && data.next_media ? data.next_media : null;
             nextNextMedia = data && data.next_next_media ? data.next_next_media : null;
