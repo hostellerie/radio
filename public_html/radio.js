@@ -1672,6 +1672,14 @@
                     if (!items[index]) {
                         return 0;
                     }
+
+                    var next = index + 1 < items.length ? items[index + 1] : null;
+                    if (next
+                        && String(items[index].media_type || '') === 'jingle'
+                        && String(next.media_type || '') === 'music') {
+                        return 0.7;
+                    }
+
                     return Math.max(0, parseFloat(items[index].transition_overlap || 0) || 0);
                 }
 
@@ -1762,12 +1770,26 @@
                                 return;
                             }
                             var progressValue = Math.min(1, (nowTime - startedAt) / (overlap * 1000));
-                            audio.volume = 1 - progressValue;
+                            var jingleIntoMusic = String(items[index].media_type || '') === 'jingle'
+                                && items[index + 1]
+                                && String(items[index + 1].media_type || '') === 'music';
+                            audio.volume = jingleIntoMusic ? 1 : (1 - progressValue);
                             queuePreload.volume = progressValue;
 
                             if (progressValue < 1) {
                                 queueFadeFrame = window.requestAnimationFrame(fade);
                                 return;
+                            }
+
+                            if (jingleIntoMusic) {
+                                var declaredCurrent = parseFloat(items[index].duration || 0) || 0;
+                                var actualCurrent = isFinite(audio.duration) && audio.duration > 0
+                                    ? audio.duration
+                                    : declaredCurrent;
+                                if (actualCurrent > 0 && audio.currentTime < Math.max(0, actualCurrent - 0.05)) {
+                                    queueFadeFrame = window.requestAnimationFrame(fade);
+                                    return;
+                                }
                             }
 
                             var nextIndex = index + 1;
