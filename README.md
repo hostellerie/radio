@@ -88,3 +88,10 @@ When server offload is enabled, PHP performs authentication/authorization and im
 hands the file transfer to Apache/Nginx instead of staying busy for the complete audio
 request. The PHP fallback uses larger chunks, and statistics retention cleanup is no
 longer run for every listener event.
+
+
+## YouTube Live beta
+
+Radio can send selected scheduled programmes to YouTube Live through an optional server-side FFmpeg worker while leaving the current Studio, web players and Automatic Radio behaviour unchanged.
+
+The first beta supports manual tests and selected existing Radio schedule entries, with local programme media only. See `docs/YOUTUBE-LIVE.md` for server requirements, configuration and the worker/cron command.
