@@ -32,8 +32,6 @@ jobs:
           import shutil
           import subprocess
           import time
-          import urllib.error
-          import urllib.request
           from pathlib import Path
 
           src_path = Path("language/english.php")
@@ -105,33 +103,42 @@ jobs:
                       {"role": "user", "content": json.dumps(source_map, ensure_ascii=False)}
                   ]
               }
-              data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-              req = urllib.request.Request(
-                  "https://models.github.ai/inference/chat/completions",
-                  data=data,
-                  headers={
-                      "Content-Type": "application/json",
-                      "Authorization": "Bearer " + os.environ["GITHUB_TOKEN"],
-                  },
-                  method="POST",
-              )
+              payload_text = json.dumps(payload, ensure_ascii=False)
               last = None
               for attempt in range(8):
+                  proc = subprocess.run(
+                      [
+                          "curl", "-sS", "--max-time", "90",
+                          "-H", "Content-Type: application/json",
+                          "-H", "Authorization: Bearer " + os.environ["GITHUB_TOKEN"],
+                          "--data-binary", "@-",
+                          "https://models.github.ai/inference/chat/completions",
+                      ],
+                      input=payload_text,
+                      text=True,
+                      capture_output=True,
+                  )
                   try:
-                      with urllib.request.urlopen(req, timeout=90) as response:
-                          body = json.loads(response.read().decode("utf-8"))
+                      if proc.returncode != 0:
+                          raise RuntimeError(f"curl exit={proc.returncode}: {proc.stderr[:500]}")
+                      if not proc.stdout.strip():
+                          raise RuntimeError("empty GitHub Models response")
+                      body = json.loads(proc.stdout)
+                      if "error" in body:
+                          raise RuntimeError("GitHub Models API error: " + json.dumps(body["error"]))
                       content = body["choices"][0]["message"]["content"]
                       result = json.loads(content)
                       if not isinstance(result, dict):
                           raise RuntimeError("model response is not a JSON object")
                       return result
-                  except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError, RuntimeError) as exc:
+                  except (KeyError, json.JSONDecodeError, RuntimeError) as exc:
                       last = exc
-                      if isinstance(exc, urllib.error.HTTPError) and exc.code not in (408, 429, 500, 502, 503, 504):
-                          raise
                       if attempt == 7:
-                          raise RuntimeError(f"GitHub Models request failed for {locale}: {last}")
-                      time.sleep(10 + attempt * 10)
+                          sample = proc.stdout[:1000] if proc.stdout else ""
+                          raise RuntimeError(
+                              f"GitHub Models request failed for {locale}: {last}; response={sample!r}"
+                          )
+                      time.sleep(8 + attempt * 8)
 
           def translate_locale(locale):
               ordered_ids = list(ids.keys())
