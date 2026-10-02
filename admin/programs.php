@@ -14,6 +14,47 @@ global $LANG_RADIO, $_CONF;
 $message = '';
 $selectedId = isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0;
 
+if (isset($_POST['generate_program'])) {
+    if (!SEC_checkToken()) {
+        $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
+    } else {
+        $targetMinutes = isset($_POST['generated_duration']) ? (int) $_POST['generated_duration'] : 60;
+        if (!in_array($targetMinutes, array(30, 60, 120), true)) {
+            $targetMinutes = 60;
+        }
+
+        $durationLabel = $targetMinutes === 120
+            ? $LANG_RADIO['generated_program_2_hours']
+            : ($targetMinutes === 60
+                ? $LANG_RADIO['generated_program_1_hour']
+                : $LANG_RADIO['generated_program_30_minutes']);
+
+        $generatedTitle = sprintf(
+            $LANG_RADIO['generated_program_title'],
+            $durationLabel,
+            date('Y-m-d H:i')
+        );
+        $generated = RADIO_createAutomaticProgram($targetMinutes * 60, $generatedTitle);
+
+        if ($generated !== false) {
+            $selectedId = (int) $generated['program_id'];
+            $message = COM_showMessageText(
+                sprintf(
+                    $LANG_RADIO['generated_program_created'],
+                    (int) $generated['items'],
+                    gmdate('H:i:s', (int) $generated['duration'])
+                ),
+                $LANG_RADIO['programs']
+            );
+        } else {
+            $message = COM_showMessageText(
+                $LANG_RADIO['generated_program_failed'],
+                $LANG_RADIO['programs']
+            );
+        }
+    }
+}
+
 if (isset($_POST['save_program'])) {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['admin_title']);
@@ -52,6 +93,8 @@ if (isset($_POST['delete_program'])) {
     }
 }
 
+$token = SEC_createToken();
+
 $programs = array_values(array_filter(RADIO_getPrograms(100, false), function ($row) {
     return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
 }));
@@ -60,13 +103,24 @@ if ($selected !== false && !RADIO_hasReadAccess($selected) && !RADIO_hasEditAcce
     $selected = false;
     $selectedId = 0;
 }
-$token = SEC_createToken();
-
 $content = '';
 
 $content .= '<div class="radio-programs-layout">';
 $content .= '<aside class="radio-programs-list"><h2>' . htmlspecialchars($LANG_RADIO['program_list'], ENT_QUOTES, 'UTF-8') . '</h2>';
 $content .= '<p><a href="?program_id=0">' . htmlspecialchars($LANG_RADIO['new_program'], ENT_QUOTES, 'UTF-8') . '</a></p>';
+$content .= '<form method="post" action="" class="radio-programs-generator">'
+    . '<p><strong>' . htmlspecialchars($LANG_RADIO['generated_program_heading'], ENT_QUOTES, 'UTF-8') . '</strong><br>'
+    . '<small>' . htmlspecialchars($LANG_RADIO['generated_program_help'], ENT_QUOTES, 'UTF-8') . '</small></p>'
+    . '<p><label>' . htmlspecialchars($LANG_RADIO['generated_program_duration'], ENT_QUOTES, 'UTF-8') . ' '
+    . '<select name="generated_duration">'
+    . '<option value="30">' . htmlspecialchars($LANG_RADIO['generated_program_30_minutes'], ENT_QUOTES, 'UTF-8') . '</option>'
+    . '<option value="60" selected>' . htmlspecialchars($LANG_RADIO['generated_program_1_hour'], ENT_QUOTES, 'UTF-8') . '</option>'
+    . '<option value="120">' . htmlspecialchars($LANG_RADIO['generated_program_2_hours'], ENT_QUOTES, 'UTF-8') . '</option>'
+    . '</select></label></p>'
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">'
+    . '<button type="submit" class="radio-admin__button radio-admin__button--primary" name="generate_program" value="1">'
+    . htmlspecialchars($LANG_RADIO['generated_program_button'], ENT_QUOTES, 'UTF-8') . '</button>'
+    . '</form>';
 if (count($programs) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['program_list_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
 } else {
