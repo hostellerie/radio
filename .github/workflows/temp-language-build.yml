@@ -94,7 +94,7 @@ jobs:
               for item in unique:
                   p, ph = protect(item)
                   added = len(p) + len(separator)
-                  if current and current_len + added > 3200:
+                  if current and current_len + added > 800:
                       chunks.append(current)
                       current = []
                       current_len = 0
@@ -124,7 +124,7 @@ jobs:
                           time.sleep(5 * (attempt + 1))
                   for (original, _p, ph), translated in zip(chunk, parts):
                       out[original] = restore(translated.strip(), ph)
-                  time.sleep(1.0)
+                  time.sleep(0.6)
               return out
 
           def render(mapping):
