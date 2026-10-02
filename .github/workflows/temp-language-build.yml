@@ -86,7 +86,7 @@ jobs:
 
           def translate_strings(lang):
               out = {}
-              separator = "\nZZZSEPARATORZZZ\n"
+              separator = "\ue000\ue001\ue002"
 
               chunks = []
               current = []
@@ -114,7 +114,7 @@ jobs:
                               to_language=lang,
                               timeout=30,
                           )
-                          parts = re.split(r"\\s*ZZZSEPARATORZZZ\\s*", result)
+                          parts = result.split(separator)
                           if len(parts) != len(chunk):
                               raise RuntimeError(f"separator mismatch: {len(parts)} != {len(chunk)}")
                           break
