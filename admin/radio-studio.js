@@ -25,6 +25,8 @@
     var pollTimer = 0;
     var mutationInFlight = 0;
     var stateRevision = 0;
+    var stateRequestInFlight = false;
+    var stateNextAllowedAt = 0;
 
     function setStatus(message) {
         if (status) {
@@ -920,19 +922,26 @@
     }
 
     function syncState() {
-        if (mutationInFlight > 0) {
+        if (mutationInFlight > 0 || stateRequestInFlight || Date.now() < stateNextAllowedAt) {
             return;
         }
 
+        stateRequestInFlight = true;
         var requestRevision = stateRevision;
         fetch(studioUrl('state'), {
             credentials: 'same-origin',
             cache: 'no-store'
         })
             .then(function (response) {
+                if (!response.ok) {
+                    stateNextAllowedAt = Date.now() + 15000;
+                    throw new Error('HTTP ' + response.status);
+                }
                 return response.json();
             })
             .then(function (data) {
+                stateNextAllowedAt = 0;
+
                 // Ignore a state response that started before a playlist mutation.
                 if (requestRevision !== stateRevision || mutationInFlight > 0) {
                     return;
@@ -955,7 +964,14 @@
                     renderQueue(data.items || []);
                 }
             })
-            .catch(function () {});
+            .catch(function () {
+                if (stateNextAllowedAt === 0) {
+                    stateNextAllowedAt = Date.now() + 10000;
+                }
+            })
+            .then(function () {
+                stateRequestInFlight = false;
+            });
     }
 
     if (broadcastButton) {
