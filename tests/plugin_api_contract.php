@@ -371,6 +371,15 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'queuePreload.currentTime = 0;') !== false
+        && strpos($publicPlayer, "String(items[index].media_type || '') === 'jingle'") !== false
+        && strpos($publicPlayer, "String(next.media_type || '') === 'music'") !== false
+        && strpos($publicPlayer, 'return 0.7;') !== false
+        && strpos($publicPlayer, 'audio.volume = jingleIntoMusic ? 1 : (1 - progressValue);') !== false,
+    'Radio Studio must restart fallback-preloaded items at zero and blend music under a complete jingle.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function promoteQueuePreload') !== false
         && strpos($publicPlayer, 'queuePreload.readyState < 2') !== false
         && strpos($publicPlayer, 'if (promoteQueuePreload(followingIndex))') !== false,
