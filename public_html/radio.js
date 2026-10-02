@@ -123,6 +123,15 @@
                         total = 0;
                     }
                 });
+                if (items[index]) {
+                    var initialDuration = parseFloat(items[index].duration || 0) || 0;
+                    var initialType = String(items[index].media_type || '');
+                    if (initialType === 'jingle' || (initialDuration > 0 && initialDuration <= 45)) {
+                        audio.preload = 'auto';
+                        audio.load();
+                    }
+                }
+
                 window.addEventListener('pagehide', function () {
                     flush();
                     if (total > 0) {
@@ -1367,6 +1376,9 @@
                     });
 
                     return {
+                        prepare: function () {
+                            return setup();
+                        },
                         apply: function (control, value) {
                             if (control === 'sample-assign') {
                                 assignSample(value);
@@ -2116,6 +2128,14 @@
 
                 toggle.addEventListener('click', function () {
                     if (audio.paused) {
+                        /*
+                         * Build/resume the Studio Web Audio graph while the user
+                         * gesture is still active, before playback starts. Doing
+                         * this from the first 'play' event can reroute an already
+                         * audible element and cause a one-off startup dropout.
+                         */
+                        studioFx.prepare();
+
                         if (audio.ended || !itemPlayable(index)) {
                             var startIndex = audio.ended ? 0 : index;
                             var playableIndex = nextPlayableIndex(startIndex);
