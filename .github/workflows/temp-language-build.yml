@@ -87,27 +87,40 @@ jobs:
           def translate_strings(lang):
               tr = GoogleTranslator(source="en", target=lang)
               out = {}
-              batch_size = 35
-              for start in range(0, len(unique), batch_size):
-                  chunk = unique[start:start+batch_size]
-                  protected, phs = [], []
-                  for s in chunk:
-                      p, ph = protect(s)
-                      protected.append(p)
-                      phs.append(ph)
-                  # Retry transient failures.
-                  for attempt in range(5):
+              separator = "\nZZZSEPARATORZZZ\n"
+
+              # Build large chunks below Google's per-request text limit.
+              chunks = []
+              current = []
+              current_len = 0
+              for item in unique:
+                  p, ph = protect(item)
+                  added = len(p) + len(separator)
+                  if current and current_len + added > 4200:
+                      chunks.append(current)
+                      current = []
+                      current_len = 0
+                  current.append((item, p, ph))
+                  current_len += added
+              if current:
+                  chunks.append(current)
+
+              for chunk in chunks:
+                  joined = separator.join(x[1] for x in chunk)
+                  for attempt in range(6):
                       try:
-                          translated = tr.translate_batch(protected)
-                          if translated and len(translated) == len(protected):
-                              break
+                          result = tr.translate(joined)
+                          parts = re.split(r"\\s*ZZZSEPARATORZZZ\\s*", result)
+                          if len(parts) != len(chunk):
+                              raise RuntimeError(f"separator mismatch: {len(parts)} != {len(chunk)}")
+                          break
                       except Exception:
-                          if attempt == 4:
+                          if attempt == 5:
                               raise
-                          time.sleep(3 * (attempt + 1))
-                  for original, t, ph in zip(chunk, translated, phs):
-                      out[original] = restore(t, ph)
-                  time.sleep(0.4)
+                          time.sleep(5 * (attempt + 1))
+                  for (original, _p, ph), translated in zip(chunk, parts):
+                      out[original] = restore(translated.strip(), ph)
+                  time.sleep(1.2)
               return out
 
           def render(mapping):
