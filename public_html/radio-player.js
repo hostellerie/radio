@@ -568,7 +568,7 @@
             }
 
             var streamUrl = data.current_media.stream_url || '';
-            var offset = parseInt(data.current_media.offset || 0, 10) || 0;
+            var offset = parseFloat(data.current_media.offset || 0) || 0;
             if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
                 offset = 0;
             }
@@ -594,6 +594,20 @@
             }
 
             var changed = mediaId !== nextMediaId || audio.getAttribute('src') !== streamUrl;
+
+            /*
+             * Once continuous playback has started, media-to-media progression is
+             * owned by the local A/B engine. A periodic server poll may already
+             * report the following short item while the current element is still
+             * audibly finishing. Do not cut the current item to chase that poll.
+             * Explicit programme changes and ended recovery still take precedence.
+             */
+            if (changed && !fromEnded && expectedProgramId === 0 && !audio.paused
+                && audio.duration && isFinite(audio.duration)
+                && audio.currentTime < Math.max(0, audio.duration - 0.20)) {
+                transitionManager.prepare(data);
+                return;
+            }
             mediaId = nextMediaId;
             programId = nextProgramId;
             transitionManager.prepare(data);
