@@ -201,6 +201,7 @@
         var seconds = 0;
         var slotDuration = 0;
         var currentDuration = 0;
+        var currentType = '';
         var nextMedia = null;
         var preparedUrl = '';
         var mixing = false;
@@ -290,6 +291,9 @@
             currentDuration = data && data.current_media
                 ? (parseFloat(data.current_media.duration || 0) || 0)
                 : 0;
+            currentType = data && data.current_media
+                ? String(data.current_media.media_type || '')
+                : '';
             nextMedia = data && data.next_media ? data.next_media : null;
 
             if (!nextMedia || !nextMedia.stream_url) {
@@ -346,25 +350,33 @@
         function maybeStart() {
             armPreload(false);
 
-            if (mode !== 'crossfade' || seconds < 1 || !nextMedia || mixing
-                || audio.paused || slotDuration < 1) {
+            if (!nextMedia || mixing || audio.paused || slotDuration < 1) {
                 return;
             }
-            if (audio.currentTime + 0.08 < slotDuration) {
+
+            var jingleIntoMusic = currentType === 'jingle'
+                && String(nextMedia.media_type || '') === 'music';
+            var fadeSeconds = jingleIntoMusic ? 0.7 : seconds;
+            var triggerAt = jingleIntoMusic
+                ? Math.max(0, currentDuration - fadeSeconds)
+                : slotDuration;
+
+            if ((!jingleIntoMusic && (mode !== 'crossfade' || fadeSeconds < 1))
+                || audio.currentTime + 0.08 < triggerAt) {
                 return;
             }
 
             armPreload(true);
 
-            var required = Math.max(1.25, seconds + 0.75);
+            var required = Math.max(1.25, fadeSeconds + 0.75);
             var buffered = bufferedAhead(standby);
             if (standby.readyState < 3 && buffered < required) {
                 reportBuffer();
                 return;
             }
 
-            if (currentDuration > 0
-                && (currentDuration - audio.currentTime) < Math.max(0.35, seconds * 0.35)) {
+            if (!jingleIntoMusic && currentDuration > 0
+                && (currentDuration - audio.currentTime) < Math.max(0.35, fadeSeconds * 0.35)) {
                 return;
             }
 
@@ -391,8 +403,13 @@
                     if (!mixing) {
                         return;
                     }
-                    var progress = Math.min(1, (now - started) / (seconds * 1000));
-                    audio.volume = baseVolume * (1 - progress);
+                    var progress = Math.min(1, (now - started) / (fadeSeconds * 1000));
+
+                    if (!jingleIntoMusic) {
+                        audio.volume = baseVolume * (1 - progress);
+                    } else {
+                        audio.volume = baseVolume;
+                    }
                     standby.volume = baseVolume * progress;
 
                     if (progress < 1) {
@@ -400,7 +417,13 @@
                         return;
                     }
 
-                    handoff(standby.currentTime || seconds);
+                    if (jingleIntoMusic && currentDuration > 0
+                        && audio.currentTime < Math.max(0, currentDuration - 0.05)) {
+                        fadeFrame = window.requestAnimationFrame(fade);
+                        return;
+                    }
+
+                    handoff(standby.currentTime || fadeSeconds);
                 }
 
                 fadeFrame = window.requestAnimationFrame(fade);
