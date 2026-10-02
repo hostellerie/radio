@@ -1503,7 +1503,8 @@
                         return false;
                     }
                     var duration = parseFloat(item.duration || 0) || 0;
-                    if (duration > 0 && duration <= 30) {
+                    var type = String(item.media_type || '');
+                    if (type === 'jingle' || (duration > 0 && duration <= 30)) {
                         return true;
                     }
                     return queueCurrentRemaining() <= 45;
@@ -1548,7 +1549,9 @@
                     }
                     if (reserve && queueReserveUrl === (reserve.stream_url || '')) {
                         var reserveDuration = parseFloat(reserve.duration || 0) || 0;
-                        if (reserveDuration > 0 && reserveDuration <= 30) {
+                        var reserveType = String(reserve.media_type || '');
+                        if (reserveType === 'jingle'
+                            || (reserveDuration > 0 && reserveDuration <= 30)) {
                             kickQueueBuffer(queueReserve, queueReserveUrl, reserve, true);
                         }
                     }
@@ -1580,7 +1583,9 @@
                         queueReserve.src = queueReserveUrl;
 
                         var reserveDuration = parseFloat(reserve.duration || 0) || 0;
-                        queueReserve.preload = reserveDuration > 0 && reserveDuration <= 30
+                        var reserveType = String(reserve.media_type || '');
+                        queueReserve.preload = reserveType === 'jingle'
+                            || (reserveDuration > 0 && reserveDuration <= 30)
                             ? 'auto'
                             : 'metadata';
                         queueReserve.load();
