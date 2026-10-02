@@ -1,0 +1,183 @@
+name: Temporary Radio language build
+
+on:
+  push:
+    branches:
+      - develop-1.0
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  translate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop-1.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install translator
+        run: pip install deep-translator
+      - name: Generate translations
+        shell: python
+        run: |
+          import re, time, shutil, subprocess
+          from pathlib import Path
+          from deep_translator import GoogleTranslator
+
+          src_path = Path("language/english.php")
+          src = src_path.read_text(encoding="utf-8")
+
+          targets = {
+              "spanish_utf-8.php": "es",
+              "italian_utf-8.php": "it",
+              "japanese_utf-8.php": "ja",
+              "russian_utf-8.php": "ru",
+              "chinese_simplified_utf-8.php": "zh-CN",
+              "chinese_traditional_utf-8.php": "zh-TW",
+              "hebrew_utf-8.php": "he",
+              "persian_utf-8.php": "fa",
+              "german_utf-8.php": "de",
+          }
+
+          ph_re = re.compile(r'%(?:\d+\$)?[bcdeEfFgGosuxX]')
+          literal_re = re.compile(r"'((?:\\'|[^'])*)'")
+          pair_re = re.compile(r"'((?:\\'|[^'])*)'\s*=>\s*'((?:\\'|[^'])*)'")
+
+          def protect(text):
+              ph = ph_re.findall(text)
+              for i, p in enumerate(ph):
+                  text = text.replace(p, f"ZZPLACEHOLDER{i}ZZ", 1)
+              return text, ph
+
+          def restore(text, ph):
+              for i, p in enumerate(ph):
+                  text = text.replace(f"ZZPLACEHOLDER{i}ZZ", p)
+                  text = text.replace(f"ZZ PLACEHOLDER {i} ZZ", p)
+                  text = text.replace(f"ZZPLACEHOLDER {i} ZZ", p)
+              return text
+
+          # Collect unique translatable strings.
+          items = []
+          in_selects = False
+          for line in src.splitlines():
+              if line.startswith("$LANG_configselects['radio']"):
+                  in_selects = True
+              if in_selects:
+                  for m in pair_re.finditer(line):
+                      # In config selects, translate visible labels (left side), keep internal string values.
+                      items.append(m.group(1))
+              else:
+                  for m in pair_re.finditer(line):
+                      items.append(m.group(2))
+
+          # Remove keys accidentally collected from assignment wrappers.
+          # Visible values are still captured via pair_re.
+          unique = []
+          seen = set()
+          for x in items:
+              if x not in seen:
+                  seen.add(x)
+                  unique.append(x)
+
+          def translate_strings(lang):
+              tr = GoogleTranslator(source="en", target=lang)
+              out = {}
+              batch_size = 35
+              for start in range(0, len(unique), batch_size):
+                  chunk = unique[start:start+batch_size]
+                  protected, phs = [], []
+                  for s in chunk:
+                      p, ph = protect(s)
+                      protected.append(p)
+                      phs.append(ph)
+                  # Retry transient failures.
+                  for attempt in range(5):
+                      try:
+                          translated = tr.translate_batch(protected)
+                          if translated and len(translated) == len(protected):
+                              break
+                      except Exception:
+                          if attempt == 4:
+                              raise
+                          time.sleep(3 * (attempt + 1))
+                  for original, t, ph in zip(chunk, translated, phs):
+                      out[original] = restore(t, ph)
+                  time.sleep(0.4)
+              return out
+
+          def render(mapping):
+              lines = []
+              in_selects = False
+              for line in src.splitlines():
+                  if line.startswith("$LANG_configselects['radio']"):
+                      in_selects = True
+                  if in_selects:
+                      def repl_left(m):
+                          left, right = m.group(1), m.group(2)
+                          return "'" + mapping.get(left, left).replace("'", "\\'") + "' => '" + right + "'"
+                      line = pair_re.sub(repl_left, line)
+                  else:
+                      def repl_val(m):
+                          left, right = m.group(1), m.group(2)
+                          return "'" + left + "' => '" + mapping.get(right, right).replace("'", "\\'") + "'"
+                      line = pair_re.sub(repl_val, line)
+                  lines.append(line)
+              return "\n".join(lines) + "\n"
+
+          for filename, lang in targets.items():
+              print("Translating", filename, lang)
+              mapping = translate_strings(lang)
+              Path("language", filename).write_text(render(mapping), encoding="utf-8")
+
+          # Regional/formal variants derived from their complete base translations.
+          shutil.copyfile("language/spanish_utf-8.php", "language/spanish_argentina_utf-8.php")
+          shutil.copyfile("language/german_utf-8.php", "language/german_formal_utf-8.php")
+
+          # Existing French is curated; keep it for both requested French variants.
+          fr = Path("language/french.php").read_text(encoding="utf-8")
+          Path("language/french_france.php").write_text(fr, encoding="utf-8")
+          Path("language/french_canada_utf-8.php").write_text(fr, encoding="utf-8")
+
+          # PHP syntax.
+          for p in sorted(Path("language").glob("*.php")):
+              subprocess.run(["php", "-l", str(p)], check=True)
+
+          # Structural / placeholder validation against English.
+          def extract_main(text):
+              m = re.search(r"\$LANG_RADIO\s*=\s*array\((.*?)\n\);", text, re.S)
+              if not m:
+                  raise RuntimeError("LANG_RADIO missing")
+              return dict(pair_re.findall(m.group(1)))
+
+          en = extract_main(src)
+          errors = []
+          for p in sorted(Path("language").glob("*.php")):
+              if p.name in ("english.php",):
+                  continue
+              cur = extract_main(p.read_text(encoding="utf-8"))
+              missing = [k for k in en if k not in cur]
+              extra = [k for k in cur if k not in en]
+              if missing or extra:
+                  errors.append(f"{p.name}: missing={missing} extra={extra}")
+              for k, v in en.items():
+                  if k in cur and ph_re.findall(v) != ph_re.findall(cur[k]):
+                      errors.append(f"{p.name}: placeholder mismatch {k}: {ph_re.findall(v)} != {ph_re.findall(cur[k])}")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print("All requested language files passed structure/placeholders/PHP syntax checks.")
+      - name: Commit generated language files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add language/
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Add Radio language translations"
+            git push origin HEAD:develop-1.0
+          fi
