@@ -980,8 +980,8 @@
                 var queueTransitionTimer = 0;
                 var queuePreloadLastKick = 0;
                 var queueReserveLastKick = 0;
-                queuePreload.preload = 'auto';
-                queueReserve.preload = 'auto';
+                queuePreload.preload = 'metadata';
+                queueReserve.preload = 'metadata';
 
 
                 var studioFx = (function () {
@@ -1485,11 +1485,28 @@
 
                 function queueBufferTarget(item, minimum, maximum) {
                     var duration = item ? (parseInt(item.duration || 0, 10) || 0) : 0;
-                    if (duration > 0 && duration <= 20) {
+                    if (duration > 0 && duration <= 30) {
                         return Math.max(1, duration - 0.25);
                     }
                     var target = duration > 0 ? Math.max(minimum, duration * 0.12) : minimum;
                     return Math.min(maximum, target);
+                }
+
+                function queueCurrentRemaining() {
+                    var declared = items[index] ? (parseFloat(items[index].duration || 0) || 0) : 0;
+                    var actual = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : declared;
+                    return actual > 0 ? Math.max(0, actual - (audio.currentTime || 0)) : 0;
+                }
+
+                function queueShouldArmNext(item) {
+                    if (!item) {
+                        return false;
+                    }
+                    var duration = parseFloat(item.duration || 0) || 0;
+                    if (duration > 0 && duration <= 30) {
+                        return true;
+                    }
+                    return queueCurrentRemaining() <= 45;
                 }
 
                 function kickQueueBuffer(element, url, item, reserveSlot) {
@@ -1526,11 +1543,14 @@
                     var next = index + 1 < items.length ? items[index + 1] : null;
                     var reserve = index + 2 < items.length ? items[index + 2] : null;
 
-                    if (next && queuePreloadUrl === (next.stream_url || '')) {
+                    if (next && queuePreloadUrl === (next.stream_url || '') && queueShouldArmNext(next)) {
                         kickQueueBuffer(queuePreload, queuePreloadUrl, next, false);
                     }
                     if (reserve && queueReserveUrl === (reserve.stream_url || '')) {
-                        kickQueueBuffer(queueReserve, queueReserveUrl, reserve, true);
+                        var reserveDuration = parseFloat(reserve.duration || 0) || 0;
+                        if (reserveDuration > 0 && reserveDuration <= 30) {
+                            kickQueueBuffer(queueReserve, queueReserveUrl, reserve, true);
+                        }
                     }
                     maybePreloadQueueReserve();
                     emitQueueBufferStatus();
@@ -1558,7 +1578,11 @@
                         clearQueueAudio(queueReserve);
                         queueReserveUrl = reserve.stream_url;
                         queueReserve.src = queueReserveUrl;
-                        queueReserve.preload = 'auto';
+
+                        var reserveDuration = parseFloat(reserve.duration || 0) || 0;
+                        queueReserve.preload = reserveDuration > 0 && reserveDuration <= 30
+                            ? 'auto'
+                            : 'metadata';
                         queueReserve.load();
                     }
                     emitQueueBufferStatus();
@@ -1583,8 +1607,12 @@
                         clearQueueAudio(queuePreload);
                         queuePreloadUrl = next.stream_url;
                         queuePreload.src = queuePreloadUrl;
-                        queuePreload.preload = 'auto';
+                        queuePreload.preload = 'metadata';
                         queuePreload.load();
+                    }
+
+                    if (queueShouldArmNext(next)) {
+                        kickQueueBuffer(queuePreload, queuePreloadUrl, next, false);
                     }
                     maybePreloadQueueReserve();
                 }
