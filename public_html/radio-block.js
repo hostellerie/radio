@@ -638,7 +638,7 @@
             }
 
             var streamUrl = data.current_media.stream_url || '';
-            var offset = parseInt(data.current_media.offset || 0, 10);
+            var offset = parseFloat(data.current_media.offset || 0) || 0;
             if (expectedProgramId > 0 && nextProgramId === expectedProgramId) {
                 offset = 0;
             }
@@ -647,6 +647,12 @@
                 offset = 0;
             }
             var changed = mediaId !== nextMediaId || audio.getAttribute('src') !== streamUrl;
+
+            if (changed && !fromEnded && expectedProgramId === 0 && !audio.paused
+                && audio.duration && isFinite(audio.duration)
+                && audio.currentTime < Math.max(0, audio.duration - 0.20)) {
+                return;
+            }
 
             if (fromEnded && nextMediaId === endedMediaId
                 && endedAt > 0 && offset >= Math.max(0, endedAt - 2)
