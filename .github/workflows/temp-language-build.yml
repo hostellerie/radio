@@ -26,6 +26,7 @@ jobs:
         shell: python
         run: |
           import re, time, shutil, subprocess
+          from concurrent.futures import ThreadPoolExecutor, as_completed
           from pathlib import Path
           import translators as ts
 
@@ -84,47 +85,33 @@ jobs:
                   seen.add(x)
                   unique.append(x)
 
+          def translate_one(text, lang):
+              protected, ph = protect(text)
+              last_error = None
+              for attempt in range(7):
+                  try:
+                      translated = ts.translate_text(
+                          protected,
+                          translator="bing",
+                          from_language="en",
+                          to_language=lang,
+                          timeout=30,
+                      )
+                      if not translated:
+                          raise RuntimeError("empty translation")
+                      return restore(translated.strip(), ph)
+                  except Exception as exc:
+                      last_error = exc
+                      time.sleep(2 + attempt * 3)
+              raise RuntimeError(f"translation failed for {text!r}: {last_error}")
+
           def translate_strings(lang):
               out = {}
-              separator = "\ue000\ue001\ue002"
-
-              chunks = []
-              current = []
-              current_len = 0
-              for item in unique:
-                  p, ph = protect(item)
-                  added = len(p) + len(separator)
-                  if current and current_len + added > 800:
-                      chunks.append(current)
-                      current = []
-                      current_len = 0
-                  current.append((item, p, ph))
-                  current_len += added
-              if current:
-                  chunks.append(current)
-
-              for chunk in chunks:
-                  joined = separator.join(x[1] for x in chunk)
-                  for attempt in range(5):
-                      try:
-                          result = ts.translate_text(
-                              joined,
-                              translator="bing",
-                              from_language="en",
-                              to_language=lang,
-                              timeout=30,
-                          )
-                          parts = result.split(separator)
-                          if len(parts) != len(chunk):
-                              raise RuntimeError(f"separator mismatch: {len(parts)} != {len(chunk)}")
-                          break
-                      except Exception:
-                          if attempt == 4:
-                              raise
-                          time.sleep(5 * (attempt + 1))
-                  for (original, _p, ph), translated in zip(chunk, parts):
-                      out[original] = restore(translated.strip(), ph)
-                  time.sleep(0.6)
+              with ThreadPoolExecutor(max_workers=4) as pool:
+                  futures = {pool.submit(translate_one, item, lang): item for item in unique}
+                  for future in as_completed(futures):
+                      item = futures[future]
+                      out[item] = future.result()
               return out
 
           def render(mapping):
@@ -146,25 +133,6 @@ jobs:
                   lines.append(line)
               return "\n".join(lines) + "\n"
 
-          for filename, lang in targets.items():
-              print("Translating", filename, lang)
-              mapping = translate_strings(lang)
-              Path("language", filename).write_text(render(mapping), encoding="utf-8")
-
-          # Regional/formal variants derived from their complete base translations.
-          shutil.copyfile("language/spanish_utf-8.php", "language/spanish_argentina_utf-8.php")
-          shutil.copyfile("language/german_utf-8.php", "language/german_formal_utf-8.php")
-
-          # Existing French is curated; keep it for both requested French variants.
-          fr = Path("language/french.php").read_text(encoding="utf-8")
-          Path("language/french_france.php").write_text(fr, encoding="utf-8")
-          Path("language/french_canada_utf-8.php").write_text(fr, encoding="utf-8")
-
-          # PHP syntax.
-          for p in sorted(Path("language").glob("*.php")):
-              subprocess.run(["php", "-l", str(p)], check=True)
-
-          # Structural / placeholder validation against English.
           def extract_main(text):
               m = re.search(r"\$LANG_RADIO\s*=\s*array\((.*?)\n\);", text, re.S)
               if not m:
@@ -172,6 +140,63 @@ jobs:
               return dict(pair_re.findall(m.group(1)))
 
           en = extract_main(src)
+
+          subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+          subprocess.run(["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], check=True)
+
+          def validate_main_file(path):
+              text = Path(path).read_text(encoding="utf-8")
+              subprocess.run(["php", "-l", str(path)], check=True)
+              cur = extract_main(text)
+              missing = [k for k in en if k not in cur]
+              extra = [k for k in cur if k not in en]
+              if missing or extra:
+                  raise RuntimeError(f"{path}: missing={missing} extra={extra}")
+              for k, v in en.items():
+                  if ph_re.findall(v) != ph_re.findall(cur[k]):
+                      raise RuntimeError(
+                          f"{path}: placeholder mismatch {k}: "
+                          f"{ph_re.findall(v)} != {ph_re.findall(cur[k])}"
+                      )
+
+          def commit_paths(paths, message):
+              subprocess.run(["git", "add", *paths], check=True)
+              diff = subprocess.run(["git", "diff", "--cached", "--quiet"])
+              if diff.returncode == 0:
+                  return
+              subprocess.run(["git", "commit", "-m", message], check=True)
+              subprocess.run(["git", "push", "origin", "HEAD:develop-1.0"], check=True)
+
+          # Existing French is curated; keep it for both requested French variants.
+          fr = Path("language/french.php").read_text(encoding="utf-8")
+          Path("language/french_france.php").write_text(fr, encoding="utf-8")
+          Path("language/french_canada_utf-8.php").write_text(fr, encoding="utf-8")
+
+          for filename, lang in targets.items():
+              print("Translating", filename, lang, flush=True)
+              mapping = translate_strings(lang)
+              path = Path("language", filename)
+              path.write_text(render(mapping), encoding="utf-8")
+
+              paths_to_commit = [str(path)]
+              if filename == "spanish_utf-8.php":
+                  regional = Path("language/spanish_argentina_utf-8.php")
+                  shutil.copyfile(path, regional)
+                  paths_to_commit.append(str(regional))
+              elif filename == "german_utf-8.php":
+                  regional = Path("language/german_formal_utf-8.php")
+                  shutil.copyfile(path, regional)
+                  paths_to_commit.append(str(regional))
+
+              for check_path in paths_to_commit:
+                  validate_main_file(check_path)
+              commit_paths(paths_to_commit, f"Add Radio {filename.replace('_utf-8.php', '').replace('.php', '')} translation")
+
+          # PHP syntax.
+          for p in sorted(Path("language").glob("*.php")):
+              subprocess.run(["php", "-l", str(p)], check=True)
+
+          # Structural / placeholder validation against English.
           errors = []
           for p in sorted(Path("language").glob("*.php")):
               if p.name in ("english.php",):
@@ -187,14 +212,5 @@ jobs:
           if errors:
               raise SystemExit("\n".join(errors))
           print("All requested language files passed structure/placeholders/PHP syntax checks.")
-      - name: Commit generated language files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add language/
-          if git diff --cached --quiet; then
-            echo "No changes"
-          else
-            git commit -m "Add Radio language translations"
-            git push origin HEAD:develop-1.0
-          fi
+      - name: Verify clean language generation state
+        run: git status --short
