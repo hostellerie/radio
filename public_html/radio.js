@@ -747,7 +747,7 @@
                 transitionRetryCount = 0;
             }
 
-            var offset = parseInt(data.current_media.offset || 0, 10);
+            var offset = parseFloat(data.current_media.offset || 0) || 0;
             var streamUrl = data.current_media.stream_url || '';
 
             if (expectedProgramId > 0 && nextProgram === expectedProgramId) {
@@ -782,6 +782,12 @@
             }
 
             var changed = mediaId !== nextId || audio.getAttribute('src') !== streamUrl;
+
+            if (changed && !fromEnded && expectedProgramId === 0 && !audio.paused
+                && audio.duration && isFinite(audio.duration)
+                && audio.currentTime < Math.max(0, audio.duration - 0.20)) {
+                return;
+            }
             mediaId = nextId;
             programId = nextProgram;
             transitionManager.prepare(data);
