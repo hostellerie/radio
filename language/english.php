@@ -461,3 +461,15 @@ $LANG_configselects['radio'] = array(
         'Nginx X-Accel-Redirect' => 'xaccel'
     )
 );
+
+// Automatic programme generator
+$LANG_RADIO['generated_program_heading'] = 'Automatic programme';
+$LANG_RADIO['generated_program_help'] = 'Create an editable draft programme from the Automatic Radio rotation rules.';
+$LANG_RADIO['generated_program_duration'] = 'Approximate duration';
+$LANG_RADIO['generated_program_30_minutes'] = '30 minutes';
+$LANG_RADIO['generated_program_1_hour'] = '1 hour';
+$LANG_RADIO['generated_program_2_hours'] = '2 hours';
+$LANG_RADIO['generated_program_button'] = 'Generate programme';
+$LANG_RADIO['generated_program_title'] = 'Automatic %s · %s';
+$LANG_RADIO['generated_program_created'] = 'Programme generated with %d items for approximately %s.';
+$LANG_RADIO['generated_program_failed'] = 'Unable to generate a programme. Check that Automatic Radio has eligible published media.';
