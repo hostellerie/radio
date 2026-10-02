@@ -1041,3 +1041,43 @@ radio_contract_require(
         && strpos($publicPlayer, 'masterLimiter.threshold.value = -1;') !== false,
     'Radio Studio must group stereo pan under FILTER, stack Echo/Reset, and provide independent -10..+10 dB headroom with master limiting.'
 );
+
+$youtubeAdmin = file_get_contents($root . '/admin/youtube.php');
+$youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
+$youtubeWorker = file_get_contents($root . '/bin/youtube-live.php');
+$adminNav = file_get_contents($root . '/admin/admin-ui.inc.php');
+$adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml');
+
+radio_contract_require(
+    strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
+        && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
+        && strpos($youtubeAdmin, 'type="password" name="stream_key"') !== false
+        && strpos($youtubeAdmin, "value=\"' . htmlspecialchars(\$config['stream_key']") === false
+        && strpos($youtubeAdmin, 'RADIO_youtubeSetManualRequest') !== false,
+    'Radio YouTube Live administration must require admin rights, use CSRF protection and never echo the saved stream key.'
+);
+
+radio_contract_require(
+    strpos($youtubeLib, 'function RADIO_youtubeTarget') !== false
+        && strpos($youtubeLib, 'function RADIO_youtubeFfmpegCommand') !== false
+        && strpos($youtubeLib, "'rtmps://a.rtmps.youtube.com/live2'") !== false
+        && strpos($youtubeLib, "RADIO_sourceKind(\$item) !== 'local'") !== false
+        && strpos($youtubeLib, 'youtube-live-state.json') !== false,
+    'Radio YouTube Live must keep server-side scheduling, FFmpeg generation and private runtime state separate from browser playback.'
+);
+
+radio_contract_require(
+    strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
+        && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
+        && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
+        && strpos($youtubeWorker, 'nohup ') !== false
+        && strpos($youtubeWorker, 'RADIO_youtubeStopPid') !== false,
+    'Radio YouTube Live worker must be CLI-only and reconcile FFmpeg with the configured target.'
+);
+
+radio_contract_require(
+    strpos($adminNav, "'nav_youtube'") !== false
+        && strpos($adminNavTemplate, '{nav_youtube}') !== false,
+    'Radio administration must expose the YouTube Live screen through the shared navigation.'
+);
+
