@@ -1684,6 +1684,9 @@
                     audio.volume = 1;
                     queuePreload.pause();
                     queuePreload.volume = 1;
+                    try {
+                        queuePreload.currentTime = 0;
+                    } catch (error) {}
                 }
 
                 function advanceQueueAudioRole(nextIndex) {
@@ -2204,6 +2207,16 @@
                         || queuePreload.readyState < 2) {
                         return false;
                     }
+
+                    /*
+                     * This path is used after a natural end, not during an
+                     * already-running crossfade. Always restart N+1 at zero:
+                     * a previously attempted/aborted transition may otherwise
+                     * leave the buffered element a few seconds into the file.
+                     */
+                    try {
+                        queuePreload.currentTime = 0;
+                    } catch (error) {}
 
                     advanceQueueAudioRole(nextIndex);
 
