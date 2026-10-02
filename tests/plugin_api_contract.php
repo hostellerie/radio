@@ -294,10 +294,12 @@ radio_contract_require(
         && strpos($studioJs, 'function statePollDelay()') !== false
         && strpos($studioJs, 'function scheduleStatePoll(delay)') !== false
         && strpos($studioJs, 'document.hidden') !== false
+        && strpos($studioJs, 'return 120000;') !== false
+        && strpos($studioJs, 'broadcastActive ? 30000 : 60000') !== false
         && strpos($studioJs, 'Math.random()') !== false
         && strpos($studioJs, 'window.setTimeout(function ()') !== false
         && strpos($studioJs, 'window.setInterval(syncState, 3000)') === false,
-    'Radio Studio state polling must be single-flight, adaptive, visibility-aware and non-periodic.'
+    'Radio Studio state polling must remain a sparse single-flight safety sync, independent from audio continuity.'
 );
 
 radio_contract_require(
