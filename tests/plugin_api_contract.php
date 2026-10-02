@@ -472,23 +472,22 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, "RADIO_buildFreshRotationSequence(\$date, \$cycleStart)") !== false
         && strpos($functions, "microtime(true)") !== false
-        && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
-        && strpos($functions, "\$overlap = 0.5;") !== false
         && strpos($functions, "'next_next_media'") !== false
         && strpos($nowEndpoint, "'next_next_media'") !== false,
-    'Each protected Radio rotation cycle must receive a fresh order, jingle-to-music must use the fixed half-second crossfade, and live state must expose N+2.'
+    'Each protected Radio rotation cycle must receive a fresh order and live state must continue to expose N+2 for Studio/replay consumers.'
 );
 
 radio_contract_require(
-    strpos($publicPlayer, "var reserve = new Audio()") !== false
-        && strpos($blockPlayer, "var reserve = new Audio()") !== false
-        && strpos($persistentPlayer, "var reserve = new Audio()") !== false
+    strpos($publicPlayer, "var standby = new Audio()") !== false
+        && strpos($blockPlayer, "var standby = new Audio()") !== false
+        && strpos($persistentPlayer, "var standby = new Audio()") !== false
         && strpos($publicPlayer, 'bufferedAhead(standby)') !== false
-        && strpos($blockPlayer, 'maybePrefetchReserve') !== false
-        && strpos($persistentPlayer, 'next_next_media') !== false
-        && strpos($publicPlayer, "mode === 'crossfade'") !== false
-        && strpos($publicPlayer, "mode === 'gapless' || mode === 'crossfade'") !== false,
-    'Radio live players must use adaptive N+1/N+2 buffering and fall back cleanly when a crossfade cannot start safely.'
+        && strpos($blockPlayer, 'armPreload(false)') !== false
+        && strpos($persistentPlayer, 'armPreload(false)') !== false
+        && strpos($publicPlayer, 'var promoted = standby;') !== false
+        && strpos($publicPlayer, 'standby = previous;') !== false
+        && strpos($publicPlayer, "currentType === 'jingle'") !== false,
+    'Radio public live players must use bandwidth-conscious A/B N+1 buffering, promote the preloaded element without reloading it, and preserve complete jingles.'
 );
 
 radio_contract_require(
@@ -521,9 +520,10 @@ radio_contract_require(
         && strpos($blockPlayer, 'function createTransitionManager') !== false
         && strpos($persistentPlayer, 'function createTransitionManager') !== false
         && strpos($publicPlayer, "mode !== 'crossfade'") !== false
-        && strpos($blockPlayer, "mode === 'gapless'") !== false
+        && strpos($blockPlayer, "mode === 'gapless' || mode === 'crossfade'") !== false
+        && strpos($persistentPlayer, "standby.preload = 'metadata'") !== false
         && strpos($persistentPlayer, "standby.preload = 'auto'") !== false,
-    'All Radio live players must preload and apply the configured transition mode.'
+    'All Radio live players must use deferred N+1 preload and apply the configured transition mode.'
 );
 radio_contract_require(
     strpos($radioJs, 'syncSequence') === false
