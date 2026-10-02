@@ -2722,6 +2722,102 @@ function RADIO_saveProgram($id, $data)
     return $programId;
 }
 
+function RADIO_createAutomaticProgram($targetSeconds, $title)
+{
+    $targetSeconds = (int) $targetSeconds;
+    if (!in_array($targetSeconds, array(1800, 3600, 7200), true)) {
+        return false;
+    }
+
+    $title = trim((string) $title);
+    if ($title === '') {
+        return false;
+    }
+
+    $programId = RADIO_saveProgram(0, array(
+        'program_title' => $title,
+        'program_description' => '',
+        'program_host' => '',
+        'program_status' => 'draft'
+    ));
+    if ($programId === false) {
+        return false;
+    }
+
+    $mode = RADIO_transitionMode();
+    $seconds = RADIO_crossfadeSeconds();
+    $selected = array();
+    $duration = 0;
+    $seedBase = sha1(microtime(true) . ':' . mt_rand() . ':' . $programId);
+    $stop = false;
+
+    for ($cycle = 0; $cycle < 12 && !$stop && count($selected) < 500; $cycle++) {
+        $sequence = RADIO_buildFreshRotationSequence(
+            date('Y-m-d'),
+            $seedBase . ':' . $cycle
+        );
+        if (count($sequence) === 0) {
+            break;
+        }
+
+        foreach ($sequence as $item) {
+            if (!isset($item['media_id']) || (int) $item['media_id'] < 1
+                || (int) $item['duration'] < 1) {
+                continue;
+            }
+
+            if (count($selected) > 0) {
+                $previous = $selected[count($selected) - 1];
+                if ((int) $previous['media_id'] === (int) $item['media_id']) {
+                    continue;
+                }
+                $overlap = RADIO_transitionOverlapFor($previous, $item, $mode, $seconds);
+                $candidateDuration = $duration + max(1, (int) $item['duration'] - $overlap);
+            } else {
+                $candidateDuration = (int) $item['duration'];
+            }
+
+            if (count($selected) > 0 && $candidateDuration >= $targetSeconds) {
+                $before = abs($targetSeconds - $duration);
+                $after = abs($candidateDuration - $targetSeconds);
+                if ($after <= $before) {
+                    $selected[] = $item;
+                    $duration = $candidateDuration;
+                }
+                $stop = true;
+                break;
+            }
+
+            $selected[] = $item;
+            $duration = $candidateDuration;
+
+            if ($duration >= $targetSeconds) {
+                $stop = true;
+                break;
+            }
+        }
+    }
+
+    if (count($selected) === 0) {
+        RADIO_deleteProgram($programId);
+        return false;
+    }
+
+    foreach ($selected as $item) {
+        if (!RADIO_addProgramItem($programId, (int) $item['media_id'])) {
+            RADIO_deleteProgram($programId);
+            return false;
+        }
+    }
+
+    return array(
+        'program_id' => (int) $programId,
+        'duration' => (int) $duration,
+        'items' => count($selected)
+    );
+}
+
+
 function RADIO_deleteProgram($id)
 {
     global $_TABLES;
