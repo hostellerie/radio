@@ -4373,14 +4373,22 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
         $items[] = $item;
     }
 
+    $transitionMode = RADIO_transitionMode();
+    $crossfadeSeconds = RADIO_crossfadeSeconds();
     $cursor = 0;
     $count = count($items);
+
     for ($i = 0; $i < $count; $i++) {
         $item = $items[$i];
+        $next = $i + 1 < $count ? $items[$i + 1] : false;
+        $nextNext = $i + 2 < $count ? $items[$i + 2] : false;
         $duration = (int) $item['duration'];
-        if ($elapsed < ($cursor + $duration)) {
-            $next = $i + 1 < $count ? $items[$i + 1] : false;
-            $nextNext = $i + 2 < $count ? $items[$i + 2] : false;
+        $overlap = $next !== false
+            ? RADIO_transitionOverlapFor($item, $next, $transitionMode, $crossfadeSeconds)
+            : 0;
+        $slotDuration = max(1, $duration - $overlap);
+
+        if ($elapsed < ($cursor + $slotDuration)) {
             return array(
                 'media_id' => (int) $item['media_id'],
                 'external_id' => RADIO_externalId('media', (int) $item['media_id']),
@@ -4388,11 +4396,11 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
                 'media_type' => $item['media_type'],
                 'source_kind' => RADIO_sourceKind($item),
                 'duration' => $duration,
-                'slot_duration' => $duration,
+                'slot_duration' => $slotDuration,
                 'offset' => $elapsed - $cursor,
                 'starts_after' => $cursor,
-                'transition_mode' => RADIO_transitionMode() === 'hard' ? 'hard' : 'gapless',
-                'transition_seconds' => 0,
+                'transition_mode' => $transitionMode,
+                'transition_seconds' => $overlap,
                 'stream_url' => RADIO_mediaUrl((int) $item['media_id'], false),
                 'item_url' => plugin_idtourl_radio('media', RADIO_externalId('media', (int) $item['media_id'])),
                 'next_media' => $next === false ? false : array(
@@ -4417,7 +4425,8 @@ function RADIO_resolveProgramPlayback($programId, $elapsed)
                 )
             );
         }
-        $cursor += $duration;
+
+        $cursor += $slotDuration;
     }
 
     return false;
