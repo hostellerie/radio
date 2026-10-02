@@ -27,7 +27,7 @@ jobs:
         run: |
           import re, time, shutil, subprocess
           from pathlib import Path
-          from deep_translator import GoogleTranslator
+          import requests
 
           src_path = Path("language/english.php")
           src = src_path.read_text(encoding="utf-8")
@@ -85,18 +85,16 @@ jobs:
                   unique.append(x)
 
           def translate_strings(lang):
-              tr = GoogleTranslator(source="en", target=lang)
               out = {}
               separator = "\nZZZSEPARATORZZZ\n"
 
-              # Build large chunks below Google's per-request text limit.
               chunks = []
               current = []
               current_len = 0
               for item in unique:
                   p, ph = protect(item)
                   added = len(p) + len(separator)
-                  if current and current_len + added > 4200:
+                  if current and current_len + added > 3800:
                       chunks.append(current)
                       current = []
                       current_len = 0
@@ -105,22 +103,31 @@ jobs:
               if current:
                   chunks.append(current)
 
+              session = requests.Session()
+              session.headers.update({"User-Agent": "Mozilla/5.0"})
               for chunk in chunks:
                   joined = separator.join(x[1] for x in chunk)
-                  for attempt in range(6):
-                      try:
-                          result = tr.translate(joined)
+                  params = {
+                      "client": "gtx",
+                      "sl": "en",
+                      "tl": lang,
+                      "dt": "t",
+                      "q": joined,
+                  }
+                  for attempt in range(8):
+                      r = session.get("https://translate.googleapis.com/translate_a/single", params=params, timeout=30)
+                      if r.status_code == 200:
+                          data = r.json()
+                          result = "".join(seg[0] for seg in data[0] if seg and seg[0])
                           parts = re.split(r"\\s*ZZZSEPARATORZZZ\\s*", result)
-                          if len(parts) != len(chunk):
-                              raise RuntimeError(f"separator mismatch: {len(parts)} != {len(chunk)}")
-                          break
-                      except Exception:
-                          if attempt == 5:
-                              raise
-                          time.sleep(5 * (attempt + 1))
+                          if len(parts) == len(chunk):
+                              break
+                      if attempt == 7:
+                          raise RuntimeError(f"translation failed HTTP={r.status_code}, parts={len(parts) if 'parts' in locals() else 'n/a'}")
+                      time.sleep(8 + attempt * 4)
                   for (original, _p, ph), translated in zip(chunk, parts):
                       out[original] = restore(translated.strip(), ph)
-                  time.sleep(1.2)
+                  time.sleep(2.0)
               return out
 
           def render(mapping):
