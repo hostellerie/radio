@@ -187,21 +187,18 @@
 
     function createTransitionManager(audio, hooks) {
         var standby = new Audio();
-        var reserve = new Audio();
-        standby.preload = 'auto';
-        reserve.preload = 'auto';
+        standby.preload = 'metadata';
 
         var mode = 'hard';
         var seconds = 0;
         var slotDuration = 0;
         var currentDuration = 0;
         var nextMedia = null;
-        var nextNextMedia = null;
         var preparedUrl = '';
-        var reserveUrl = '';
         var mixing = false;
         var fadeFrame = 0;
         var baseVolume = 1;
+        var preloadArmed = false;
 
         function bufferedAhead(element) {
             if (!element || !element.buffered || element.buffered.length < 1) {
@@ -224,28 +221,22 @@
             return Math.max(0, best);
         }
 
-        function bufferTarget(item, minimum, maximum) {
-            var duration = item ? (parseFloat(item.duration || 0) || 0) : 0;
-            if (duration > 0 && duration <= maximum) {
-                return duration;
-            }
-            var target = duration > 0 ? Math.max(minimum, duration * 0.20) : minimum;
-            return Math.min(maximum, target);
-        }
-
         function reportBuffer() {
             if (!hooks || typeof hooks.bufferStatus !== 'function') {
                 return;
             }
             hooks.bufferStatus({
                 next_buffered: bufferedAhead(standby),
-                next_ready: standby.readyState >= 3,
-                reserve_ready: reserveUrl !== '' && (reserve.readyState >= 2 || bufferedAhead(reserve) > 0)
+                next_ready: standby.readyState >= 3
             });
         }
 
         function clearElement(element) {
+            if (!element) {
+                return;
+            }
             element.pause();
+            element.volume = baseVolume;
             element.removeAttribute('src');
             element.load();
         }
@@ -253,38 +244,31 @@
         function clearStandby() {
             clearElement(standby);
             preparedUrl = '';
+            preloadArmed = false;
         }
 
-        function clearReserve() {
-            clearElement(reserve);
-            reserveUrl = '';
-        }
-
-        function maybePrefetchReserve() {
-            reportBuffer();
-            if (!nextNextMedia || !nextNextMedia.stream_url || !nextMedia) {
-                clearReserve();
+        function armPreload(force) {
+            if (!nextMedia || !preparedUrl || preloadArmed) {
                 return;
             }
 
-            var target = bufferTarget(nextMedia, 8, 30);
-            if (standby.readyState < 3 && bufferedAhead(standby) < target) {
+            var remaining = currentDuration > 0
+                ? Math.max(0, currentDuration - (audio.currentTime || 0))
+                : 0;
+            var shortItem = currentDuration > 0 && currentDuration <= 45;
+
+            if (!force && !shortItem && remaining > 60) {
                 return;
             }
 
-            if (reserveUrl !== nextNextMedia.stream_url) {
-                clearReserve();
-                reserveUrl = nextNextMedia.stream_url;
-                reserve.src = reserveUrl;
-                reserve.preload = 'auto';
-                reserve.load();
-            }
+            preloadArmed = true;
+            standby.preload = 'auto';
+            standby.load();
             reportBuffer();
         }
 
-        standby.addEventListener('progress', maybePrefetchReserve);
-        standby.addEventListener('canplay', maybePrefetchReserve);
-        reserve.addEventListener('progress', reportBuffer);
+        standby.addEventListener('progress', reportBuffer);
+        standby.addEventListener('canplay', reportBuffer);
 
         function prepare(data) {
             mode = data && data.transition_mode ? data.transition_mode : 'hard';
@@ -296,11 +280,9 @@
                 ? (parseFloat(data.current_media.duration || 0) || 0)
                 : 0;
             nextMedia = data && data.next_media ? data.next_media : null;
-            nextNextMedia = data && data.next_next_media ? data.next_next_media : null;
 
             if (!nextMedia || !nextMedia.stream_url) {
                 clearStandby();
-                clearReserve();
                 reportBuffer();
                 return;
             }
@@ -309,15 +291,12 @@
                 clearStandby();
                 preparedUrl = nextMedia.stream_url;
                 standby.src = preparedUrl;
-                standby.preload = 'auto';
+                standby.preload = 'metadata';
                 standby.load();
             }
 
-            if (!nextNextMedia || reserveUrl !== nextNextMedia.stream_url) {
-                clearReserve();
-            }
-
-            maybePrefetchReserve();
+            armPreload(false);
+            reportBuffer();
         }
 
         function handoff(resumeAt) {
@@ -328,16 +307,33 @@
             }
 
             var item = nextMedia;
-            hooks.activate(item, Math.max(0, resumeAt || 0), function () {
-                clearStandby();
-                clearReserve();
-                audio.volume = baseVolume;
-                mixing = false;
-            });
+            var previous = audio;
+            var promoted = standby;
+            var alreadyPlaying = !promoted.paused;
+
+            audio = promoted;
+            standby = previous;
+            preparedUrl = '';
+            preloadArmed = false;
+            nextMedia = null;
+
+            hooks.activate(
+                item,
+                Math.max(0, resumeAt || 0),
+                function () {
+                    clearStandby();
+                    audio.volume = baseVolume;
+                    mixing = false;
+                    reportBuffer();
+                },
+                promoted,
+                previous,
+                alreadyPlaying
+            );
         }
 
         function maybeStart() {
-            maybePrefetchReserve();
+            armPreload(false);
 
             if (mode !== 'crossfade' || seconds < 1 || !nextMedia || mixing
                 || audio.paused || slotDuration < 1) {
@@ -346,6 +342,8 @@
             if (audio.currentTime + 0.08 < slotDuration) {
                 return;
             }
+
+            armPreload(true);
 
             var required = Math.max(1.25, seconds + 0.75);
             var buffered = bufferedAhead(standby);
@@ -407,6 +405,7 @@
             }
 
             if ((mode === 'gapless' || mode === 'crossfade') && nextMedia) {
+                armPreload(true);
                 baseVolume = Math.max(0, Math.min(1, audio.volume));
                 hooks.beforeTransition(nextMedia);
                 handoff(0);
@@ -423,9 +422,7 @@
             mixing = false;
             audio.volume = baseVolume;
             clearStandby();
-            clearReserve();
             nextMedia = null;
-            nextNextMedia = null;
             reportBuffer();
         }
 
@@ -438,8 +435,7 @@
             bufferState: function () {
                 return {
                     next_buffered: bufferedAhead(standby),
-                    next_ready: standby.readyState >= 3,
-                    reserve_ready: reserveUrl !== '' && (reserve.readyState >= 2 || bufferedAhead(reserve) > 0)
+                    next_ready: standby.readyState >= 3
                 };
             }
         };
