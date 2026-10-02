@@ -605,7 +605,6 @@
             if (changed && !fromEnded && expectedProgramId === 0 && !audio.paused
                 && audio.duration && isFinite(audio.duration)
                 && audio.currentTime < Math.max(0, audio.duration - 0.20)) {
-                transitionManager.prepare(data);
                 return;
             }
             mediaId = nextMediaId;
