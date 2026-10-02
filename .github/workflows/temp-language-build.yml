@@ -21,13 +21,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install translator
-        run: pip install deep-translator
+        run: pip install translators
       - name: Generate translations
         shell: python
         run: |
           import re, time, shutil, subprocess
           from pathlib import Path
-          import requests
+          import translators as ts
 
           src_path = Path("language/english.php")
           src = src_path.read_text(encoding="utf-8")
@@ -37,8 +37,8 @@ jobs:
               "italian_utf-8.php": "it",
               "japanese_utf-8.php": "ja",
               "russian_utf-8.php": "ru",
-              "chinese_simplified_utf-8.php": "zh-CN",
-              "chinese_traditional_utf-8.php": "zh-TW",
+              "chinese_simplified_utf-8.php": "zh-Hans",
+              "chinese_traditional_utf-8.php": "zh-Hant",
               "hebrew_utf-8.php": "he",
               "persian_utf-8.php": "fa",
               "german_utf-8.php": "de",
@@ -94,7 +94,7 @@ jobs:
               for item in unique:
                   p, ph = protect(item)
                   added = len(p) + len(separator)
-                  if current and current_len + added > 3800:
+                  if current and current_len + added > 3200:
                       chunks.append(current)
                       current = []
                       current_len = 0
@@ -103,31 +103,28 @@ jobs:
               if current:
                   chunks.append(current)
 
-              session = requests.Session()
-              session.headers.update({"User-Agent": "Mozilla/5.0"})
               for chunk in chunks:
                   joined = separator.join(x[1] for x in chunk)
-                  params = {
-                      "client": "gtx",
-                      "sl": "en",
-                      "tl": lang,
-                      "dt": "t",
-                      "q": joined,
-                  }
-                  for attempt in range(8):
-                      r = session.get("https://translate.googleapis.com/translate_a/single", params=params, timeout=30)
-                      if r.status_code == 200:
-                          data = r.json()
-                          result = "".join(seg[0] for seg in data[0] if seg and seg[0])
+                  for attempt in range(5):
+                      try:
+                          result = ts.translate_text(
+                              joined,
+                              translator="bing",
+                              from_language="en",
+                              to_language=lang,
+                              timeout=30,
+                          )
                           parts = re.split(r"\\s*ZZZSEPARATORZZZ\\s*", result)
-                          if len(parts) == len(chunk):
-                              break
-                      if attempt == 7:
-                          raise RuntimeError(f"translation failed HTTP={r.status_code}, parts={len(parts) if 'parts' in locals() else 'n/a'}")
-                      time.sleep(8 + attempt * 4)
+                          if len(parts) != len(chunk):
+                              raise RuntimeError(f"separator mismatch: {len(parts)} != {len(chunk)}")
+                          break
+                      except Exception:
+                          if attempt == 4:
+                              raise
+                          time.sleep(5 * (attempt + 1))
                   for (original, _p, ph), translated in zip(chunk, parts):
                       out[original] = restore(translated.strip(), ph)
-                  time.sleep(2.0)
+                  time.sleep(1.0)
               return out
 
           def render(mapping):
