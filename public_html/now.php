@@ -35,7 +35,7 @@ if ($state['media'] !== false) {
         ? $media['transition_mode']
         : RADIO_transitionMode();
     $payload['transition_seconds'] = isset($media['transition_seconds'])
-        ? (int) $media['transition_seconds']
+        ? (float) $media['transition_seconds']
         : 0;
     $payload['current_media'] = array(
         'media_id' => $media['external_id'],
@@ -44,7 +44,7 @@ if ($state['media'] !== false) {
         'source_kind' => isset($media['source_kind']) ? $media['source_kind'] : 'local',
         'duration' => (int) $media['duration'],
         'slot_duration' => isset($media['slot_duration']) ? (float) $media['slot_duration'] : (float) $media['duration'],
-        'offset' => (int) $media['offset'],
+        'offset' => (float) $media['offset'],
         'stream_url' => $media['stream_url'],
         'url' => $media['item_url']
     );
