@@ -169,6 +169,14 @@
         }
 
         return {
+            setAudio: function (value) {
+                if (value && value !== audio) {
+                    audio = value;
+                    fallback = true;
+                    analyser = null;
+                    data = null;
+                }
+            },
             setExternal: function (value) {
                 external = !!value;
                 if (external) {
@@ -473,20 +481,41 @@
             beforeTransition: function () {
                 flush();
             },
-            activate: function (item, resumeAt, done) {
+            activate: function (item, resumeAt, done, nextAudio, previousAudio, alreadyPlaying) {
+                if (previousAudio) {
+                    unbindAudio(previousAudio);
+                }
+                if (nextAudio) {
+                    audio = nextAudio;
+                    bindAudio(audio);
+                    if (scope && typeof scope.setAudio === 'function') {
+                        scope.setAudio(audio);
+                    }
+                }
+
                 mediaId = parseInt(String(item.media_id || '').replace('media:', ''), 10) || 0;
                 if (title) {
                     title.textContent = item.title || '';
                     title.href = item.url || '#';
                 }
                 scope.setExternal(item.source_kind && item.source_kind !== 'local');
-                audio.src = item.stream_url || '';
-                audio.load();
+
+                if (alreadyPlaying) {
+                    handleAudioPlay();
+                    if (done) {
+                        done();
+                    }
+                    window.setTimeout(function () {
+                        sync(true, false, 0);
+                    }, 200);
+                    return;
+                }
 
                 function startNext() {
                     try {
                         audio.currentTime = Math.max(0, resumeAt || 0);
                     } catch (error) {}
+                    audio.volume = 1;
                     scope.start();
                     audio.play().then(function () {
                         if (done) {
@@ -723,20 +752,20 @@
             sync(true);
         });
 
-        audio.addEventListener('play', function () {
+        function handleAudioPlay() {
             updateButton();
             if (mediaId) {
                 postEvent(eventEndpoint, mediaId, programId, 'play', 0);
                 listenStart = Date.now();
             }
-        });
+        }
 
-        audio.addEventListener('pause', function () {
+        function handleAudioPause() {
             flush();
             updateButton();
-        });
+        }
 
-        audio.addEventListener('ended', function () {
+        function handleAudioEnded() {
             flush();
             if (!wantedPlaying) {
                 return;
@@ -748,7 +777,27 @@
             endedMediaId = mediaId;
             endedRetryCount = 0;
             sync(true, true);
-        });
+        }
+
+        function bindAudio(element) {
+            if (!element) {
+                return;
+            }
+            element.addEventListener('play', handleAudioPlay);
+            element.addEventListener('pause', handleAudioPause);
+            element.addEventListener('ended', handleAudioEnded);
+        }
+
+        function unbindAudio(element) {
+            if (!element) {
+                return;
+            }
+            element.removeEventListener('play', handleAudioPlay);
+            element.removeEventListener('pause', handleAudioPause);
+            element.removeEventListener('ended', handleAudioEnded);
+        }
+
+        bindAudio(audio);
 
         window.addEventListener('pagehide', flush);
         window.setInterval(function () {
