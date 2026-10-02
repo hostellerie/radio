@@ -290,6 +290,17 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($studioJs, 'stateRequestInFlight') !== false
+        && strpos($studioJs, 'function statePollDelay()') !== false
+        && strpos($studioJs, 'function scheduleStatePoll(delay)') !== false
+        && strpos($studioJs, 'document.hidden') !== false
+        && strpos($studioJs, 'Math.random()') !== false
+        && strpos($studioJs, 'window.setTimeout(function ()') !== false
+        && strpos($studioJs, 'window.setInterval(syncState, 3000)') === false,
+    'Radio Studio state polling must be single-flight, adaptive, visibility-aware and non-periodic.'
+);
+
+radio_contract_require(
     strpos($studioPage, 'data-radio-studio-endpoint') !== false
         && strpos($studioPage, 'data-radio-studio-mutation-endpoint') !== false
         && strpos($studioPage, 'data-radio-studio-queue') !== false
