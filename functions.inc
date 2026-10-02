@@ -2590,6 +2590,7 @@ function RADIO_sendMedia($row, $download)
     header('Content-Type: ' . $mime);
     header('Accept-Ranges: bytes');
     header('Content-Length: ' . (($end - $start) + 1));
+    header('Cache-Control: private, max-age=300');
     header('X-Content-Type-Options: nosniff');
 
     $disposition = $download ? 'attachment' : 'inline';
@@ -4210,10 +4211,11 @@ function RADIO_transitionOverlapFor($current, $next, $mode, $seconds)
 
     if ($currentType === 'music' && $nextType === 'music') {
         $overlap = $seconds;
-    } elseif ($currentType === 'jingle' && $nextType === 'music') {
-        // Keep the jingle intelligible, then let the music enter just before it ends.
-        $overlap = 0.5;
     } else {
+        /*
+         * Speech, jingles and other short-form elements must be heard in full.
+         * Crossfade is therefore reserved for music-to-music transitions.
+         */
         return 0;
     }
 
