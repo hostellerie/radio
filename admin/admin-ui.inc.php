@@ -101,6 +101,13 @@ function RADIO_adminNavigation($active)
             $adminBase . 'stats.php',
             $LANG_RADIO['statistics'],
             SEC_hasRights('radio.admin')
+        ),
+        'nav_youtube' => RADIO_adminNavItem(
+            $active,
+            'youtube',
+            $adminBase . 'youtube.php',
+            $LANG_RADIO['youtube_live'],
+            SEC_hasRights('radio.admin')
         )
     ));
 
