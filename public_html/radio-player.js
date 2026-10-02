@@ -208,9 +208,12 @@
             var remaining = currentDuration > 0
                 ? Math.max(0, currentDuration - (audio.currentTime || 0))
                 : 0;
-            var shortItem = currentDuration > 0 && currentDuration <= 45;
+            var nextDuration = nextMedia
+                ? (parseFloat(nextMedia.duration || 0) || 0)
+                : 0;
+            var shortNext = nextDuration > 0 && nextDuration <= 30;
 
-            if (!force && !shortItem && remaining > 60) {
+            if (!force && !shortNext && remaining > 60) {
                 return;
             }
 
