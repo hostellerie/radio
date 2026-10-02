@@ -380,6 +380,14 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'prepare: function ()') !== false
+        && strpos($publicPlayer, 'studioFx.prepare();') !== false
+        && strpos($publicPlayer, "initialType === 'jingle'") !== false
+        && strpos($publicPlayer, "audio.preload = 'auto';") !== false,
+    'Radio Studio must initialize its Web Audio graph before first playback and eagerly preload a short/current jingle.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function promoteQueuePreload') !== false
         && strpos($publicPlayer, 'queuePreload.readyState < 2') !== false
         && strpos($publicPlayer, 'if (promoteQueuePreload(followingIndex))') !== false,
