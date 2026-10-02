@@ -428,6 +428,13 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, "type === 'jingle'") !== false
+        && strpos($publicPlayer, "reserveType === 'jingle'") !== false
+        && strpos($publicPlayer, "queueReserve.preload = reserveType === 'jingle'") !== false,
+    'Radio Studio must preload jingles early regardless of the generic short-item duration threshold.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function maintainQueueBuffers') !== false
         && strpos($publicPlayer, 'window.setInterval(maintainQueueBuffers, 10000)') !== false
         && strpos($publicPlayer, 'function advanceQueueAudioRole') !== false
