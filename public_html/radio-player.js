@@ -148,6 +148,7 @@
         var currentDuration = 0;
         var currentType = '';
         var nextMedia = null;
+        var nextNextMedia = null;
         var preparedUrl = '';
         var mixing = false;
         var fadeFrame = 0;
@@ -240,6 +241,7 @@
                 ? String(data.current_media.media_type || '')
                 : '';
             nextMedia = data && data.next_media ? data.next_media : null;
+            nextNextMedia = data && data.next_next_media ? data.next_next_media : null;
 
             if (!nextMedia || !nextMedia.stream_url) {
                 clearStandby();
@@ -267,6 +269,7 @@
             }
 
             var item = nextMedia;
+            var following = nextNextMedia;
             var previous = audio;
             var promoted = standby;
             var alreadyPlaying = !promoted.paused;
@@ -275,13 +278,28 @@
             standby = previous;
             preparedUrl = '';
             preloadArmed = false;
-            nextMedia = null;
+            nextMedia = following;
+            nextNextMedia = null;
 
             hooks.activate(
                 item,
                 Math.max(0, resumeAt || 0),
                 function () {
                     clearStandby();
+
+                    /*
+                     * Re-arm N+1 immediately from the already-known N+2 metadata.
+                     * Public listeners still download only one future track: N+2
+                     * is metadata-only until it becomes the new N+1 after swap.
+                     */
+                    if (nextMedia && nextMedia.stream_url) {
+                        preparedUrl = nextMedia.stream_url;
+                        standby.src = preparedUrl;
+                        standby.preload = 'metadata';
+                        standby.load();
+                        armPreload(false);
+                    }
+
                     audio.volume = baseVolume;
                     mixing = false;
                     reportBuffer();
@@ -402,6 +420,7 @@
             audio.volume = baseVolume;
             clearStandby();
             nextMedia = null;
+            nextNextMedia = null;
             reportBuffer();
         }
 
