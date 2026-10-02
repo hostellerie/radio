@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  models: read
 
 jobs:
   translate:
@@ -20,99 +21,155 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install translator
-        run: pip install translators
-      - name: Generate translations
+      - name: Generate and validate translations
         shell: python
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          import re, time, shutil, subprocess
-          from concurrent.futures import ThreadPoolExecutor, as_completed
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.request
           from pathlib import Path
-          import translators as ts
 
           src_path = Path("language/english.php")
           src = src_path.read_text(encoding="utf-8")
 
-          targets = {
-              "spanish_utf-8.php": "es",
-              "italian_utf-8.php": "it",
-              "japanese_utf-8.php": "ja",
-              "russian_utf-8.php": "ru",
-              "chinese_simplified_utf-8.php": "zh-Hans",
-              "chinese_traditional_utf-8.php": "zh-Hant",
-              "hebrew_utf-8.php": "he",
-              "persian_utf-8.php": "fa",
-              "german_utf-8.php": "de",
-          }
+          targets = [
+              ("spanish_utf-8.php", "Spanish (international/neutral)"),
+              ("italian_utf-8.php", "Italian"),
+              ("japanese_utf-8.php", "Japanese"),
+              ("russian_utf-8.php", "Russian"),
+              ("chinese_simplified_utf-8.php", "Simplified Chinese (zh-CN)"),
+              ("chinese_traditional_utf-8.php", "Traditional Chinese (zh-TW)"),
+              ("hebrew_utf-8.php", "Hebrew"),
+              ("persian_utf-8.php", "Persian (Farsi)"),
+              ("french_canada_utf-8.php", "Canadian French (fr-CA)"),
+              ("german_utf-8.php", "German, neutral informal UI style"),
+              ("german_formal_utf-8.php", "German formal UI style, consistently use Sie/Ihnen where addressing the user"),
+              ("spanish_argentina_utf-8.php", "Argentinian Spanish (es-AR), natural local vocabulary; use voseo only where direct address makes it natural"),
+          ]
 
           ph_re = re.compile(r'%(?:\d+\$)?[bcdeEfFgGosuxX]')
-          literal_re = re.compile(r"'((?:\\'|[^'])*)'")
           pair_re = re.compile(r"'((?:\\'|[^'])*)'\s*=>\s*'((?:\\'|[^'])*)'")
 
-          def protect(text):
-              ph = ph_re.findall(text)
-              for i, p in enumerate(ph):
-                  text = text.replace(p, f"ZZPLACEHOLDER{i}ZZ", 1)
-              return text, ph
-
-          def restore(text, ph):
-              for i, p in enumerate(ph):
-                  text = text.replace(f"ZZPLACEHOLDER{i}ZZ", p)
-                  text = text.replace(f"ZZ PLACEHOLDER {i} ZZ", p)
-                  text = text.replace(f"ZZPLACEHOLDER {i} ZZ", p)
-              return text
-
-          # Collect unique translatable strings.
-          items = []
+          # Collect all user-visible English strings. In configuration selects,
+          # the left side is the visible label and the right side is the internal value.
+          visible = []
           in_selects = False
           for line in src.splitlines():
               if line.startswith("$LANG_configselects['radio']"):
                   in_selects = True
-              if in_selects:
-                  for m in pair_re.finditer(line):
-                      # In config selects, translate visible labels (left side), keep internal string values.
-                      items.append(m.group(1))
-              else:
-                  for m in pair_re.finditer(line):
-                      items.append(m.group(2))
+              for m in pair_re.finditer(line):
+                  visible.append(m.group(1) if in_selects else m.group(2))
 
-          # Remove keys accidentally collected from assignment wrappers.
-          # Visible values are still captured via pair_re.
           unique = []
           seen = set()
-          for x in items:
-              if x not in seen:
-                  seen.add(x)
-                  unique.append(x)
+          for value in visible:
+              if value not in seen:
+                  seen.add(value)
+                  unique.append(value)
 
-          def translate_one(text, lang):
-              protected, ph = protect(text)
-              last_error = None
-              for attempt in range(7):
+          ids = {f"s{i}": value for i, value in enumerate(unique)}
+          id_for_value = {value: key for key, value in ids.items()}
+
+          def call_model(locale, source_map, repair=False):
+              if repair:
+                  instruction = (
+                      "Repair only these translations. Return a JSON object using exactly the same IDs. "
+                      "Translate naturally into " + locale + ". Preserve every printf placeholder exactly "
+                      "as present in the English source, including type and order. Do not add commentary."
+                  )
+              else:
+                  instruction = (
+                      "Translate the following Geeklog Radio plugin UI strings from English into " + locale + ". "
+                      "Return ONLY a JSON object whose keys are exactly the supplied IDs and whose values are the "
+                      "translated strings. Preserve printf placeholders exactly (%s, %d, positional placeholders, "
+                      "etc.), with the same type and order. Preserve technical tokens and brand/protocol names where "
+                      "appropriate: Radio, HTTP, HTTPS, RSS, Atom, MP3, PHP, Nginx, Apache, LiteSpeed, X-Sendfile, "
+                      "X-Accel-Redirect, M3U, DJ FX. Keep UI text concise, natural and professional. Do not translate "
+                      "internal identifiers or invent information. Do not omit any ID. Do not add explanations."
+                  )
+
+              payload = {
+                  "model": "openai/gpt-4o",
+                  "temperature": 0.1,
+                  "response_format": {"type": "json_object"},
+                  "messages": [
+                      {"role": "system", "content": instruction},
+                      {"role": "user", "content": json.dumps(source_map, ensure_ascii=False)}
+                  ]
+              }
+              data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+              req = urllib.request.Request(
+                  "https://models.github.ai/inference/chat/completions",
+                  data=data,
+                  headers={
+                      "Content-Type": "application/json",
+                      "Authorization": "Bearer " + os.environ["GITHUB_TOKEN"],
+                  },
+                  method="POST",
+              )
+              last = None
+              for attempt in range(8):
                   try:
-                      translated = ts.translate_text(
-                          protected,
-                          translator="bing",
-                          from_language="en",
-                          to_language=lang,
-                          timeout=30,
-                      )
-                      if not translated:
-                          raise RuntimeError("empty translation")
-                      return restore(translated.strip(), ph)
-                  except Exception as exc:
-                      last_error = exc
-                      time.sleep(2 + attempt * 3)
-              raise RuntimeError(f"translation failed for {text!r}: {last_error}")
+                      with urllib.request.urlopen(req, timeout=180) as response:
+                          body = json.loads(response.read().decode("utf-8"))
+                      content = body["choices"][0]["message"]["content"]
+                      result = json.loads(content)
+                      if not isinstance(result, dict):
+                          raise RuntimeError("model response is not a JSON object")
+                      return result
+                  except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError, RuntimeError) as exc:
+                      last = exc
+                      if isinstance(exc, urllib.error.HTTPError) and exc.code not in (408, 429, 500, 502, 503, 504):
+                          raise
+                      if attempt == 7:
+                          raise RuntimeError(f"GitHub Models request failed for {locale}: {last}")
+                      time.sleep(10 + attempt * 10)
 
-          def translate_strings(lang):
-              out = {}
-              with ThreadPoolExecutor(max_workers=4) as pool:
-                  futures = {pool.submit(translate_one, item, lang): item for item in unique}
-                  for future in as_completed(futures):
-                      item = futures[future]
-                      out[item] = future.result()
-              return out
+          def translate_locale(locale):
+              result = call_model(locale, ids)
+              missing = [key for key in ids if key not in result]
+              extra = [key for key in result if key not in ids]
+              if missing or extra:
+                  raise RuntimeError(f"{locale}: missing IDs={missing}, extra IDs={extra}")
+
+              bad = {}
+              for key, english in ids.items():
+                  translated = result[key]
+                  if not isinstance(translated, str) or not translated.strip():
+                      bad[key] = english
+                      continue
+                  if ph_re.findall(english) != ph_re.findall(translated):
+                      bad[key] = english
+
+              if bad:
+                  repair_input = {
+                      key: {"english": ids[key], "current_translation": result.get(key, "")}
+                      for key in bad
+                  }
+                  repaired = call_model(locale, repair_input, repair=True)
+                  for key in bad:
+                      if key not in repaired or not isinstance(repaired[key], str):
+                          raise RuntimeError(f"{locale}: repair omitted {key}")
+                      result[key] = repaired[key]
+
+              for key, english in ids.items():
+                  if ph_re.findall(english) != ph_re.findall(result[key]):
+                      raise RuntimeError(
+                          f"{locale}: placeholder mismatch {key}: "
+                          f"{ph_re.findall(english)} != {ph_re.findall(result[key])}"
+                      )
+
+              return {english: result[key] for key, english in ids.items()}
+
+          def escape_php(value):
+              return value.replace("\\", "\\\\").replace("'", "\\'")
 
           def render(mapping):
               lines = []
@@ -123,12 +180,12 @@ jobs:
                   if in_selects:
                       def repl_left(m):
                           left, right = m.group(1), m.group(2)
-                          return "'" + mapping.get(left, left).replace("'", "\\'") + "' => '" + right + "'"
+                          return "'" + escape_php(mapping.get(left, left)) + "' => '" + right + "'"
                       line = pair_re.sub(repl_left, line)
                   else:
                       def repl_val(m):
                           left, right = m.group(1), m.group(2)
-                          return "'" + left + "' => '" + mapping.get(right, right).replace("'", "\\'") + "'"
+                          return "'" + left + "' => '" + escape_php(mapping.get(right, right)) + "'"
                       line = pair_re.sub(repl_val, line)
                   lines.append(line)
               return "\n".join(lines) + "\n"
@@ -139,78 +196,50 @@ jobs:
                   raise RuntimeError("LANG_RADIO missing")
               return dict(pair_re.findall(m.group(1)))
 
-          en = extract_main(src)
+          en_main = extract_main(src)
+
+          def validate_file(path):
+              text = Path(path).read_text(encoding="utf-8")
+              # UTF-8 round trip
+              text.encode("utf-8").decode("utf-8")
+              subprocess.run(["php", "-l", str(path)], check=True)
+              cur = extract_main(text)
+              missing = [k for k in en_main if k not in cur]
+              extra = [k for k in cur if k not in en_main]
+              if missing or extra:
+                  raise RuntimeError(f"{path}: missing={missing} extra={extra}")
+              for key, value in en_main.items():
+                  if ph_re.findall(value) != ph_re.findall(cur[key]):
+                      raise RuntimeError(
+                          f"{path}: placeholder mismatch {key}: "
+                          f"{ph_re.findall(value)} != {ph_re.findall(cur[key])}"
+                      )
 
           subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
           subprocess.run(["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], check=True)
 
-          def validate_main_file(path):
-              text = Path(path).read_text(encoding="utf-8")
-              subprocess.run(["php", "-l", str(path)], check=True)
-              cur = extract_main(text)
-              missing = [k for k in en if k not in cur]
-              extra = [k for k in cur if k not in en]
-              if missing or extra:
-                  raise RuntimeError(f"{path}: missing={missing} extra={extra}")
-              for k, v in en.items():
-                  if ph_re.findall(v) != ph_re.findall(cur[k]):
-                      raise RuntimeError(
-                          f"{path}: placeholder mismatch {k}: "
-                          f"{ph_re.findall(v)} != {ph_re.findall(cur[k])}"
-                      )
-
-          def commit_paths(paths, message):
-              subprocess.run(["git", "add", *paths], check=True)
-              diff = subprocess.run(["git", "diff", "--cached", "--quiet"])
-              if diff.returncode == 0:
-                  return
-              subprocess.run(["git", "commit", "-m", message], check=True)
-              subprocess.run(["git", "push", "origin", "HEAD:develop-1.0"], check=True)
-
-          # Existing French is curated; keep it for both requested French variants.
+          # French France is already a complete curated translation in french.php.
           fr = Path("language/french.php").read_text(encoding="utf-8")
           Path("language/french_france.php").write_text(fr, encoding="utf-8")
-          Path("language/french_canada_utf-8.php").write_text(fr, encoding="utf-8")
+          validate_file("language/french_france.php")
 
-          for filename, lang in targets.items():
-              print("Translating", filename, lang, flush=True)
-              mapping = translate_strings(lang)
+          for filename, locale in targets:
+              print(f"Translating {filename} -> {locale}", flush=True)
+              mapping = translate_locale(locale)
               path = Path("language", filename)
               path.write_text(render(mapping), encoding="utf-8")
+              validate_file(path)
 
-              paths_to_commit = [str(path)]
-              if filename == "spanish_utf-8.php":
-                  regional = Path("language/spanish_argentina_utf-8.php")
-                  shutil.copyfile(path, regional)
-                  paths_to_commit.append(str(regional))
-              elif filename == "german_utf-8.php":
-                  regional = Path("language/german_formal_utf-8.php")
-                  shutil.copyfile(path, regional)
-                  paths_to_commit.append(str(regional))
+              subprocess.run(["git", "add", str(path)], check=True)
+              staged = subprocess.run(["git", "diff", "--cached", "--quiet"])
+              if staged.returncode != 0:
+                  subprocess.run(["git", "commit", "-m", f"Add Radio {filename} translation"], check=True)
+                  subprocess.run(["git", "push", "origin", "HEAD:develop-1.0"], check=True)
 
-              for check_path in paths_to_commit:
-                  validate_main_file(check_path)
-              commit_paths(paths_to_commit, f"Add Radio {filename.replace('_utf-8.php', '').replace('.php', '')} translation")
+          # Final syntax pass over every language file.
+          for path in sorted(Path("language").glob("*.php")):
+              subprocess.run(["php", "-l", str(path)], check=True)
 
-          # PHP syntax.
-          for p in sorted(Path("language").glob("*.php")):
-              subprocess.run(["php", "-l", str(p)], check=True)
-
-          # Structural / placeholder validation against English.
-          errors = []
-          for p in sorted(Path("language").glob("*.php")):
-              if p.name in ("english.php",):
-                  continue
-              cur = extract_main(p.read_text(encoding="utf-8"))
-              missing = [k for k in en if k not in cur]
-              extra = [k for k in cur if k not in en]
-              if missing or extra:
-                  errors.append(f"{p.name}: missing={missing} extra={extra}")
-              for k, v in en.items():
-                  if k in cur and ph_re.findall(v) != ph_re.findall(cur[k]):
-                      errors.append(f"{p.name}: placeholder mismatch {k}: {ph_re.findall(v)} != {ph_re.findall(cur[k])}")
-          if errors:
-              raise SystemExit("\n".join(errors))
-          print("All requested language files passed structure/placeholders/PHP syntax checks.")
-      - name: Verify clean language generation state
+          print("All requested Radio language files generated and mechanically validated.", flush=True)
+      - name: Verify working tree
         run: git status --short
