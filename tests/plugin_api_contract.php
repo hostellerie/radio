@@ -3,7 +3,7 @@ $root = dirname(__DIR__);
 $functions = file_get_contents($root . '/functions.inc');
 $autoinstall = file_get_contents($root . '/autoinstall.php');
 $english = file_get_contents($root . '/language/english.php');
-$french = file_get_contents($root . '/language/french.php');
+$french = file_get_contents($root . '/language/french_france.php');
 $defaults = file_get_contents($root . '/install_defaults.php');
 $publicIndex = file_get_contents($root . '/public_html/index.php');
 $publicProgram = file_get_contents($root . '/public_html/program.php');
@@ -191,11 +191,11 @@ radio_contract_require(
         && strpos($defaults, "'crossfade_seconds' => 2") !== false
         && strpos($functions, 'function RADIO_transitionOverlap') !== false
         && strpos($functions, "\$currentType === 'music' && \$nextType === 'music'") !== false
-        && strpos($functions, "\$currentType === 'jingle' && \$nextType === 'music'") !== false
-        && strpos($functions, "\$overlap = 0.5;") !== false
         && strpos($nowEndpoint, "'next_media'") !== false
-        && strpos($nowEndpoint, "'transition_seconds'") !== false,
-    'Radio must expose configurable music-to-music crossfade and a fixed half-second jingle-to-music overlap.'
+        && strpos($nowEndpoint, "'transition_seconds'") !== false
+        && strpos($publicPlayer, "currentType === 'jingle'") !== false
+        && strpos($publicPlayer, "fadeSeconds = jingleIntoMusic ? 0.7 : seconds") !== false,
+    'Radio must expose configurable music-to-music crossfade and preserve complete jingles while blending the following music in client-side.'
 );
 
 $versionFile = file_get_contents($root . '/version.php');
