@@ -2486,6 +2486,7 @@ function RADIO_sendMediaViaWebServer($path, $mime, $filename, $download)
 
     header('Content-Type: ' . $mime);
     header('Accept-Ranges: bytes');
+    header('Cache-Control: private, max-age=300');
     header('X-Content-Type-Options: nosniff');
 
     $disposition = $download ? 'attachment' : 'inline';
