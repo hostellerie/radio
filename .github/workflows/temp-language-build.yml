@@ -98,6 +98,7 @@ jobs:
               payload = {
                   "model": "openai/gpt-4o",
                   "temperature": 0.1,
+                  "max_tokens": 6000,
                   "response_format": {"type": "json_object"},
                   "messages": [
                       {"role": "system", "content": instruction},
@@ -117,7 +118,7 @@ jobs:
               last = None
               for attempt in range(8):
                   try:
-                      with urllib.request.urlopen(req, timeout=180) as response:
+                      with urllib.request.urlopen(req, timeout=90) as response:
                           body = json.loads(response.read().decode("utf-8"))
                       content = body["choices"][0]["message"]["content"]
                       result = json.loads(content)
@@ -133,38 +134,52 @@ jobs:
                       time.sleep(10 + attempt * 10)
 
           def translate_locale(locale):
-              result = call_model(locale, ids)
-              missing = [key for key in ids if key not in result]
-              extra = [key for key in result if key not in ids]
-              if missing or extra:
-                  raise RuntimeError(f"{locale}: missing IDs={missing}, extra IDs={extra}")
+              ordered_ids = list(ids.keys())
+              result = {}
 
-              bad = {}
-              for key, english in ids.items():
-                  translated = result[key]
-                  if not isinstance(translated, str) or not translated.strip():
-                      bad[key] = english
-                      continue
-                  if ph_re.findall(english) != ph_re.findall(translated):
-                      bad[key] = english
+              # Keep each model response small and deterministic.
+              for offset in range(0, len(ordered_ids), 80):
+                  chunk_ids = ordered_ids[offset:offset + 80]
+                  chunk = {key: ids[key] for key in chunk_ids}
+                  translated = call_model(locale, chunk)
 
-              if bad:
-                  repair_input = {
-                      key: {"english": ids[key], "current_translation": result.get(key, "")}
-                      for key in bad
-                  }
-                  repaired = call_model(locale, repair_input, repair=True)
-                  for key in bad:
-                      if key not in repaired or not isinstance(repaired[key], str):
-                          raise RuntimeError(f"{locale}: repair omitted {key}")
-                      result[key] = repaired[key]
+                  missing = [key for key in chunk_ids if key not in translated]
+                  extra = [key for key in translated if key not in chunk]
+                  if missing or extra:
+                      raise RuntimeError(f"{locale}: missing IDs={missing}, extra IDs={extra}")
 
-              for key, english in ids.items():
-                  if ph_re.findall(english) != ph_re.findall(result[key]):
-                      raise RuntimeError(
-                          f"{locale}: placeholder mismatch {key}: "
-                          f"{ph_re.findall(english)} != {ph_re.findall(result[key])}"
-                      )
+                  bad = {}
+                  for key in chunk_ids:
+                      english = ids[key]
+                      value = translated[key]
+                      if not isinstance(value, str) or not value.strip():
+                          bad[key] = english
+                          continue
+                      if ph_re.findall(english) != ph_re.findall(value):
+                          bad[key] = english
+
+                  if bad:
+                      repair_input = {
+                          key: {"english": ids[key], "current_translation": translated.get(key, "")}
+                          for key in bad
+                      }
+                      repaired = call_model(locale, repair_input, repair=True)
+                      for key in bad:
+                          if key not in repaired or not isinstance(repaired[key], str):
+                              raise RuntimeError(f"{locale}: repair omitted {key}")
+                          translated[key] = repaired[key]
+
+                  for key in chunk_ids:
+                      english = ids[key]
+                      if ph_re.findall(english) != ph_re.findall(translated[key]):
+                          raise RuntimeError(
+                              f"{locale}: placeholder mismatch {key}: "
+                              f"{ph_re.findall(english)} != {ph_re.findall(translated[key])}"
+                          )
+                      result[key] = translated[key]
+
+                  print(f"  {locale}: {min(offset + 80, len(ordered_ids))}/{len(ordered_ids)} strings", flush=True)
+                  time.sleep(2)
 
               return {english: result[key] for key, english in ids.items()}
 
