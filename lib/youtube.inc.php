@@ -5,16 +5,28 @@ if (!isset($GLOBALS['_CONF'])) {
 
 function RADIO_youtubeConfigDefaults()
 {
+    global $_RADIO_CONF;
+
     return array(
-        'enabled' => false,
-        'mode' => 'scheduled',
-        'rtmp_url' => 'rtmps://a.rtmps.youtube.com/live2',
-        'stream_key' => '',
+        'enabled' => !empty($_RADIO_CONF['youtube_enabled']),
+        'mode' => isset($_RADIO_CONF['youtube_mode'])
+            ? (string) $_RADIO_CONF['youtube_mode']
+            : 'scheduled',
+        'rtmp_url' => isset($_RADIO_CONF['youtube_rtmp_url'])
+            ? trim((string) $_RADIO_CONF['youtube_rtmp_url'])
+            : 'rtmps://a.rtmps.youtube.com/live2',
+        'stream_key' => isset($_RADIO_CONF['youtube_stream_key'])
+            ? trim((string) $_RADIO_CONF['youtube_stream_key'])
+            : '',
         'schedule_ids' => array(),
         'manual_program_id' => 0,
         'manual_requested' => false,
-        'video_size' => '1280x720',
-        'audio_bitrate' => '128k'
+        'video_size' => isset($_RADIO_CONF['youtube_video_size'])
+            ? (string) $_RADIO_CONF['youtube_video_size']
+            : '1280x720',
+        'audio_bitrate' => isset($_RADIO_CONF['youtube_audio_bitrate'])
+            ? (string) $_RADIO_CONF['youtube_audio_bitrate']
+            : '128k'
     );
 }
 
@@ -53,7 +65,15 @@ function RADIO_youtubeReadJson($path, $defaults)
 
 function RADIO_youtubeConfig()
 {
-    $config = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), RADIO_youtubeConfigDefaults());
+    $config = RADIO_youtubeConfigDefaults();
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
+
+    foreach (array('schedule_ids','manual_program_id','manual_requested') as $runtimeKey) {
+        if (array_key_exists($runtimeKey, $runtime)) {
+            $config[$runtimeKey] = $runtime[$runtimeKey];
+        }
+    }
+
     $config['enabled'] = !empty($config['enabled']);
     $config['manual_requested'] = !empty($config['manual_requested']);
     $config['manual_program_id'] = max(0, (int) $config['manual_program_id']);
@@ -64,12 +84,18 @@ function RADIO_youtubeConfig()
         $config['schedule_ids'] = array();
     }
     $config['schedule_ids'] = array_values(array_unique(array_filter(array_map('intval', $config['schedule_ids']))));
+    $config['rtmp_url'] = trim((string) $config['rtmp_url']);
+    if (strpos($config['rtmp_url'], 'rtmps://') !== 0
+        && strpos($config['rtmp_url'], 'rtmp://') !== 0) {
+        $config['rtmp_url'] = 'rtmps://a.rtmps.youtube.com/live2';
+    }
     $config['video_size'] = preg_match('/^\d{3,4}x\d{3,4}$/', (string) $config['video_size'])
         ? (string) $config['video_size']
         : '1280x720';
     $config['audio_bitrate'] = in_array($config['audio_bitrate'], array('96k','128k','160k','192k'), true)
         ? $config['audio_bitrate']
         : '128k';
+
     return $config;
 }
 
@@ -97,48 +123,36 @@ function RADIO_youtubeWriteJson($path, $data)
 
 function RADIO_youtubeSaveConfig($data)
 {
-    $current = RADIO_youtubeConfig();
-    $next = $current;
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array(
+        'schedule_ids' => array(),
+        'manual_program_id' => 0,
+        'manual_requested' => false
+    ));
 
-    $next['enabled'] = !empty($data['enabled']);
-    $next['mode'] = isset($data['mode']) && in_array($data['mode'], array('scheduled','manual'), true)
-        ? $data['mode']
-        : 'scheduled';
-    $next['rtmp_url'] = isset($data['rtmp_url']) ? trim((string) $data['rtmp_url']) : $current['rtmp_url'];
-    if (strpos($next['rtmp_url'], 'rtmps://') !== 0 && strpos($next['rtmp_url'], 'rtmp://') !== 0) {
-        $next['rtmp_url'] = 'rtmps://a.rtmps.youtube.com/live2';
-    }
-
-    $key = isset($data['stream_key']) ? trim((string) $data['stream_key']) : '';
-    if ($key !== '') {
-        $next['stream_key'] = $key;
-    }
-
-    $next['schedule_ids'] = isset($data['schedule_ids']) && is_array($data['schedule_ids'])
+    $runtime['schedule_ids'] = isset($data['schedule_ids']) && is_array($data['schedule_ids'])
         ? array_values(array_unique(array_filter(array_map('intval', $data['schedule_ids']))))
         : array();
-    $next['manual_program_id'] = isset($data['manual_program_id'])
+    $runtime['manual_program_id'] = isset($data['manual_program_id'])
         ? max(0, (int) $data['manual_program_id'])
         : 0;
-    $next['video_size'] = isset($data['video_size']) && preg_match('/^\d{3,4}x\d{3,4}$/', $data['video_size'])
-        ? $data['video_size']
-        : '1280x720';
-    $next['audio_bitrate'] = isset($data['audio_bitrate'])
-        && in_array($data['audio_bitrate'], array('96k','128k','160k','192k'), true)
-        ? $data['audio_bitrate']
-        : '128k';
 
-    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $next);
+    if (!isset($runtime['manual_requested'])) {
+        $runtime['manual_requested'] = false;
+    }
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
 }
 
 function RADIO_youtubeSetManualRequest($requested)
 {
-    $config = RADIO_youtubeConfig();
-    $config['manual_requested'] = (bool) $requested;
-    if ($requested) {
-        $config['mode'] = 'manual';
-    }
-    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $config);
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array(
+        'schedule_ids' => array(),
+        'manual_program_id' => 0,
+        'manual_requested' => false
+    ));
+    $runtime['manual_requested'] = (bool) $requested;
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
 }
 
 function RADIO_youtubeStatus()
