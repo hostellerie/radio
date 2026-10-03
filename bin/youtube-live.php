@@ -87,6 +87,15 @@ if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) 
     exit(5);
 }
 
+$videoMode = 'color';
+if (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+    $videoMode = 'drawtext';
+} elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')) {
+    $videoMode = 'showwaves';
+} elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showspectrum')) {
+    $videoMode = 'showspectrum';
+}
+
 $status = RADIO_youtubeStatus();
 $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
 $running = RADIO_youtubePidRunning($pid);
@@ -120,7 +129,7 @@ if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
 }
 
 if ($running && isset($status['target_key']) && $status['target_key'] === $target['key']) {
-    RADIO_youtubeWriteStatus(array('running' => true, 'pid' => $pid));
+    RADIO_youtubeWriteStatus(array('running' => true, 'pid' => $pid, 'video_mode' => $videoMode));
     echo "YouTube Live already running for " . $target['program_title'] . ".\n";
     exit(0);
 }
@@ -130,7 +139,7 @@ if ($running) {
 }
 
 $error = '';
-$command = RADIO_youtubeFfmpegCommand($target, $error);
+$command = RADIO_youtubeFfmpegCommand($target, $error, $ffmpegPath, $videoMode);
 if ($command === false) {
     RADIO_youtubeWriteStatus(array(
         'running' => false,
@@ -194,6 +203,7 @@ RADIO_youtubeWriteStatus(array(
     'program_title' => $target['program_title'],
     'schedule_id' => (int) $target['schedule_id'],
     'started_at' => date('Y-m-d H:i:s'),
+    'video_mode' => $videoMode,
     'last_error' => ''
 ));
 
