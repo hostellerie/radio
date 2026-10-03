@@ -1082,6 +1082,12 @@ $adminConfigurationTemplate = file_get_contents($root . '/templates/admin/config
 $adminCssFile = file_get_contents($root . '/admin/radio-admin.css');
 
 radio_contract_require(
+    strpos($youtubeAdmin, '$config = RADIO_youtubeConfig();') === false
+        && strpos($youtubeAdmin, '$youtubeConfig = RADIO_youtubeConfig();') !== false,
+    'Radio YouTube administration must not overwrite Geeklog\'s global $config object with plugin runtime configuration.'
+);
+
+radio_contract_require(
     strpos($youtubeAdmin, "\$youtubeLibrary = \$_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';") !== false
         && strpos($youtubeAdmin, 'is_file($youtubeLibrary) && is_readable($youtubeLibrary)') !== false
         && strpos($youtubeAdmin, "function_exists('RADIO_youtubeConfig')") !== false
