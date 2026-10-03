@@ -185,6 +185,8 @@ $content .= '<section class="radio-admin__panel"><h2>'
     ) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_video_size']) . '</dt><dd>'
     . radio_youtube_h($youtubeConfig['video_size']) . '</dd>'
+    . '<dt>' . radio_youtube_h(isset($LANG_RADIO['youtube_video_bitrate']) ? $LANG_RADIO['youtube_video_bitrate'] : 'Video bitrate') . '</dt><dd>'
+    . radio_youtube_h($youtubeConfig['video_bitrate']) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_audio_bitrate']) . '</dt><dd>'
     . radio_youtube_h($youtubeConfig['audio_bitrate']) . '</dd>'
     . '</dl></section>';
