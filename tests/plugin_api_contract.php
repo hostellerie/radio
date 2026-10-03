@@ -1061,6 +1061,13 @@ $adminNav = file_get_contents($root . '/admin/admin-ui.inc.php');
 $adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml');
 
 radio_contract_require(
+    strpos($youtubeAdmin, '$youtubeLanguageDefaults = array(') !== false
+        && strpos($youtubeAdmin, "isset(\$_CONF['path_html'])") !== false
+        && strpos($youtubeAdmin, "'<GEEKLOG_PUBLIC_ROOT>'") !== false,
+    'Radio YouTube administration must render even when new language keys or path_html are unavailable.'
+);
+
+radio_contract_require(
     strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
         && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
         && strpos($youtubeAdmin, 'type="password" name="stream_key"') !== false
