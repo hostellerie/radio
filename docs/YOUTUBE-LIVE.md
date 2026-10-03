@@ -31,8 +31,55 @@ The server needs:
 Check FFmpeg:
 
 ```sh
+command -v ffmpeg
 ffmpeg -version
 ```
+
+### Installing FFmpeg without root access
+
+On shared hosting, FFmpeg may not be installed globally and the account may not have `sudo` access. A static x86_64 build can be installed in the account's own `~/bin` directory, provided the hosting provider allows user binaries.
+
+Example for a Linux x86_64 account:
+
+```sh
+mkdir -p ~/bin
+cd /tmp
+wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+```
+
+If `tar -xJf` works:
+
+```sh
+tar -xJf ffmpeg-release-amd64-static.tar.xz
+```
+
+Some restricted hosting environments block the external `xz` executable. If that happens and Python 3 has the `lzma` module:
+
+```sh
+python3 - <<'PY'
+import lzma, shutil
+src = "/tmp/ffmpeg-release-amd64-static.tar.xz"
+dst = "/tmp/ffmpeg-release-amd64-static.tar"
+with lzma.open(src, "rb") as f_in, open(dst, "wb") as f_out:
+    shutil.copyfileobj(f_in, f_out)
+print(dst)
+PY
+tar -xf /tmp/ffmpeg-release-amd64-static.tar
+```
+
+Then install the binaries:
+
+```sh
+cp /tmp/ffmpeg-*-amd64-static/ffmpeg ~/bin/
+cp /tmp/ffmpeg-*-amd64-static/ffprobe ~/bin/
+chmod 755 ~/bin/ffmpeg ~/bin/ffprobe
+command -v ffmpeg
+ffmpeg -version
+```
+
+The worker must be able to find the same `ffmpeg` executable when run from cron. If `~/bin` is not in the cron PATH, add it to the cron environment or use a wrapper that exports the required PATH.
+
+FFmpeg must include at least the H.264 (`libx264`) and AAC encoders and RTMP/RTMPS protocol support.
 
 ## Configure YouTube
 
@@ -46,7 +93,7 @@ In Geeklog administration open **Radio → YouTube Live**.
 5. For scheduled mode, select the existing Radio schedule entries that must also be sent to YouTube.
 6. Save.
 
-The saved stream key is kept in Radio private storage and is not shown back in the form.
+The stream key is stored in the standard Geeklog Radio configuration. Treat it like a password. It can also appear in the FFmpeg process command line on systems where users can inspect running processes, so rotate it if it has been exposed.
 
 ## Run the worker
 
@@ -88,7 +135,7 @@ The first/last minute of a scheduled YouTube slot can therefore have up to rough
 9. Confirm the ingest in YouTube Studio.
 10. Click **Request stop** and run the worker once again.
 
-The worker status and last error are shown on the Radio YouTube administration page. FFmpeg output is written to `youtube-live.log` in Radio private storage.
+The worker status and last error are shown on the Radio YouTube administration page. FFmpeg output is written to `youtube-live.log` in Radio's media storage directory (the same storage area that contains `youtube-live.ffconcat`).
 
 ## Security
 
@@ -106,3 +153,12 @@ Planned follow-up work can add:
 - a persistent systemd/Supervisor worker instead of cron;
 - YouTube Data API creation of scheduled broadcast events;
 - additional RTMP providers.
+
+
+## Video output and YouTube bitrate warning
+
+The current beta intentionally generates a simple black video frame while streaming the Radio programme audio. This keeps the first implementation independent from browser playback and avoids requiring a separate video source.
+
+For 1280×720 output, Radio defaults to a 2500k video bitrate and uses constant-rate H.264 settings so that YouTube does not interpret the static black image as an abnormally low-bitrate stream. Audio defaults to 128k AAC.
+
+A future version may replace the black frame with a configurable station image, artwork, or Now Playing display.
