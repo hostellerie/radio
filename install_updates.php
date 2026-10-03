@@ -35,6 +35,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.6.0' => array(
         'next' => '0.6.1',
         'callback' => 'radio_update_0_6_0_to_0_6_1'
+    ),
+    '0.6.1' => array(
+        'next' => '0.6.2',
+        'callback' => 'radio_update_0_6_1_to_0_6_2'
     )
 );
 
@@ -254,6 +258,15 @@ function radio_update_0_6_0_to_0_6_1()
     // No SQL schema change is required. plugin_upgrade_radio() calls
     // RADIO_ensureConfig() after this migration, which adds the YouTube Live
     // settings to existing Radio 0.6.0 installations.
+    return true;
+}
+
+function radio_update_0_6_1_to_0_6_2()
+{
+    // No SQL schema change is required. This maintenance release packages the
+    // YouTube Live worker, station-card, artwork/status diagnostics, responsive
+    // admin fixes, and documentation as a real Geeklog plugin upgrade.
+    // plugin_upgrade_radio() will still run RADIO_ensureConfig().
     return true;
 }
 
