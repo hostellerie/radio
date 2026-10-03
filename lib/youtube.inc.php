@@ -357,7 +357,30 @@ function RADIO_youtubeWriteConcat($programId, &$error)
     return $path;
 }
 
-function RADIO_youtubeFfmpegCommand($target, &$error)
+function RADIO_youtubeFfmpegHasFilter($ffmpegPath, $filter)
+{
+    $ffmpegPath = trim((string) $ffmpegPath);
+    $filter = trim((string) $filter);
+    if ($ffmpegPath === '' || $filter === '') {
+        return false;
+    }
+
+    $output = array();
+    $code = 1;
+    @exec(escapeshellarg($ffmpegPath) . ' -hide_banner -filters 2>/dev/null', $output, $code);
+    if ($code !== 0) {
+        return false;
+    }
+
+    foreach ($output as $line) {
+        if (preg_match('/\\b' . preg_quote($filter, '/') . '\\b/', (string) $line)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $videoMode = 'auto')
 {
     $error = '';
     $config = RADIO_youtubeConfig();
@@ -367,8 +390,16 @@ function RADIO_youtubeFfmpegCommand($target, &$error)
     }
 
     $destination = rtrim($config['rtmp_url'], '/') . '/' . ltrim($config['stream_key'], '/');
+    $ffmpegPath = trim((string) $ffmpegPath);
+    if ($ffmpegPath === '') {
+        $ffmpegPath = 'ffmpeg';
+    }
+    $videoMode = in_array($videoMode, array('drawtext', 'showwaves', 'showspectrum', 'color'), true)
+        ? $videoMode
+        : 'color';
+
     $parts = array(
-        'ffmpeg',
+        $ffmpegPath,
         '-hide_banner',
         '-loglevel', 'warning',
         '-re'
@@ -380,15 +411,44 @@ function RADIO_youtubeFfmpegCommand($target, &$error)
     $parts = array_merge($parts, array(
         '-f', 'concat',
         '-safe', '0',
-        '-i', $concat,
-        '-f', 'lavfi',
-        '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
-        '-map', '1:v:0',
-        '-map', '0:a:0',
-        '-vf',
-        "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=white:fontsize=52:x=(w-text_w)/2:y=h*0.24,"
-        . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=white:fontsize=38:x=(w-text_w)/2:y=h*0.42,"
-        . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h*0.58",
+        '-i', $concat
+    ));
+
+    if ($videoMode === 'drawtext') {
+        $parts = array_merge($parts, array(
+            '-f', 'lavfi',
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-map', '1:v:0',
+            '-map', '0:a:0',
+            '-vf',
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=white:fontsize=52:x=(w-text_w)/2:y=h*0.24,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=white:fontsize=38:x=(w-text_w)/2:y=h*0.42,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h*0.58"
+        ));
+    } elseif ($videoMode === 'showwaves') {
+        $parts = array_merge($parts, array(
+            '-filter_complex',
+            '[0:a]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=white[v]',
+            '-map', '[v]',
+            '-map', '0:a:0'
+        ));
+    } elseif ($videoMode === 'showspectrum') {
+        $parts = array_merge($parts, array(
+            '-filter_complex',
+            '[0:a]showspectrum=s=' . $config['video_size'] . ':mode=combined:color=intensity:slide=scroll:fps=25[v]',
+            '-map', '[v]',
+            '-map', '0:a:0'
+        ));
+    } else {
+        $parts = array_merge($parts, array(
+            '-f', 'lavfi',
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-map', '1:v:0',
+            '-map', '0:a:0'
+        ));
+    }
+
+    $parts = array_merge($parts, array(
         '-c:v', 'libx264',
         '-preset', 'veryfast',
         '-tune', 'stillimage',
