@@ -2,15 +2,6 @@
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
 require_once __DIR__ . '/admin-ui.inc.php';
-require_once $_CONF['path_system'] . 'classes/config.class.php';
-require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
-
-RADIO_ensureConfig();
-$radioConfig = config::get_instance();
-if ($radioConfig->group_exists('radio')) {
-    $_RADIO_CONF = $radioConfig->get_config('radio');
-}
-
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
@@ -29,7 +20,7 @@ function radio_youtube_h($value)
 
 $message = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['youtube_live']);
     } elseif (isset($_POST['save_youtube_runtime'])) {
@@ -57,7 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $config = RADIO_youtubeConfig();
 $status = RADIO_youtubeStatus();
 $schedules = RADIO_getSchedules(false);
-$programs = RADIO_getPrograms(200, false);
+$programs = array_values(array_filter(RADIO_getPrograms(200, false), function ($row) {
+    return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
+}));
 $token = SEC_createToken();
 $scheduleIds = array_flip($config['schedule_ids']);
 
@@ -68,7 +61,11 @@ $content .= '<section class="radio-admin__panel"><h2>'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_config_in_main']) . '</p>'
     . '<dl>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_enabled']) . '</dt><dd>'
-    . radio_youtube_h($config['enabled'] ? $LANG_RADIO['enabled'] : $LANG_RADIO['disabled']) . '</dd>'
+    . radio_youtube_h(
+        $config['enabled']
+            ? (isset($LANG_RADIO['enabled']) ? $LANG_RADIO['enabled'] : 'Enabled')
+            : (isset($LANG_RADIO['disabled']) ? $LANG_RADIO['disabled'] : 'Disabled')
+    ) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_mode']) . '</dt><dd>'
     . radio_youtube_h(
         $config['mode'] === 'manual'
