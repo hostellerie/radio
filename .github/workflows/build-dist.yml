@@ -225,6 +225,7 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/stats.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/sources.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/admin/youtube.php'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/images/plugin.svg'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/lib/youtube.inc.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/bin/youtube-live.php'
           unzip -Z1 "$ARCHIVE" | grep -qx 'radio/public_html/index.php'
