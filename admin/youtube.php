@@ -144,6 +144,22 @@ radio_youtube_trace(29, 'before page content construction');
 $content = '';
 
 $content .= '<section class="radio-admin__panel"><h2>'
+    . radio_youtube_h(isset($LANG_RADIO['youtube_getting_started']) ? $LANG_RADIO['youtube_getting_started'] : 'Getting started')
+    . '</h2>'
+    . '<ol>'
+    . '<li>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_step_1']) ? $LANG_RADIO['youtube_help_step_1'] : 'Open YouTube Studio, click Create, then Go Live.') . '</li>'
+    . '<li>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_step_2']) ? $LANG_RADIO['youtube_help_step_2'] : 'Open the Stream tab and locate Stream key.') . '</li>'
+    . '<li>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_step_3']) ? $LANG_RADIO['youtube_help_step_3'] : 'Copy the stream key into Radio Configuration. Keep it private.') . '</li>'
+    . '<li>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_step_4']) ? $LANG_RADIO['youtube_help_step_4'] : 'For a first test, use Manual mode and select a Radio programme made from local audio files.') . '</li>'
+    . '<li>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_step_5']) ? $LANG_RADIO['youtube_help_step_5'] : 'Run the Radio YouTube worker from cron or the server command shown below.') . '</li>'
+    . '</ol>'
+    . '<p><strong>' . radio_youtube_h(isset($LANG_RADIO['youtube_help_stream_key_warning']) ? $LANG_RADIO['youtube_help_stream_key_warning'] : 'Security: the stream key acts like a password. Do not publish or share it.') . '</strong></p>'
+    . '<p><a href="https://support.google.com/youtube/answer/2907883" target="_blank" rel="noopener noreferrer">'
+    . radio_youtube_h(isset($LANG_RADIO['youtube_help_official']) ? $LANG_RADIO['youtube_help_official'] : 'Official YouTube encoder setup help')
+    . '</a></p>'
+    . '</section>';
+
+$content .= '<section class="radio-admin__panel"><h2>'
     . radio_youtube_h($LANG_RADIO['youtube_configuration']) . '</h2>'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_config_in_main']) . '</p>'
     . '<dl>'
