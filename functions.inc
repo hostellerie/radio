@@ -2544,10 +2544,24 @@ function RADIO_sendMedia($row, $download)
         return true;
     }
 
+    clearstatcache(true, $path);
     $size = filesize($path);
+    if ($size === false || $size < 1) {
+        return false;
+    }
+
     $start = 0;
     $end = $size - 1;
     $status = 200;
+
+    /*
+     * Browser audio elements commonly ask for "bytes=N-" ranges. Sending the
+     * complete remainder of a multi-megabyte file through PHP keeps one worker
+     * occupied for a long time and is fragile when several N/N+1/N+2 requests
+     * share one HTTP/2 connection. Bound open-ended playback ranges so the
+     * browser can request the next chunk normally.
+     */
+    $playbackRangeChunk = 2 * 1024 * 1024;
 
     if (!$download && isset($_SERVER['HTTP_RANGE'])) {
         $range = trim((string) $_SERVER['HTTP_RANGE']);
@@ -2572,6 +2586,8 @@ function RADIO_sendMedia($row, $download)
             $start = (int) $m[1];
             if ($m[2] !== '') {
                 $end = min($end, (int) $m[2]);
+            } else {
+                $end = min($end, $start + $playbackRangeChunk - 1);
             }
         }
 
@@ -2581,6 +2597,23 @@ function RADIO_sendMedia($row, $download)
             exit;
         }
         $status = 206;
+    }
+
+    /*
+     * lib-common.php may have opened a session and output/compression buffers.
+     * A media response must not retain the session lock for the life of the
+     * stream, and Content-Length must describe the raw bytes actually emitted.
+     */
+    if (function_exists('session_status')
+        && session_status() === PHP_SESSION_ACTIVE) {
+        @session_write_close();
+    }
+    @ini_set('zlib.output_compression', '0');
+    if (function_exists('apache_setenv')) {
+        @apache_setenv('no-gzip', '1');
+    }
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
     }
 
     if ($status === 206) {
@@ -2593,6 +2626,7 @@ function RADIO_sendMedia($row, $download)
     header('Content-Length: ' . (($end - $start) + 1));
     header('Cache-Control: private, max-age=300');
     header('X-Content-Type-Options: nosniff');
+    header('X-Accel-Buffering: no');
 
     $disposition = $download ? 'attachment' : 'inline';
     header('Content-Disposition: ' . $disposition . '; filename="' . str_replace('"', '', $filename) . '"');
@@ -2601,8 +2635,9 @@ function RADIO_sendMedia($row, $download)
     if (!$handle) {
         return false;
     }
-    if ($start > 0) {
-        fseek($handle, $start);
+    if ($start > 0 && fseek($handle, $start) !== 0) {
+        fclose($handle);
+        return false;
     }
 
     $remaining = ($end - $start) + 1;
@@ -2610,13 +2645,17 @@ function RADIO_sendMedia($row, $download)
         $length = min(262144, $remaining);
         $buffer = fread($handle, $length);
         if ($buffer === false || $buffer === '') {
-            break;
+            fclose($handle);
+            COM_errorLog(
+                'Radio media streaming stopped early for media '
+                . (isset($row['media_id']) ? (int) $row['media_id'] : 0)
+                . ' with ' . $remaining . ' bytes remaining.',
+                1
+            );
+            exit;
         }
         echo $buffer;
         $remaining -= strlen($buffer);
-        if (function_exists('fastcgi_finish_request')) {
-            // Do not call it here: the response must continue until the requested range is sent.
-        }
     }
     fclose($handle);
     exit;
