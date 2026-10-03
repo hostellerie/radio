@@ -12,6 +12,47 @@ if (!SEC_hasRights('radio.admin')) {
 }
 
 global $LANG_RADIO, $_CONF;
+
+$youtubeLanguageDefaults = array(
+    'youtube_live' => 'YouTube Live',
+    'youtube_status' => 'YouTube Live status',
+    'youtube_running' => 'Running',
+    'youtube_idle' => 'Idle',
+    'youtube_last_worker_check' => 'Last worker check',
+    'youtube_configuration' => 'YouTube configuration',
+    'youtube_enabled' => 'Enable YouTube Live output',
+    'youtube_mode' => 'Mode',
+    'youtube_mode_scheduled' => 'Scheduled slots',
+    'youtube_mode_manual' => 'Manual test',
+    'youtube_rtmp_url' => 'RTMP/RTMPS server',
+    'youtube_stream_key' => 'Stream key',
+    'youtube_stream_key_saved' => 'Saved — leave blank to keep it',
+    'youtube_stream_key_help' => 'The stream key is stored in Radio private storage.',
+    'youtube_video_size' => 'Video size',
+    'youtube_audio_bitrate' => 'Audio bitrate',
+    'youtube_scheduled_slots' => 'YouTube scheduled slots',
+    'youtube_no_schedules' => 'No Radio schedule is available yet.',
+    'youtube_manual_test' => 'Manual test',
+    'youtube_start_now' => 'Request start',
+    'youtube_stop' => 'Request stop',
+    'youtube_saved' => 'YouTube Live configuration saved.',
+    'youtube_save_failed' => 'Unable to save the YouTube Live configuration.',
+    'youtube_start_requested' => 'Manual YouTube start requested.',
+    'youtube_stop_requested' => 'YouTube stop requested.',
+    'youtube_worker' => 'Server worker',
+    'youtube_worker_help' => 'Run this command from the server to process the current YouTube state.',
+    'youtube_worker_cron_help' => 'For scheduled slots, run it every minute with cron:',
+    'youtube_beta_warning' => 'Beta: local programme media only.',
+    'admin_youtube_intro' => 'Send selected Radio programmes to YouTube Live from the server.',
+    'admin_youtube_help_title' => 'Server-side YouTube output',
+    'admin_youtube_help_text' => 'The existing Radio players remain unchanged.'
+);
+foreach ($youtubeLanguageDefaults as $youtubeLanguageKey => $youtubeLanguageValue) {
+    if (!isset($LANG_RADIO[$youtubeLanguageKey]) || $LANG_RADIO[$youtubeLanguageKey] === '') {
+        $LANG_RADIO[$youtubeLanguageKey] = $youtubeLanguageValue;
+    }
+}
+
 $message = '';
 
 if (isset($_POST['save_youtube'])) {
@@ -125,7 +166,13 @@ if (count($schedules) === 0) {
             . (isset($scheduleIds[$id]) ? ' checked' : '') . '> '
             . htmlspecialchars($schedule['program_title'], ENT_QUOTES, 'UTF-8') . ' — '
             . htmlspecialchars($schedule['starts_at'], ENT_QUOTES, 'UTF-8') . ' — '
-            . htmlspecialchars($LANG_RADIO['recurrence_' . $schedule['recurrence']], ENT_QUOTES, 'UTF-8')
+            . htmlspecialchars(
+                isset($LANG_RADIO['recurrence_' . $schedule['recurrence']])
+                    ? $LANG_RADIO['recurrence_' . $schedule['recurrence']]
+                    : (string) $schedule['recurrence'],
+                ENT_QUOTES,
+                'UTF-8'
+            )
             . '</label><br>';
     }
     $content .= '</div>';
@@ -147,7 +194,9 @@ $content .= '</select></label></p>'
     . '</form></section>';
 
 $worker = $_CONF['path'] . 'plugins/radio/bin/youtube-live.php';
-$root = rtrim($_CONF['path_html'], '/\\');
+$root = isset($_CONF['path_html']) && $_CONF['path_html'] !== ''
+    ? rtrim((string) $_CONF['path_html'], '/\\')
+    : '<GEEKLOG_PUBLIC_ROOT>';
 $command = 'php ' . $worker . ' --geeklog-root=' . $root;
 
 $content .= '<section class="radio-admin__panel"><h2>'
