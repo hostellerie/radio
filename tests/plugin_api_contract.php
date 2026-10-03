@@ -1068,6 +1068,7 @@ radio_contract_require(
 );
 
 $installDefaults = file_get_contents($root . '/install_defaults.php');
+$updates = file_get_contents($root . '/install_updates.php');
 $youtubeAdmin = file_get_contents($root . '/admin/youtube.php');
 $youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $youtubeWorker = file_get_contents($root . '/bin/youtube-live.php');
@@ -1083,6 +1084,14 @@ radio_contract_require(
         && strpos($youtubeAdmin, 'youtube_stream_key_configured') !== false
         && strpos($youtubeAdmin, 'RADIO_youtubeSetManualRequest') !== false,
     'Radio YouTube Live administration must require admin rights, use CSRF protection, ensure existing configuration and never render the saved stream key.'
+);
+
+radio_contract_require(
+    strpos($updates, "'0.6.0' => array(") !== false
+        && strpos($updates, "'next' => '0.6.1'") !== false
+        && strpos($updates, "'callback' => 'radio_update_0_6_0_to_0_6_1'") !== false
+        && strpos($updates, 'function radio_update_0_6_0_to_0_6_1()') !== false,
+    'Radio 0.6.0 installations must have an explicit upgrade path to 0.6.1 so configuration reconciliation adds the YouTube settings.'
 );
 
 radio_contract_require(
