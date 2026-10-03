@@ -24,6 +24,9 @@ function RADIO_youtubeConfigDefaults()
         'video_size' => isset($_RADIO_CONF['youtube_video_size'])
             ? (string) $_RADIO_CONF['youtube_video_size']
             : '1280x720',
+        'video_bitrate' => isset($_RADIO_CONF['youtube_video_bitrate'])
+            ? (string) $_RADIO_CONF['youtube_video_bitrate']
+            : '2500k',
         'audio_bitrate' => isset($_RADIO_CONF['youtube_audio_bitrate'])
             ? (string) $_RADIO_CONF['youtube_audio_bitrate']
             : '128k'
@@ -324,6 +327,11 @@ function RADIO_youtubeFfmpegCommand($target, &$error)
         '-tune', 'stillimage',
         '-pix_fmt', 'yuv420p',
         '-g', '50',
+        '-b:v', $config['video_bitrate'],
+        '-minrate', $config['video_bitrate'],
+        '-maxrate', $config['video_bitrate'],
+        '-bufsize', '5000k',
+        '-x264-params', 'nal-hrd=cbr:force-cfr=1',
         '-c:a', 'aac',
         '-b:a', $config['audio_bitrate'],
         '-ar', '44100'
