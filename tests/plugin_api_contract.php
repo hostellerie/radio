@@ -915,8 +915,14 @@ radio_contract_require(
         && strpos($functions, 'function RADIO_sendMediaViaWebServer') !== false
         && strpos($functions, "header('X-Sendfile: ' . $path)") !== false
         && strpos($functions, "header('X-Accel-Redirect: ' . $internal)") !== false
+        && strpos($functions, '$playbackRangeChunk = 2 * 1024 * 1024;') !== false
+        && strpos($functions, '$end = min($end, $start + $playbackRangeChunk - 1);') !== false
+        && strpos($functions, '@session_write_close();') !== false
+        && strpos($functions, "@ini_set('zlib.output_compression', '0');") !== false
+        && strpos($functions, 'while (ob_get_level() > 0)') !== false
+        && strpos($functions, "header('X-Accel-Buffering: no')") !== false
         && strpos($functions, 'min(262144, $remaining)') !== false,
-    'Radio local media delivery must support safe web-server offload with a larger PHP fallback buffer.'
+    'Radio local media delivery must offload when possible and keep PHP fallback ranges HTTP/2-safe.'
 );
 
 radio_contract_require(
