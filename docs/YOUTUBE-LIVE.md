@@ -1,6 +1,6 @@
 # YouTube Live beta
 
-Radio 0.6.0 can optionally send selected scheduled programmes to YouTube Live without changing the existing browser Studio, public player or Automatic Radio behaviour.
+Radio 0.6.1 can optionally send selected scheduled programmes to YouTube Live without changing the existing browser Studio, public player or Automatic Radio behaviour.
 
 ## Scope
 
