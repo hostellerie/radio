@@ -1082,6 +1082,15 @@ $adminConfigurationTemplate = file_get_contents($root . '/templates/admin/config
 $adminCssFile = file_get_contents($root . '/admin/radio-admin.css');
 
 radio_contract_require(
+    strpos($youtubeAdmin, "\$youtubeLibrary = \$_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';") !== false
+        && strpos($youtubeAdmin, 'is_file($youtubeLibrary) && is_readable($youtubeLibrary)') !== false
+        && strpos($youtubeAdmin, "function_exists('RADIO_youtubeConfig')") !== false
+        && strpos($youtubeAdmin, 'youtube_module_unavailable') !== false
+        && strpos($youtubeAdmin, 'RADIO_adminRenderPage(') !== false,
+    'Radio YouTube administration must fail with a normal Geeklog page when the optional server-side module is missing or incomplete.'
+);
+
+radio_contract_require(
     strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
         && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
         && strpos($youtubeAdmin, 'RADIO_ensureConfig();') === false
