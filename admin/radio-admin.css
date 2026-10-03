@@ -945,3 +945,19 @@ body.radio-studio-focus-active{
     .plugin-admin-nav__primary,.radio-admin__nav-primary{align-items:stretch;flex-direction:column}
     .plugin-admin-nav__item,.plugin-admin-nav__form,.plugin-admin-nav__form .plugin-admin-nav__item{width:100%;box-sizing:border-box}
 }
+
+
+.radio-admin{box-sizing:border-box;width:100%;max-width:1180px;min-width:0}
+.radio-admin__content,.radio-admin__panel{min-width:0;max-width:100%;box-sizing:border-box}
+.radio-admin pre{max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;box-sizing:border-box}
+.radio-admin pre code{white-space:inherit;overflow-wrap:anywhere;word-break:break-word}
+.radio-admin__panel code{max-width:100%}
+@media(max-width:720px){
+    .radio-admin{padding-left:.75rem;padding-right:.75rem}
+    .radio-admin__panel{padding:.75rem}
+    .radio-admin__panel dl{display:grid;grid-template-columns:minmax(0,1fr);gap:.25rem}
+    .radio-admin__panel dt{font-weight:700}
+    .radio-admin__panel dd{margin:0 0 .75rem;min-width:0;overflow-wrap:anywhere}
+    .radio-admin__panel select{width:100%}
+    .radio-admin__panel form button{margin:.2rem .2rem .2rem 0}
+}
