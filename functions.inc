@@ -5443,12 +5443,36 @@ function plugin_getheadercode_radio()
     return $header;
 }
 
+function plugin_geticon_radio()
+{
+    global $_CONF;
+
+    return rtrim($_CONF['site_url'], '/') . '/radio/images/plugin.svg';
+}
+
+function plugin_cclabel_radio()
+{
+    global $_CONF, $LANG_RADIO;
+
+    if (!SEC_hasRights('radio.admin')) {
+        return false;
+    }
+
+    $label = isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio';
+
+    return array(
+        $label,
+        $_CONF['site_admin_url'] . '/plugins/radio/index.php',
+        plugin_geticon_radio()
+    );
+}
+
 function plugin_getadminoption_radio()
 {
     global $_CONF, $LANG_RADIO;
 
     if (!SEC_hasRights('radio.admin')) {
-        return null;
+        return array();
     }
 
     $label = isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio';
