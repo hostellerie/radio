@@ -36,6 +36,7 @@ $_RADIO_DEFAULT = array(
     'youtube_rtmp_url' => 'rtmps://a.rtmps.youtube.com/live2',
     'youtube_stream_key' => '',
     'youtube_video_size' => '1280x720',
+    'youtube_video_bitrate' => '2500k',
     'youtube_audio_bitrate' => '128k'
 );
 
@@ -73,13 +74,14 @@ function RADIO_configSortOrder()
         'youtube_rtmp_url' => 240,
         'youtube_stream_key' => 250,
         'youtube_video_size' => 260,
-        'youtube_audio_bitrate' => 270
+        'youtube_video_bitrate' => 270,
+        'youtube_audio_bitrate' => 280
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode', 'youtube_enabled', 'youtube_mode', 'youtube_video_size', 'youtube_audio_bitrate'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode', 'youtube_enabled', 'youtube_mode', 'youtube_video_size', 'youtube_video_bitrate', 'youtube_audio_bitrate'), true)
         ? 'select'
         : 'text';
     $select = $name === 'transition_mode'
@@ -92,7 +94,9 @@ function RADIO_addConfigSetting($c, $name, $default, $sort)
                     ? 4
                     : ($name === 'youtube_video_size'
                         ? 5
-                        : ($name === 'youtube_audio_bitrate' ? 6 : 0)))));
+                        : ($name === 'youtube_video_bitrate'
+                            ? 7
+                            : ($name === 'youtube_audio_bitrate' ? 6 : 0))))));
 
     $c->add($name, $default, $type, 0, 0, $select, $sort, true, 'radio', 0);
 }
