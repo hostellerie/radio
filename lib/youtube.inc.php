@@ -357,6 +357,101 @@ function RADIO_youtubeWriteConcat($programId, &$error)
     return $path;
 }
 
+function RADIO_youtubeAssPath()
+{
+    return RADIO_storageDir() . 'youtube-live.ass';
+}
+
+function RADIO_youtubeAssTime($seconds)
+{
+    $seconds = max(0, (int) $seconds);
+    $hours = (int) floor($seconds / 3600);
+    $minutes = (int) floor(($seconds % 3600) / 60);
+    $secs = $seconds % 60;
+    return sprintf('%d:%02d:%02d.00', $hours, $minutes, $secs);
+}
+
+function RADIO_youtubeAssText($value)
+{
+    $value = RADIO_youtubeOverlayText($value, 140);
+    $value = str_replace('\\', '\\\\', $value);
+    $value = str_replace(array('{', '}'), array('\\{', '\\}'), $value);
+    return str_replace(',', '‚', $value);
+}
+
+function RADIO_youtubeWriteAss($target, &$error)
+{
+    global $_CONF;
+
+    $error = '';
+    $config = RADIO_youtubeConfig();
+    $size = isset($config['video_size']) ? (string) $config['video_size'] : '1280x720';
+    $width = 1280;
+    $height = 720;
+    if (preg_match('/^(\\d+)x(\\d+)$/', $size, $m)) {
+        $width = max(320, (int) $m[1]);
+        $height = max(180, (int) $m[2]);
+    }
+
+    $station = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
+        ? (string) $_CONF['site_name']
+        : 'Radio';
+    $program = isset($target['program_title']) ? (string) $target['program_title'] : '';
+    $elapsed = isset($target['elapsed']) ? max(0, (int) $target['elapsed']) : 0;
+
+    $header = "[Script Info]\n"
+        . "ScriptType: v4.00+\n"
+        . "PlayResX: " . $width . "\n"
+        . "PlayResY: " . $height . "\n"
+        . "WrapStyle: 2\n\n"
+        . "[V4+ Styles]\n"
+        . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+        . "Style: Station,DejaVu Sans,48,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,40,40,60,1\n"
+        . "Style: Program,DejaVu Sans,32,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,60,60,135,1\n"
+        . "Style: Track,DejaVu Sans,34,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,70,70,230,1\n\n"
+        . "[Events]\n"
+        . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
+
+    $events = '';
+    $longEnd = RADIO_youtubeAssTime(86400);
+    $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Station,,0,0,0,,' . RADIO_youtubeAssText($station) . "\n";
+    if ($program !== '') {
+        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssText($program) . "\n";
+    }
+
+    $items = RADIO_getProgramItems((int) $target['program_id']);
+    $cursor = 0;
+    foreach ($items as $item) {
+        if (!RADIO_isBroadcastAvailable($item) || (int) $item['duration'] < 1) {
+            continue;
+        }
+        $duration = max(1, (int) $item['duration']);
+        $itemStart = $cursor;
+        $itemEnd = $cursor + $duration;
+        $cursor = $itemEnd;
+
+        if ($itemEnd <= $elapsed) {
+            continue;
+        }
+        $start = max(0, $itemStart - $elapsed);
+        $end = max($start + 1, $itemEnd - $elapsed);
+        $title = isset($item['title']) ? (string) $item['title'] : '';
+        if ($title === '') {
+            continue;
+        }
+        $events .= 'Dialogue: 0,' . RADIO_youtubeAssTime($start) . ',' . RADIO_youtubeAssTime($end)
+            . ',Track,,0,0,0,,' . RADIO_youtubeAssText($title) . "\n";
+    }
+
+    $path = RADIO_youtubeAssPath();
+    if (@file_put_contents($path, $header . $events, LOCK_EX) === false) {
+        $error = 'youtube_ass_write_failed';
+        return false;
+    }
+    @chmod($path, 0600);
+    return $path;
+}
+
 function RADIO_youtubeFfmpegHasFilter($ffmpegPath, $filter)
 {
     $ffmpegPath = trim((string) $ffmpegPath);
@@ -394,7 +489,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
     if ($ffmpegPath === '') {
         $ffmpegPath = 'ffmpeg';
     }
-    $videoMode = in_array($videoMode, array('drawtext', 'showwaves', 'showspectrum', 'color'), true)
+    $videoMode = in_array($videoMode, array('stationcard', 'compactwaves', 'drawtext', 'showwaves', 'showspectrum', 'color'), true)
         ? $videoMode
         : 'color';
 
@@ -414,7 +509,36 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         '-i', $concat
     ));
 
-    if ($videoMode === 'drawtext') {
+    if ($videoMode === 'stationcard') {
+        $assError = '';
+        $ass = RADIO_youtubeWriteAss($target, $assError);
+        if ($ass === false) {
+            $error = $assError;
+            return false;
+        }
+        $parts = array_merge($parts, array(
+            '-f', 'lavfi',
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-filter_complex',
+            '[0:a]asplit=2[aout][awave];'
+            . '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave];'
+            . "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
+            . '[card][wave]overlay=(W-w)/2:H-h-65[v]',
+            '-map', '[v]',
+            '-map', '[aout]'
+        ));
+    } elseif ($videoMode === 'compactwaves') {
+        $parts = array_merge($parts, array(
+            '-f', 'lavfi',
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-filter_complex',
+            '[0:a]asplit=2[aout][awave];'
+            . '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave];'
+            . '[1:v][wave]overlay=(W-w)/2:H-h-65[v]',
+            '-map', '[v]',
+            '-map', '[aout]'
+        ));
+    } elseif ($videoMode === 'drawtext') {
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
