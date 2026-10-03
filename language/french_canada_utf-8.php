@@ -527,3 +527,12 @@ $LANG_RADIO['youtube_program_empty'] = 'Le programme sélectionné ne contient a
 $LANG_RADIO['youtube_concat_failed'] = 'La liste de lecture FFmpeg n’a pas pu être créée.';
 $LANG_RADIO['youtube_ffmpeg_start_failed'] = 'FFmpeg n’a pas pu être démarré.';
 
+
+$LANG_RADIO['youtube_getting_started'] = "Bien démarrer avec YouTube Live";
+$LANG_RADIO['youtube_help_step_1'] = "Ouvrez YouTube Studio, cliquez sur Créer puis Passer au direct pour ouvrir la salle de contrôle du direct.";
+$LANG_RADIO['youtube_help_step_2'] = "Ouvrez l’onglet Flux et repérez la section Clé de flux.";
+$LANG_RADIO['youtube_help_step_3'] = "Copiez la clé de flux dans la Configuration de Radio. Gardez cette clé confidentielle.";
+$LANG_RADIO['youtube_help_step_4'] = "Pour un premier test, utilisez le mode Manuel et choisissez une émission Radio composée uniquement de fichiers audio locaux.";
+$LANG_RADIO['youtube_help_step_5'] = "Lancez le worker YouTube de Radio avec cron ou avec la commande serveur affichée plus bas.";
+$LANG_RADIO['youtube_help_stream_key_warning'] = "Sécurité : la clé de flux agit comme un mot de passe pour l’encodeur YouTube Live. Ne la publiez pas et ne la partagez pas.";
+$LANG_RADIO['youtube_help_official'] = "Aide officielle YouTube pour la diffusion avec un encodeur";
