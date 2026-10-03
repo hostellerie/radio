@@ -114,6 +114,11 @@ if ($target === false) {
     exit(0);
 }
 
+if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
+    RADIO_youtubeWriteStatus(array('last_error' => 'youtube_overlay_write_failed'));
+    fwrite(STDERR, "YouTube Live warning: unable to update station card text.\n");
+}
+
 if ($running && isset($status['target_key']) && $status['target_key'] === $target['key']) {
     RADIO_youtubeWriteStatus(array('running' => true, 'pid' => $pid));
     echo "YouTube Live already running for " . $target['program_title'] . ".\n";
