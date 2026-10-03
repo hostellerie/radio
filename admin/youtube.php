@@ -2,39 +2,26 @@
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
 require_once __DIR__ . '/admin-ui.inc.php';
-require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
     COM_accessLog('User tried to access Radio YouTube Live administration without permission.');
     $content = COM_showMessageText($MESSAGE[29], $MESSAGE[30]);
-    $GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'output';
-COM_output(COM_createHTMLDocument($content, array('pagetitle' => $MESSAGE[30])));
+    COM_output(COM_createHTMLDocument($content, array('pagetitle' => $MESSAGE[30])));
     exit;
 }
 
 global $LANG_RADIO, $_CONF;
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'bootstrap';
-register_shutdown_function(function () {
-    $error = error_get_last();
-    if (!is_array($error)) {
-        return;
-    }
-    $fatalTypes = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
-    if (!in_array($error['type'], $fatalTypes, true)) {
-        return;
-    }
-    $stage = isset($GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'])
-        ? $GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE']
-        : 'unknown';
-    COM_errorLog(
-        'Radio YouTube admin fatal at stage ' . $stage
-        . ': ' . $error['message']
-        . ' in ' . $error['file']
-        . ':' . $error['line'],
-        1
-    );
-});
+$youtubeLibrary = $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
+$youtubeLibraryReady = is_file($youtubeLibrary) && is_readable($youtubeLibrary);
+
+if ($youtubeLibraryReady) {
+    require_once $youtubeLibrary;
+    $youtubeLibraryReady = function_exists('RADIO_youtubeConfig')
+        && function_exists('RADIO_youtubeStatus')
+        && function_exists('RADIO_youtubeSaveConfig')
+        && function_exists('RADIO_youtubeSetManualRequest');
+}
 
 function radio_youtube_h($value)
 {
@@ -42,6 +29,31 @@ function radio_youtube_h($value)
 }
 
 $message = '';
+
+if (!$youtubeLibraryReady) {
+    $errorText = isset($LANG_RADIO['youtube_module_unavailable'])
+        ? $LANG_RADIO['youtube_module_unavailable']
+        : 'The YouTube Live module is unavailable or incomplete.';
+    $content = '<section class="radio-admin__panel"><p>'
+        . radio_youtube_h($errorText)
+        . '</p></section>';
+
+    $content = RADIO_adminRenderPage(
+        'youtube',
+        isset($LANG_RADIO['youtube_live']) ? $LANG_RADIO['youtube_live'] : 'YouTube Live',
+        isset($LANG_RADIO['admin_youtube_intro']) ? $LANG_RADIO['admin_youtube_intro'] : '',
+        isset($LANG_RADIO['admin_youtube_help_title']) ? $LANG_RADIO['admin_youtube_help_title'] : '',
+        isset($LANG_RADIO['admin_youtube_help_text']) ? $LANG_RADIO['admin_youtube_help_text'] : '',
+        $content,
+        ''
+    );
+
+    COM_output(COM_createHTMLDocument($content, array(
+        'pagetitle' => isset($LANG_RADIO['youtube_live']) ? $LANG_RADIO['youtube_live'] : 'YouTube Live',
+        'headercode' => RADIO_adminHeaderCode()
+    )));
+    exit;
+}
 
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!SEC_checkToken()) {
@@ -68,16 +80,12 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
     }
 }
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'config';
 $config = RADIO_youtubeConfig();
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'status';
 $status = RADIO_youtubeStatus();
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'schedules';
 $schedules = RADIO_getSchedules(false);
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'programs';
 $programs = array_values(array_filter(RADIO_getPrograms(200, false), function ($row) {
     return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
 }));
@@ -202,7 +210,6 @@ $content .= '<section class="radio-admin__panel"><h2>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_beta_warning']) . '</small></p>'
     . '</section>';
 
-$GLOBALS['RADIO_YOUTUBE_ADMIN_STAGE'] = 'render';
 $content = RADIO_adminRenderPage(
     'youtube',
     $LANG_RADIO['youtube_live'],
