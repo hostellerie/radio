@@ -5,15 +5,31 @@ if (PHP_SAPI !== 'cli') {
 }
 
 $root = getenv('GEEKLOG_ROOT');
+$host = getenv('GEEKLOG_HOST');
+
 foreach ($argv as $arg) {
     if (strpos($arg, '--geeklog-root=') === 0) {
         $root = substr($arg, strlen('--geeklog-root='));
+    } elseif (strpos($arg, '--host=') === 0) {
+        $host = substr($arg, strlen('--host='));
     }
 }
+
 $root = rtrim((string) $root, '/\\');
+$host = trim((string) $host);
+
 if ($root === '' || !is_file($root . '/lib-common.php')) {
     fwrite(STDERR, "Set GEEKLOG_ROOT or pass --geeklog-root=/path/to/public_html.\n");
     exit(2);
+}
+
+if ($host !== '') {
+    if (!preg_match('/^[A-Za-z0-9.-]+$/', $host)) {
+        fwrite(STDERR, "Invalid --host value.\n");
+        exit(2);
+    }
+    $_SERVER['HTTP_HOST'] = $host;
+    $_SERVER['SERVER_NAME'] = $host;
 }
 
 require_once $root . '/lib-common.php';
