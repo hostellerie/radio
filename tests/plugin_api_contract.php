@@ -201,7 +201,7 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.0") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.1") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
@@ -220,8 +220,11 @@ radio_contract_require(
         && strpos($updatesFile, "'0.5.1' => array(") !== false
         && strpos($updatesFile, "'next' => '0.6.0'") !== false
         && strpos($updatesFile, 'radio_update_0_5_1_to_0_6_0') !== false
+        && strpos($updatesFile, "'0.6.0' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.6.1'") !== false
+        && strpos($updatesFile, 'radio_update_0_6_0_to_0_6_1') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.6.0 must preserve the existing upgrade chain and add the semi-live session migration.'
+    'Radio 0.6.1 must preserve the existing upgrade chain through 0.6.0 and reconcile configuration during upgrade.'
 );
 
 $mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
@@ -329,7 +332,7 @@ radio_contract_require(
         && strpos($studioApi, "if (\$studioAction === 'broadcast_stop')") !== false
         && strpos($studioPage, 'data-radio-studio-broadcast') !== false
         && strpos($studioJs, "studio_action', broadcastActive ? 'broadcast_stop' : 'broadcast_start'") !== false,
-    'Radio 0.6.0 Studio must provide server-driven semi-live broadcast sessions without relying on the operator browser as the broadcast clock.'
+    'Radio 0.6.1 Studio must preserve server-driven semi-live broadcast sessions without relying on the operator browser as the broadcast clock.'
 );
 
 radio_contract_require(
