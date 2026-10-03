@@ -31,6 +31,10 @@ $GLOBALS['RADIO_UPDATES'] = array(
     '0.5.1' => array(
         'next' => '0.6.0',
         'callback' => 'radio_update_0_5_1_to_0_6_0'
+    ),
+    '0.6.0' => array(
+        'next' => '0.6.1',
+        'callback' => 'radio_update_0_6_0_to_0_6_1'
     )
 );
 
@@ -244,6 +248,15 @@ function radio_update_0_5_1_to_0_6_0()
 
     return !DB_error();
 }
+
+function radio_update_0_6_0_to_0_6_1()
+{
+    // No SQL schema change is required. plugin_upgrade_radio() calls
+    // RADIO_ensureConfig() after this migration, which adds the YouTube Live
+    // settings to existing Radio 0.6.0 installations.
+    return true;
+}
+
 
 function radio_apply_updates($installedVersion, $targetVersion)
 {
