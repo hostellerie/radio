@@ -485,6 +485,7 @@ $LANG_RADIO['generated_program_failed'] = 'Impossible de générer le programme.
 
  // YouTube Live beta
 $LANG_RADIO['youtube_live'] = 'YouTube Live';
+$LANG_RADIO['youtube_module_unavailable'] = 'Le module YouTube Live est indisponible ou incomplet. Réinstallez ou mettez à jour Radio 0.6.1 et vérifiez la présence de private/plugins/radio/lib/youtube.inc.php.';
 $LANG_RADIO['admin_youtube_intro'] = 'Diffusez certains programmes Radio sur YouTube Live grâce à un worker FFmpeg exécuté côté serveur.';
 $LANG_RADIO['admin_youtube_help_title'] = 'Sortie YouTube côté serveur';
 $LANG_RADIO['admin_youtube_help_text'] = 'Cette bêta conserve les lecteurs Radio actuels. Le worker CLI démarre ou arrête FFmpeg pour les plages sélectionnées ou pour un programme de test manuel.';
