@@ -213,6 +213,16 @@ if (!empty($status['last_error'])) {
     $errorText = isset($LANG_RADIO[$errorKey]) ? $LANG_RADIO[$errorKey] : $errorKey;
     $content .= '<p class="radio-admin__notice">' . radio_youtube_h($errorText) . '</p>';
 }
+if (!empty($status['video_mode'])) {
+    $content .= '<p><small>Video mode: ' . radio_youtube_h($status['video_mode']) . '</small></p>';
+}
+if (isset($status['artwork_type'])) {
+    $artworkLabel = (string) $status['artwork_type'];
+    if (!empty($status['artwork_path'])) {
+        $artworkLabel .= ' — ' . basename((string) $status['artwork_path']);
+    }
+    $content .= '<p><small>Artwork: ' . radio_youtube_h($artworkLabel) . '</small></p>';
+}
 if (!empty($status['last_check'])) {
     $content .= '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_last_worker_check'])
         . ': ' . radio_youtube_h($status['last_check']) . '</small></p>';
