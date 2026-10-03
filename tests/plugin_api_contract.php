@@ -389,10 +389,14 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($functions, '$selectedMediaIds = array();') !== false
+        && strpos($functions, "if ($mediaType === 'jingle')") !== false
+        && strpos($functions, '$pendingJingle = $item;') !== false
         && strpos($functions, 'isset($selectedMediaIds[$mediaId])') !== false
         && strpos($functions, '$selectedMediaIds[$mediaId] = true;') !== false
-        && strpos($functions, '$addedThisCycle === 0') !== false,
-    'Generated Radio programmes must never repeat a media_id and must accept a shorter duration when all unique eligible media have been exhausted.'
+        && strpos($functions, '$lastJingleMediaId') !== false
+        && strpos($functions, 'count($jinglePool) > 1') !== false
+        && strpos($functions, '$addedRegularThisCycle === 0') !== false,
+    'Generated Radio programmes must keep regular media unique, allow controlled jingle reuse, preserve rotation alternation and stop instead of padding with orphan jingles.'
 );
 
 radio_contract_require(
