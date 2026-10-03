@@ -158,6 +158,69 @@ function RADIO_youtubeSetManualRequest($requested)
     return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
 }
 
+function RADIO_youtubeOverlayPath($name)
+{
+    $safe = preg_replace('/[^a-z0-9_-]+/i', '-', (string) $name);
+    return RADIO_storageDir() . 'youtube-live-' . trim($safe, '-') . '.txt';
+}
+
+function RADIO_youtubeOverlayText($value, $maxLength)
+{
+    $value = trim(preg_replace('/[\r\n\t]+/', ' ', (string) $value));
+    $value = preg_replace('/\s{2,}/', ' ', $value);
+    if (function_exists('mb_substr')) {
+        return mb_substr($value, 0, (int) $maxLength, 'UTF-8');
+    }
+    return substr($value, 0, (int) $maxLength);
+}
+
+function RADIO_youtubeWriteOverlay($target, $status, $timestamp)
+{
+    global $_CONF;
+
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $elapsed = isset($target['elapsed']) ? max(0, (int) $target['elapsed']) : 0;
+
+    if (isset($target['schedule_id']) && (int) $target['schedule_id'] === 0
+        && isset($status['target_key']) && (string) $status['target_key'] === (string) $target['key']
+        && !empty($status['started_at'])) {
+        $started = strtotime((string) $status['started_at']);
+        if ($started !== false && $started <= $timestamp) {
+            $elapsed = max(0, $timestamp - $started);
+        }
+    }
+
+    $media = RADIO_resolveProgramPlayback((int) $target['program_id'], $elapsed);
+    $station = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
+        ? (string) $_CONF['site_name']
+        : 'Radio';
+    $program = isset($target['program_title']) ? (string) $target['program_title'] : '';
+    $track = $media !== false && isset($media['title']) ? (string) $media['title'] : '';
+
+    $files = array(
+        'station' => RADIO_youtubeOverlayText($station, 70),
+        'program' => RADIO_youtubeOverlayText($program, 90),
+        'track' => RADIO_youtubeOverlayText($track, 120)
+    );
+
+    foreach ($files as $name => $text) {
+        $path = RADIO_youtubeOverlayPath($name);
+        if (@file_put_contents($path, $text . PHP_EOL, LOCK_EX) === false) {
+            return false;
+        }
+        @chmod($path, 0600);
+    }
+
+    return true;
+}
+
+function RADIO_youtubeFilterPath($path)
+{
+    $path = str_replace('\\', '/', (string) $path);
+    $path = str_replace(array(':', "'"), array('\\:', "\\'"), $path);
+    return $path;
+}
+
 function RADIO_youtubeStatus()
 {
     return RADIO_youtubeReadJson(RADIO_youtubeStatePath(), array(
@@ -319,9 +382,13 @@ function RADIO_youtubeFfmpegCommand($target, &$error)
         '-safe', '0',
         '-i', $concat,
         '-f', 'lavfi',
-        '-i', 'color=c=black:s=' . $config['video_size'] . ':r=25',
+        '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
         '-map', '1:v:0',
         '-map', '0:a:0',
+        '-vf',
+        "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=white:fontsize=52:x=(w-text_w)/2:y=h*0.24,"
+        . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=white:fontsize=38:x=(w-text_w)/2:y=h*0.42,"
+        . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h*0.58",
         '-c:v', 'libx264',
         '-preset', 'veryfast',
         '-tune', 'stillimage',
