@@ -527,3 +527,12 @@ $LANG_RADIO['youtube_program_empty'] = 'The selected programme contains no playa
 $LANG_RADIO['youtube_concat_failed'] = 'The FFmpeg playlist could not be created.';
 $LANG_RADIO['youtube_ffmpeg_start_failed'] = 'FFmpeg could not be started.';
 
+
+$LANG_RADIO['youtube_getting_started'] = "Getting started with YouTube Live";
+$LANG_RADIO['youtube_help_step_1'] = "Open YouTube Studio, click Create, then Go Live to open Live Control Room.";
+$LANG_RADIO['youtube_help_step_2'] = "Open the Stream tab and locate the Stream key section.";
+$LANG_RADIO['youtube_help_step_3'] = "Copy the stream key into Radio Configuration. Keep this key private.";
+$LANG_RADIO['youtube_help_step_4'] = "For a first test, use Manual mode and select a Radio programme made only from local audio files.";
+$LANG_RADIO['youtube_help_step_5'] = "Run the Radio YouTube worker from cron or use the server command shown below.";
+$LANG_RADIO['youtube_help_stream_key_warning'] = "Security: the stream key acts like a password for your YouTube Live encoder. Do not publish or share it.";
+$LANG_RADIO['youtube_help_official'] = "Official YouTube encoder setup help";
