@@ -199,3 +199,22 @@ Radio detects the filters supported by the FFmpeg binary used by the worker and 
 This prevents a missing optional FFmpeg filter from stopping the YouTube Live stream.
 
 The worker also uses the exact FFmpeg executable found with `command -v ffmpeg`, which is important on shared hosting and cron environments where FFmpeg may be installed in a user directory such as `~/bin`.
+
+
+## Titled station card without drawtext
+
+When FFmpeg does not provide the optional `drawtext` filter, Radio can still render titles by using the FFmpeg `subtitles` filter backed by libass.
+
+When `subtitles`, `overlay`, and `showwaves` are available, Radio automatically generates a private `youtube-live.ass` file containing:
+
+- the Geeklog site/station name;
+- the programme title;
+- the current media title, timed across the programme.
+
+The card uses a dark 720p/1080p background and a compact 860×90 audio waveform near the bottom instead of the full-screen waveform.
+
+If the subtitles filter is unavailable, Radio falls back to the compact waveform where possible, then to the older full-frame visualization modes.
+
+### Manual programme completion
+
+Manual YouTube output is a one-shot request. When the selected programme reaches its duration and FFmpeg exits normally, the worker clears the manual start request. The next cron pass therefore does not restart the programme from the beginning. Starting it again requires a new explicit **Request start** action.
