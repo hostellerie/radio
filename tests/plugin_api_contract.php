@@ -1081,12 +1081,12 @@ $adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml
 radio_contract_require(
     strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
         && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
-        && strpos($youtubeAdmin, 'RADIO_ensureConfig();') !== false
-        && strpos($youtubeAdmin, "\$_RADIO_CONF = \$radioConfig->get_config('radio');") !== false
+        && strpos($youtubeAdmin, 'RADIO_ensureConfig();') === false
+        && strpos($youtubeAdmin, "classes/config.class.php") === false
         && strpos($youtubeAdmin, 'name="stream_key"') === false
         && strpos($youtubeAdmin, 'youtube_stream_key_configured') !== false
         && strpos($youtubeAdmin, 'RADIO_youtubeSetManualRequest') !== false,
-    'Radio YouTube Live administration must require admin rights, use CSRF protection, ensure existing configuration and never render the saved stream key.'
+    'Radio YouTube Live administration must use the already-loaded Radio configuration, require admin rights and CSRF protection, and never render the saved stream key.'
 );
 
 radio_contract_require(
