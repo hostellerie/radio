@@ -256,7 +256,7 @@ function RADIO_youtubeTarget($timestamp)
         if (!$config['manual_requested'] || $config['manual_program_id'] < 1) {
             return false;
         }
-        $program = RADIO_getProgram($config['manual_program_id'], false);
+        $program = RADIO_getProgram($config['manual_program_id'], true);
         if ($program === false) {
             return false;
         }
@@ -379,6 +379,17 @@ function RADIO_youtubeAssText($value)
     return str_replace(',', '‚', $value);
 }
 
+function RADIO_youtubeProgramCoverPath($programId)
+{
+    $program = RADIO_getProgram((int) $programId, true);
+    if ($program === false || empty($program['cover_name'])) {
+        return '';
+    }
+
+    $path = RADIO_coverDir() . basename((string) $program['cover_name']);
+    return is_file($path) && is_readable($path) ? $path : '';
+}
+
 function RADIO_youtubeWriteAss($target, &$error)
 {
     global $_CONF;
@@ -435,6 +446,11 @@ function RADIO_youtubeWriteAss($target, &$error)
         }
         $start = max(0, $itemStart - $elapsed);
         $end = max($start + 1, $itemEnd - $elapsed);
+        $mediaType = isset($item['media_type']) ? (string) $item['media_type'] : '';
+        if ($mediaType === 'jingle') {
+            continue;
+        }
+
         $title = isset($item['title']) ? (string) $item['title'] : '';
         if ($title === '') {
             continue;
@@ -516,17 +532,39 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             $error = $assError;
             return false;
         }
+
+        $cover = RADIO_youtubeProgramCoverPath((int) $target['program_id']);
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
-            '-filter_complex',
-            '[0:a]asplit=2[aout][awave];'
-            . '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave];'
-            . "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
-            . '[card][wave]overlay=(W-w)/2:H-h-65[v]',
-            '-map', '[v]',
-            '-map', '[aout]'
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
         ));
+
+        if ($cover !== '') {
+            $parts = array_merge($parts, array(
+                '-loop', '1',
+                '-framerate', '1',
+                '-i', $cover,
+                '-filter_complex',
+                '[0:a]asplit=2[aout][awave];'
+                . '[awave]showwaves=s=700x70:mode=line:rate=25:colors=0xD8E6F3[wave];'
+                . '[2:v]scale=320:320:force_original_aspect_ratio=decrease[cover];'
+                . '[1:v][cover]overlay=(W-w)/2:250[bg];'
+                . "[bg]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
+                . '[card][wave]overlay=(W-w)/2:H-h-55[v]',
+                '-map', '[v]',
+                '-map', '[aout]'
+            ));
+        } else {
+            $parts = array_merge($parts, array(
+                '-filter_complex',
+                '[0:a]asplit=2[aout][awave];'
+                . '[awave]showwaves=s=700x70:mode=line:rate=25:colors=0xD8E6F3[wave];'
+                . "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
+                . '[card][wave]overlay=(W-w)/2:H-h-55[v]',
+                '-map', '[v]',
+                '-map', '[aout]'
+            ));
+        }
     } elseif ($videoMode === 'compactwaves') {
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
