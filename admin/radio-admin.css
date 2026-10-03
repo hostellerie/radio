@@ -4,7 +4,7 @@
 .radio-admin__heading p{margin:0;max-width:760px;line-height:1.55}
 .radio-admin__header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
 .radio-admin__config-form{margin:0}
-.radio-admin__button,.radio-admin__nav a{display:inline-flex;align-items:center;justify-content:center;min-height:2.4rem;padding:.45rem .8rem;border:1px solid rgba(127,127,127,.45);border-radius:.35rem;text-decoration:none;cursor:pointer}
+.radio-admin__button,.plugin-admin-nav__item,.radio-admin__nav a{display:inline-flex;align-items:center;justify-content:center;min-height:2.4rem;padding:.45rem .8rem;border:1px solid rgba(127,127,127,.45);border-radius:.35rem;background:transparent;color:inherit;font:inherit;text-decoration:none;cursor:pointer}
 .radio-admin__button--secondary{
     background:#f3f4f6;
     color:#1f2937;
@@ -20,8 +20,10 @@
     outline:2px solid currentColor;
     outline-offset:2px
 }
-.radio-admin__nav{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
-.radio-admin__nav a.is-active{font-weight:700;border-width:2px}
+.plugin-admin-nav,.radio-admin__nav{margin:0 0 1rem}
+.plugin-admin-nav__primary,.radio-admin__nav-primary{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.plugin-admin-nav__form,.radio-admin__config-form{display:inline-block;margin:0}
+.plugin-admin-nav__item.is-active,.radio-admin__nav-item.is-active,.radio-admin__nav a.is-active{font-weight:700;border-width:2px;box-shadow:inset 0 -2px 0 currentColor}
 .radio-admin__help{margin:0 0 1rem;padding:1rem;border-left:4px solid currentColor;background:rgba(127,127,127,.08)}
 .radio-admin__help h2{margin:0 0 .35rem;font-size:1.05rem}
 .radio-admin__help p{margin:0;line-height:1.55}
@@ -937,4 +939,9 @@ body.radio-studio-focus-active{
     .radio-programs-cover{
         max-width:100%
     }
+}
+
+@media(max-width:640px){
+    .plugin-admin-nav__primary,.radio-admin__nav-primary{align-items:stretch;flex-direction:column}
+    .plugin-admin-nav__item,.plugin-admin-nav__form,.plugin-admin-nav__form .plugin-admin-nav__item{width:100%;box-sizing:border-box}
 }
