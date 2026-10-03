@@ -1,9 +1,12 @@
-<nav class="radio-admin__nav" aria-label="{nav_aria_label}">
-    {nav_library}
-    {nav_programs}
-    {nav_schedule}
-    {nav_rotation}
-    {nav_sources}
-    {nav_stats}
-    {nav_youtube}
+<nav class="plugin-admin-nav radio-admin__nav" aria-label="{nav_aria_label}">
+    <div class="plugin-admin-nav__primary radio-admin__nav-primary">
+        {nav_library}
+        {nav_programs}
+        {nav_schedule}
+        {nav_rotation}
+        {nav_sources}
+        {nav_stats}
+        {nav_youtube}
+        {nav_configuration}
+    </div>
 </nav>
