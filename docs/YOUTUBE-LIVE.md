@@ -218,3 +218,12 @@ If the subtitles filter is unavailable, Radio falls back to the compact waveform
 ### Manual programme completion
 
 Manual YouTube output is a one-shot request. When the selected programme reaches its duration and FFmpeg exits normally, the worker clears the manual start request. The next cron pass therefore does not restart the programme from the beginning. Starting it again requires a new explicit **Request start** action.
+
+
+## Publication state, programme artwork, and jingles
+
+YouTube output only accepts published programmes. A draft programme is rejected in both scheduled and manual modes.
+
+When a published programme has a cover image, the station card uses that programme artwork in the centre of the video. If no programme cover is available, the card falls back to the text-and-wave layout.
+
+Jingle titles are deliberately hidden from the YouTube visual overlay because jingle names are often internal or technical labels. During a jingle, the station/programme branding remains visible but no jingle title is rendered.
