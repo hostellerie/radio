@@ -2,6 +2,15 @@
 require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
 require_once __DIR__ . '/admin-ui.inc.php';
+require_once $_CONF['path_system'] . 'classes/config.class.php';
+require_once $_CONF['path'] . 'plugins/radio/install_defaults.php';
+
+RADIO_ensureConfig();
+$radioConfig = config::get_instance();
+if ($radioConfig->group_exists('radio')) {
+    $_RADIO_CONF = $radioConfig->get_config('radio');
+}
+
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
 if (!SEC_hasRights('radio.admin')) {
