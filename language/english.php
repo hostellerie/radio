@@ -448,7 +448,13 @@ $LANG_confignames['radio'] = array(
     'stats_retention_days' => 'Statistics retention (days)',
     'library_mode' => 'Media library mode',
     'shared_storage_path' => 'Shared media storage path',
-    'shared_media_sync_interval' => 'Shared media metadata sync interval (seconds)'
+    'shared_media_sync_interval' => 'Shared media metadata sync interval (seconds)',
+    'youtube_enabled' => 'Enable YouTube Live output?',
+    'youtube_mode' => 'YouTube Live mode',
+    'youtube_rtmp_url' => 'YouTube RTMP/RTMPS server',
+    'youtube_stream_key' => 'YouTube stream key',
+    'youtube_video_size' => 'YouTube video size',
+    'youtube_audio_bitrate' => 'YouTube audio bitrate'
 );
 $LANG_configselects['radio'] = array(
     0 => array('Enabled' => 1, 'Disabled' => 0),
@@ -459,7 +465,10 @@ $LANG_configselects['radio'] = array(
         'PHP fallback' => 'php',
         'Apache / LiteSpeed X-Sendfile' => 'xsendfile',
         'Nginx X-Accel-Redirect' => 'xaccel'
-    )
+    ),
+    4 => array('Scheduled slots' => 'scheduled', 'Manual test' => 'manual'),
+    5 => array('1280×720' => '1280x720', '1920×1080' => '1920x1080'),
+    6 => array('96 kbit/s' => '96k', '128 kbit/s' => '128k', '160 kbit/s' => '160k', '192 kbit/s' => '192k')
 );
 
 // Automatic programme generator
