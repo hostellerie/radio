@@ -16,7 +16,7 @@ function RADIO_adminHeaderCode()
     return '<meta name="robots" content="noindex,nofollow">' . "\n";
 }
 
-function RADIO_adminConfigurationButton()
+function RADIO_adminConfigurationButton($active)
 {
     global $_CONF, $LANG_RADIO;
 
@@ -35,7 +35,13 @@ function RADIO_adminConfigurationButton()
             $LANG_RADIO['admin_configuration'],
             ENT_QUOTES,
             'UTF-8'
-        )
+        ),
+        'configuration_active_class' => $active === 'configuration'
+            ? ' is-active'
+            : '',
+        'configuration_aria_current' => $active === 'configuration'
+            ? ' aria-current="page"'
+            : ''
     ));
 
     return $template->finish($template->parse('output', 'page'));
@@ -47,8 +53,12 @@ function RADIO_adminNavItem($active, $key, $url, $label, $allowed)
         return '';
     }
 
-    return '<a class="' . ($active === $key ? 'is-active' : '') . '" href="'
-        . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
+    $isActive = $active === $key;
+
+    return '<a class="plugin-admin-nav__item radio-admin__nav-item'
+        . ($isActive ? ' is-active' : '') . '"'
+        . ($isActive ? ' aria-current="page"' : '')
+        . ' href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
         . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
 }
 
@@ -108,7 +118,8 @@ function RADIO_adminNavigation($active)
             $adminBase . 'youtube.php',
             $LANG_RADIO['youtube_live'],
             SEC_hasRights('radio.admin')
-        )
+        ),
+        'nav_configuration' => RADIO_adminConfigurationButton($active)
     ));
 
     return $template->finish($template->parse('output', 'page'));
@@ -120,7 +131,7 @@ function RADIO_adminRenderPage($active, $title, $intro, $helpTitle, $helpText, $
     $template->set_var(array(
         'page_title' => htmlspecialchars($title, ENT_QUOTES, 'UTF-8'),
         'page_intro' => htmlspecialchars($intro, ENT_QUOTES, 'UTF-8'),
-        'configuration_button' => RADIO_adminConfigurationButton(),
+        'configuration_button' => '',
         'navigation' => RADIO_adminNavigation($active),
         'message' => $message,
         'help_title' => htmlspecialchars($helpTitle, ENT_QUOTES, 'UTF-8'),
