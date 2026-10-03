@@ -166,6 +166,26 @@ if ($newPid < 2) {
     exit(4);
 }
 
+/*
+ * A background shell can return a PID even when FFmpeg exits immediately
+ * because of a filter, codec, input or RTMP error. Give the process a short
+ * grace period and verify that it is still alive before reporting success.
+ */
+sleep(1);
+if (!RADIO_youtubePidRunning($newPid)) {
+    RADIO_youtubeWriteStatus(array(
+        'running' => false,
+        'pid' => 0,
+        'target_key' => '',
+        'program_id' => (int) $target['program_id'],
+        'program_title' => $target['program_title'],
+        'schedule_id' => (int) $target['schedule_id'],
+        'last_error' => 'youtube_ffmpeg_exited_early'
+    ));
+    fwrite(STDERR, "YouTube Live error: FFmpeg exited immediately. Check youtube-live.log.\n");
+    exit(4);
+}
+
 RADIO_youtubeWriteStatus(array(
     'running' => true,
     'pid' => $newPid,
