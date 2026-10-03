@@ -901,6 +901,13 @@ radio_contract_require(
 
 
 radio_contract_require(
+    strpos($studioJs, "line.className = 'radio-studio__buffer-line';") !== false
+        && strpos($studioJs, 'bufferStatus.appendChild(line);') !== false
+        && strpos($studioJs, "parts.join(' | ')") === false,
+    'Radio Studio buffer status must render Current, Next and Reserve on separate lines.'
+);
+
+radio_contract_require(
     strpos($studioJs, 'function updateDjValue(range)') !== false
         && strpos($studioJs, 'if (!range || !djFx)') !== false
         && strpos($studioJs, 'function syncDjModeControl') === false,
@@ -1060,6 +1067,7 @@ radio_contract_require(
     'Radio Studio must group stereo pan under FILTER, stack Echo/Reset, and provide independent -10..+10 dB headroom with master limiting.'
 );
 
+$installDefaults = file_get_contents($root . '/install_defaults.php');
 $youtubeAdmin = file_get_contents($root . '/admin/youtube.php');
 $youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $youtubeWorker = file_get_contents($root . '/bin/youtube-live.php');
@@ -1067,19 +1075,26 @@ $adminNav = file_get_contents($root . '/admin/admin-ui.inc.php');
 $adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml');
 
 radio_contract_require(
-    strpos($youtubeAdmin, '$youtubeLanguageDefaults = array(') !== false
-        && strpos($youtubeAdmin, "isset(\$_CONF['path_html'])") !== false
-        && strpos($youtubeAdmin, "'<GEEKLOG_PUBLIC_ROOT>'") !== false,
-    'Radio YouTube administration must render even when new language keys or path_html are unavailable.'
+    strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
+        && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
+        && strpos($youtubeAdmin, 'RADIO_ensureConfig();') !== false
+        && strpos($youtubeAdmin, "\$_RADIO_CONF = \$radioConfig->get_config('radio');") !== false
+        && strpos($youtubeAdmin, 'name="stream_key"') === false
+        && strpos($youtubeAdmin, 'youtube_stream_key_configured') !== false
+        && strpos($youtubeAdmin, 'RADIO_youtubeSetManualRequest') !== false,
+    'Radio YouTube Live administration must require admin rights, use CSRF protection, ensure existing configuration and never render the saved stream key.'
 );
 
 radio_contract_require(
-    strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
-        && strpos($youtubeAdmin, 'SEC_checkToken()') !== false
-        && strpos($youtubeAdmin, 'type="password" name="stream_key"') !== false
-        && strpos($youtubeAdmin, "value=\"' . htmlspecialchars(\$config['stream_key']") === false
-        && strpos($youtubeAdmin, 'RADIO_youtubeSetManualRequest') !== false,
-    'Radio YouTube Live administration must require admin rights, use CSRF protection and never echo the saved stream key.'
+    strpos($installDefaults, "'youtube_enabled' => 0") !== false
+        && strpos($installDefaults, "'youtube_mode' => 'scheduled'") !== false
+        && strpos($installDefaults, "'youtube_rtmp_url' => 'rtmps://a.rtmps.youtube.com/live2'") !== false
+        && strpos($installDefaults, "'youtube_stream_key' => ''") !== false
+        && strpos($installDefaults, "'youtube_video_size' => '1280x720'") !== false
+        && strpos($installDefaults, "'youtube_audio_bitrate' => '128k'") !== false
+        && strpos($youtubeLib, "\$_RADIO_CONF['youtube_enabled']") !== false
+        && strpos($youtubeLib, "\$_RADIO_CONF['youtube_stream_key']") !== false,
+    'YouTube Live base settings must live in the normal Radio configuration and be consumed by the server-side worker.'
 );
 
 radio_contract_require(
