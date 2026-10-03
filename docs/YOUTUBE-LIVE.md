@@ -162,3 +162,26 @@ The current beta intentionally generates a simple black video frame while stream
 For 1280×720 output, Radio defaults to a 2500k video bitrate and uses constant-rate H.264 settings so that YouTube does not interpret the static black image as an abnormally low-bitrate stream. Audio defaults to 128k AAC.
 
 A future version may replace the black frame with a configurable station image, artwork, or Now Playing display.
+
+
+## Station card and Now Playing overlay
+
+The YouTube output uses a lightweight generated station card instead of a full video source. The current layout contains:
+
+- the Geeklog site/station name;
+- the active Radio programme title;
+- the current media title.
+
+FFmpeg renders the card over a dark background with the `drawtext` filter. The worker writes the display text into private Radio storage files and FFmpeg reads them with `reload=1`, so the text can change without restarting the YouTube stream.
+
+When the worker is run from cron once per minute, the Now Playing display is refreshed on each worker pass and may therefore lag a track change by up to about one minute.
+
+Verify that the installed FFmpeg build supports the required filter:
+
+```sh
+ffmpeg -filters | grep drawtext
+```
+
+The static build installation described above normally includes the required FreeType/fontconfig support. If `drawtext` is unavailable, the YouTube process will fail and the FFmpeg log will contain the corresponding filter error.
+
+The generated overlay text files are stored beside the other Radio YouTube runtime files, for example `youtube-live-station.txt`, `youtube-live-program.txt`, and `youtube-live-track.txt`.
