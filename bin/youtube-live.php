@@ -65,6 +65,28 @@ global $_CONF;
 require_once $_CONF['path'] . 'plugins/radio/functions.inc';
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
+$ffmpegPath = '';
+$ffmpegOutput = array();
+$ffmpegCode = 1;
+@exec('command -v ffmpeg 2>/dev/null', $ffmpegOutput, $ffmpegCode);
+if ($ffmpegCode === 0 && isset($ffmpegOutput[0])) {
+    $ffmpegPath = trim((string) $ffmpegOutput[0]);
+}
+
+if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) {
+    RADIO_youtubeWriteStatus(array(
+        'running' => false,
+        'pid' => 0,
+        'target_key' => '',
+        'program_id' => 0,
+        'program_title' => '',
+        'schedule_id' => 0,
+        'last_error' => 'youtube_ffmpeg_missing'
+    ));
+    fwrite(STDERR, "YouTube Live error: FFmpeg is not installed or is not available in PATH.\n");
+    exit(5);
+}
+
 $status = RADIO_youtubeStatus();
 $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
 $running = RADIO_youtubePidRunning($pid);
