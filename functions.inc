@@ -2751,6 +2751,9 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
     $duration = 0;
     $seedBase = sha1(microtime(true) . ':' . mt_rand() . ':' . $programId);
     $stop = false;
+    $lastJingleMediaId = 0;
+
+    $jinglePool = RADIO_getRotationMediaByTypes(array('jingle'));
 
     for ($cycle = 0; $cycle < 12 && !$stop && count($selected) < 500; $cycle++) {
         $sequence = RADIO_buildFreshRotationSequence(
@@ -2761,7 +2764,8 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
             break;
         }
 
-        $addedThisCycle = 0;
+        $addedRegularThisCycle = 0;
+        $pendingJingle = false;
 
         foreach ($sequence as $item) {
             if (!isset($item['media_id']) || (int) $item['media_id'] < 1
@@ -2770,42 +2774,99 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
             }
 
             $mediaId = (int) $item['media_id'];
+            $mediaType = isset($item['media_type']) ? (string) $item['media_type'] : '';
 
             /*
-             * Generated programmes are unique playlists: a media item may
-             * appear only once, regardless of its type. Reaching the requested
-             * duration is secondary to avoiding repeated songs, jingles,
-             * announcements or promos.
+             * A jingle is not used as filler. Keep at most one pending jingle
+             * and commit it only together with a following unique regular item.
+             * This preserves the Automatic Radio alternation when the unique
+             * regular library is too small for the requested duration.
+             */
+            if ($mediaType === 'jingle') {
+                $pendingJingle = $item;
+                continue;
+            }
+
+            /*
+             * Regular programme media stay globally unique. Duration is only a
+             * target; we never repeat a song/show/etc. merely to reach it.
              */
             if (isset($selectedMediaIds[$mediaId])) {
                 continue;
             }
 
-            if (count($selected) > 0) {
-                $previous = $selected[count($selected) - 1];
-                $overlap = RADIO_transitionOverlapFor($previous, $item, $mode, $seconds);
-                $candidateDuration = $duration + max(1, (int) $item['duration'] - $overlap);
-            } else {
-                $candidateDuration = (int) $item['duration'];
+            $itemsToAdd = array();
+
+            if ($pendingJingle !== false) {
+                $jingle = $pendingJingle;
+
+                /*
+                 * Jingles may repeat when there are fewer jingles than required
+                 * by the rotation pattern. If alternatives exist, avoid using
+                 * the same jingle on two consecutive jingle slots.
+                 */
+                if ((int) $jingle['media_id'] === $lastJingleMediaId
+                    && count($jinglePool) > 1) {
+                    $alternatives = array();
+                    foreach ($jinglePool as $candidate) {
+                        if ((int) $candidate['media_id'] !== $lastJingleMediaId) {
+                            $alternatives[] = $candidate;
+                        }
+                    }
+                    if (count($alternatives) > 0) {
+                        $jingle = $alternatives[mt_rand(0, count($alternatives) - 1)];
+                    }
+                }
+
+                $itemsToAdd[] = $jingle;
+            }
+
+            $itemsToAdd[] = $item;
+
+            $candidateDuration = $duration;
+            $candidatePrevious = count($selected) > 0
+                ? $selected[count($selected) - 1]
+                : false;
+
+            foreach ($itemsToAdd as $candidateItem) {
+                if ($candidatePrevious !== false) {
+                    $overlap = RADIO_transitionOverlapFor(
+                        $candidatePrevious,
+                        $candidateItem,
+                        $mode,
+                        $seconds
+                    );
+                    $candidateDuration += max(
+                        1,
+                        (int) $candidateItem['duration'] - $overlap
+                    );
+                } else {
+                    $candidateDuration += (int) $candidateItem['duration'];
+                }
+                $candidatePrevious = $candidateItem;
             }
 
             if (count($selected) > 0 && $candidateDuration >= $targetSeconds) {
                 $before = abs($targetSeconds - $duration);
                 $after = abs($candidateDuration - $targetSeconds);
-                if ($after <= $before) {
-                    $selected[] = $item;
-                    $selectedMediaIds[$mediaId] = true;
-                    $duration = $candidateDuration;
-                    $addedThisCycle++;
+                if ($after > $before) {
+                    $stop = true;
+                    break;
                 }
-                $stop = true;
-                break;
             }
 
-            $selected[] = $item;
+            foreach ($itemsToAdd as $candidateItem) {
+                $selected[] = $candidateItem;
+                if (isset($candidateItem['media_type'])
+                    && (string) $candidateItem['media_type'] === 'jingle') {
+                    $lastJingleMediaId = (int) $candidateItem['media_id'];
+                }
+            }
+
             $selectedMediaIds[$mediaId] = true;
             $duration = $candidateDuration;
-            $addedThisCycle++;
+            $addedRegularThisCycle++;
+            $pendingJingle = false;
 
             if ($duration >= $targetSeconds) {
                 $stop = true;
@@ -2814,11 +2875,11 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
         }
 
         /*
-         * A complete fresh rotation did not expose any unused media. Further
-         * cycles would only repeat already selected IDs, so accept a shorter
-         * programme rather than introducing duplicates.
+         * If a complete fresh rotation exposes no unused regular media, stop.
+         * Any pending jingle is deliberately discarded instead of being used
+         * alone to pad the programme duration.
          */
-        if (!$stop && $addedThisCycle === 0) {
+        if (!$stop && $addedRegularThisCycle === 0) {
             break;
         }
     }
