@@ -32,6 +32,34 @@ if ($host !== '') {
     $_SERVER['SERVER_NAME'] = $host;
 }
 
+/*
+ * Geeklog's normal bootstrap assumes an HTTP request, including on 2.1.1.
+ * Provide the minimal request context required by device/session/routing code
+ * before lib-common.php is loaded so the CLI worker behaves like the selected
+ * site without depending on a web server.
+ */
+if (!isset($_SERVER['HTTP_USER_AGENT'])) {
+    $_SERVER['HTTP_USER_AGENT'] = 'Geeklog Radio YouTube CLI';
+}
+if (!isset($_SERVER['REQUEST_METHOD'])) {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+}
+if (!isset($_SERVER['SERVER_PROTOCOL'])) {
+    $_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
+}
+if (!isset($_SERVER['REMOTE_ADDR'])) {
+    $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+}
+if (!isset($_SERVER['REQUEST_URI'])) {
+    $_SERVER['REQUEST_URI'] = '/';
+}
+if (!isset($_SERVER['SCRIPT_NAME'])) {
+    $_SERVER['SCRIPT_NAME'] = '/radio-youtube-worker';
+}
+if (!isset($_SERVER['PHP_SELF'])) {
+    $_SERVER['PHP_SELF'] = '/radio-youtube-worker';
+}
+
 require_once $root . '/lib-common.php';
 global $_CONF;
 require_once $_CONF['path'] . 'plugins/radio/functions.inc';
