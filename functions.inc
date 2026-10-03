@@ -2747,6 +2747,7 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
     $mode = RADIO_transitionMode();
     $seconds = RADIO_crossfadeSeconds();
     $selected = array();
+    $selectedMediaIds = array();
     $duration = 0;
     $seedBase = sha1(microtime(true) . ':' . mt_rand() . ':' . $programId);
     $stop = false;
@@ -2760,17 +2761,28 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
             break;
         }
 
+        $addedThisCycle = 0;
+
         foreach ($sequence as $item) {
             if (!isset($item['media_id']) || (int) $item['media_id'] < 1
                 || (int) $item['duration'] < 1) {
                 continue;
             }
 
+            $mediaId = (int) $item['media_id'];
+
+            /*
+             * Generated programmes are unique playlists: a media item may
+             * appear only once, regardless of its type. Reaching the requested
+             * duration is secondary to avoiding repeated songs, jingles,
+             * announcements or promos.
+             */
+            if (isset($selectedMediaIds[$mediaId])) {
+                continue;
+            }
+
             if (count($selected) > 0) {
                 $previous = $selected[count($selected) - 1];
-                if ((int) $previous['media_id'] === (int) $item['media_id']) {
-                    continue;
-                }
                 $overlap = RADIO_transitionOverlapFor($previous, $item, $mode, $seconds);
                 $candidateDuration = $duration + max(1, (int) $item['duration'] - $overlap);
             } else {
@@ -2782,19 +2794,32 @@ function RADIO_createAutomaticProgram($targetSeconds, $title)
                 $after = abs($candidateDuration - $targetSeconds);
                 if ($after <= $before) {
                     $selected[] = $item;
+                    $selectedMediaIds[$mediaId] = true;
                     $duration = $candidateDuration;
+                    $addedThisCycle++;
                 }
                 $stop = true;
                 break;
             }
 
             $selected[] = $item;
+            $selectedMediaIds[$mediaId] = true;
             $duration = $candidateDuration;
+            $addedThisCycle++;
 
             if ($duration >= $targetSeconds) {
                 $stop = true;
                 break;
             }
+        }
+
+        /*
+         * A complete fresh rotation did not expose any unused media. Further
+         * cycles would only repeat already selected IDs, so accept a shorter
+         * programme rather than introducing duplicates.
+         */
+        if (!$stop && $addedThisCycle === 0) {
+            break;
         }
     }
 
