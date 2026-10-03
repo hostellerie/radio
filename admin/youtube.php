@@ -118,7 +118,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
 radio_youtube_trace(18, 'after POST handling');
 
 radio_youtube_trace(19, 'before RADIO_youtubeConfig');
-$config = RADIO_youtubeConfig();
+$youtubeConfig = RADIO_youtubeConfig();
 radio_youtube_trace(20, 'after RADIO_youtubeConfig');
 
 radio_youtube_trace(21, 'before RADIO_youtubeStatus');
@@ -138,7 +138,7 @@ radio_youtube_trace(26, 'after RADIO_getPrograms count=' . count($programs));
 radio_youtube_trace(27, 'before SEC_createToken');
 $token = SEC_createToken();
 radio_youtube_trace(28, 'after SEC_createToken');
-$scheduleIds = array_flip($config['schedule_ids']);
+$scheduleIds = array_flip($youtubeConfig['schedule_ids']);
 
 radio_youtube_trace(29, 'before page content construction');
 $content = '';
@@ -149,31 +149,31 @@ $content .= '<section class="radio-admin__panel"><h2>'
     . '<dl>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_enabled']) . '</dt><dd>'
     . radio_youtube_h(
-        $config['enabled']
+        $youtubeConfig['enabled']
             ? (isset($LANG_RADIO['enabled']) ? $LANG_RADIO['enabled'] : 'Enabled')
             : (isset($LANG_RADIO['disabled']) ? $LANG_RADIO['disabled'] : 'Disabled')
     ) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_mode']) . '</dt><dd>'
     . radio_youtube_h(
-        $config['mode'] === 'manual'
+        $youtubeConfig['mode'] === 'manual'
             ? $LANG_RADIO['youtube_mode_manual']
             : $LANG_RADIO['youtube_mode_scheduled']
     ) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_rtmp_url']) . '</dt><dd>'
-    . radio_youtube_h($config['rtmp_url']) . '</dd>'
+    . radio_youtube_h($youtubeConfig['rtmp_url']) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_stream_key']) . '</dt><dd>'
     . radio_youtube_h(
-        trim((string) $config['stream_key']) !== ''
+        trim((string) $youtubeConfig['stream_key']) !== ''
             ? $LANG_RADIO['youtube_stream_key_configured']
             : $LANG_RADIO['youtube_stream_key_missing']
     ) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_video_size']) . '</dt><dd>'
-    . radio_youtube_h($config['video_size']) . '</dd>'
+    . radio_youtube_h($youtubeConfig['video_size']) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_audio_bitrate']) . '</dt><dd>'
-    . radio_youtube_h($config['audio_bitrate']) . '</dd>'
+    . radio_youtube_h($youtubeConfig['audio_bitrate']) . '</dd>'
     . '</dl></section>';
 
-if (!$config['enabled'] || trim((string) $config['stream_key']) === '') {
+if (!$youtubeConfig['enabled'] || trim((string) $youtubeConfig['stream_key']) === '') {
     $content .= '<p class="radio-admin__notice">'
         . radio_youtube_h($LANG_RADIO['youtube_configuration_required'])
         . '</p>';
@@ -230,7 +230,7 @@ $content .= '<h3>' . radio_youtube_h($LANG_RADIO['youtube_manual_test']) . '</h3
 
 foreach ($programs as $program) {
     $content .= '<option value="' . (int) $program['program_id'] . '"'
-        . ((int) $config['manual_program_id'] === (int) $program['program_id'] ? ' selected' : '') . '>'
+        . ((int) $youtubeConfig['manual_program_id'] === (int) $program['program_id'] ? ' selected' : '') . '>'
         . radio_youtube_h($program['title']) . '</option>';
 }
 
