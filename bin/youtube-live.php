@@ -87,10 +87,18 @@ if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) 
     exit(5);
 }
 
+$hasShowwaves = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves');
+$hasOverlay = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay');
+$hasSubtitles = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'subtitles');
+
 $videoMode = 'color';
-if (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+if ($hasShowwaves && $hasOverlay && $hasSubtitles) {
+    $videoMode = 'stationcard';
+} elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
     $videoMode = 'drawtext';
-} elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')) {
+} elseif ($hasShowwaves && $hasOverlay) {
+    $videoMode = 'compactwaves';
+} elseif ($hasShowwaves) {
     $videoMode = 'showwaves';
 } elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showspectrum')) {
     $videoMode = 'showspectrum';
@@ -102,6 +110,32 @@ $running = RADIO_youtubePidRunning($pid);
 if (!$running && $pid > 0) {
     $status['pid'] = 0;
     $status['running'] = false;
+}
+
+$config = RADIO_youtubeConfig();
+if (!$running
+    && isset($config['mode']) && $config['mode'] === 'manual'
+    && !empty($config['manual_requested'])
+    && !empty($status['target_key'])
+    && strpos((string) $status['target_key'], 'manual:') === 0
+    && !empty($status['started_at'])
+    && !empty($status['program_id'])) {
+    $startedAt = strtotime((string) $status['started_at']);
+    $duration = RADIO_programDuration((int) $status['program_id']);
+    if ($startedAt !== false && $duration > 0 && time() >= ($startedAt + $duration)) {
+        RADIO_youtubeSetManualRequest(false);
+        RADIO_youtubeWriteStatus(array(
+            'running' => false,
+            'pid' => 0,
+            'target_key' => '',
+            'last_error' => ''
+        ));
+        echo "YouTube Live manual programme completed.\n";
+        exit(0);
+    }
+}
+
+if (!$running) {
     $status['target_key'] = '';
 }
 
