@@ -264,7 +264,15 @@ $worker = $_CONF['path'] . 'plugins/radio/bin/youtube-live.php';
 $root = isset($_CONF['path_html']) && $_CONF['path_html'] !== ''
     ? rtrim((string) $_CONF['path_html'], '/\\')
     : '<GEEKLOG_PUBLIC_ROOT>';
-$command = 'php ' . $worker . ' --geeklog-root=' . $root;
+$siteHost = '';
+if (!empty($_CONF['site_url'])) {
+    $parsedHost = parse_url((string) $_CONF['site_url'], PHP_URL_HOST);
+    if (is_string($parsedHost)) {
+        $siteHost = trim($parsedHost);
+    }
+}
+$command = 'php ' . $worker . ' --geeklog-root=' . $root
+    . ($siteHost !== '' ? ' --host=' . $siteHost : '');
 
 $content .= '<section class="radio-admin__panel"><h2>'
     . radio_youtube_h($LANG_RADIO['youtube_worker']) . '</h2>'
