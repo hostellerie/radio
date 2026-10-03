@@ -30,7 +30,13 @@ $_RADIO_DEFAULT = array(
     'block_order' => 50,
     'library_mode' => 'local',
     'shared_storage_path' => '',
-    'shared_media_sync_interval' => 300
+    'shared_media_sync_interval' => 300,
+    'youtube_enabled' => 0,
+    'youtube_mode' => 'scheduled',
+    'youtube_rtmp_url' => 'rtmps://a.rtmps.youtube.com/live2',
+    'youtube_stream_key' => '',
+    'youtube_video_size' => '1280x720',
+    'youtube_audio_bitrate' => '128k'
 );
 
 function RADIO_configSortOrder()
@@ -61,20 +67,32 @@ function RADIO_configSortOrder()
         'block_order' => 180,
         'library_mode' => 190,
         'shared_storage_path' => 200,
-        'shared_media_sync_interval' => 210
+        'shared_media_sync_interval' => 210,
+        'youtube_enabled' => 220,
+        'youtube_mode' => 230,
+        'youtube_rtmp_url' => 240,
+        'youtube_stream_key' => 250,
+        'youtube_video_size' => 260,
+        'youtube_audio_bitrate' => 270
     );
 }
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode', 'youtube_enabled', 'youtube_mode', 'youtube_video_size', 'youtube_audio_bitrate'), true)
         ? 'select'
         : 'text';
     $select = $name === 'transition_mode'
         ? 1
         : ($name === 'library_mode'
             ? 2
-            : ($name === 'media_delivery_mode' ? 3 : 0));
+            : ($name === 'media_delivery_mode'
+                ? 3
+                : ($name === 'youtube_mode'
+                    ? 4
+                    : ($name === 'youtube_video_size'
+                        ? 5
+                        : ($name === 'youtube_audio_bitrate' ? 6 : 0)))));
 
     $c->add($name, $default, $type, 0, 0, $select, $sort, true, 'radio', 0);
 }
