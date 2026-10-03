@@ -390,6 +390,45 @@ function RADIO_youtubeProgramCoverPath($programId)
     return is_file($path) && is_readable($path) ? $path : '';
 }
 
+function RADIO_youtubeMediaCoverPath($mediaId)
+{
+    $media = RADIO_getMedia((int) $mediaId, true);
+    if ($media === false || empty($media['cover_name'])) {
+        return '';
+    }
+
+    $path = RADIO_coverDir() . basename((string) $media['cover_name']);
+    return is_file($path) && is_readable($path) ? $path : '';
+}
+
+function RADIO_youtubeArtwork($target)
+{
+    $programCover = RADIO_youtubeProgramCoverPath((int) $target['program_id']);
+    if ($programCover !== '') {
+        return array(
+            'type' => 'program',
+            'path' => $programCover
+        );
+    }
+
+    $elapsed = isset($target['elapsed']) ? max(0, (int) $target['elapsed']) : 0;
+    $media = RADIO_resolveProgramPlayback((int) $target['program_id'], $elapsed);
+    if ($media !== false && !empty($media['media_id'])) {
+        $mediaCover = RADIO_youtubeMediaCoverPath((int) $media['media_id']);
+        if ($mediaCover !== '') {
+            return array(
+                'type' => 'media',
+                'path' => $mediaCover
+            );
+        }
+    }
+
+    return array(
+        'type' => 'none',
+        'path' => ''
+    );
+}
+
 function RADIO_youtubeWriteAss($target, &$error)
 {
     global $_CONF;
@@ -533,7 +572,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             return false;
         }
 
-        $cover = RADIO_youtubeProgramCoverPath((int) $target['program_id']);
+        $artwork = RADIO_youtubeArtwork($target);
+        $cover = isset($artwork['path']) ? (string) $artwork['path'] : '';
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
