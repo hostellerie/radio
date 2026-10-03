@@ -1077,6 +1077,9 @@ $youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $youtubeWorker = file_get_contents($root . '/bin/youtube-live.php');
 $adminNav = file_get_contents($root . '/admin/admin-ui.inc.php');
 $adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml');
+$adminNavigationTemplate = $adminNavTemplate;
+$adminConfigurationTemplate = file_get_contents($root . '/templates/admin/configuration-button.thtml');
+$adminCssFile = file_get_contents($root . '/admin/radio-admin.css');
 
 radio_contract_require(
     strpos($youtubeAdmin, "SEC_hasRights('radio.admin')") !== false
@@ -1125,6 +1128,28 @@ radio_contract_require(
         && strpos($youtubeWorker, 'nohup ') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeStopPid') !== false,
     'Radio YouTube Live worker must be CLI-only and reconcile FFmpeg with the configured target.'
+);
+
+radio_contract_require(
+    strpos($functions, 'function plugin_getadminoption_radio()') !== false
+        && strpos($functions, 'function plugin_cclabel_radio()') !== false
+        && strpos($functions, 'function plugin_geticon_radio()') !== false
+        && strpos($functions, "return rtrim(\$_CONF['site_url'], '/') . '/radio/images/plugin.svg';") !== false
+        && strpos($functions, "if (!SEC_hasRights('radio.admin')) {\n        return array();") !== false,
+    'Radio administration must expose Geeklog native admin-menu and Command & Control discovery hooks without relying on a theme.'
+);
+
+radio_contract_require(
+    strpos($adminNavigationTemplate, 'class="plugin-admin-nav radio-admin__nav"') !== false
+        && strpos($adminNavigationTemplate, 'class="plugin-admin-nav__primary radio-admin__nav-primary"') !== false
+        && strpos($adminNavigationTemplate, '{nav_configuration}') !== false
+        && strpos($adminConfigurationTemplate, 'class="plugin-admin-nav__form radio-admin__config-form"') !== false
+        && strpos($adminConfigurationTemplate, 'name="conf_group" value="radio"') !== false
+        && strpos($adminConfigurationTemplate, 'plugin-admin-nav__item') !== false
+        && strpos($adminNav, 'aria-current="page"') !== false
+        && strpos($adminCssFile, '.plugin-admin-nav__primary') !== false
+        && strpos($adminCssFile, '.plugin-admin-nav__item') !== false,
+    'Radio persistent administration navigation must follow the Memorandum plugin-admin-nav contract and remain theme-neutral.'
 );
 
 radio_contract_require(
