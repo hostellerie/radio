@@ -185,3 +185,17 @@ ffmpeg -filters | grep drawtext
 The static build installation described above normally includes the required FreeType/fontconfig support. If `drawtext` is unavailable, the YouTube process will fail and the FFmpeg log will contain the corresponding filter error.
 
 The generated overlay text files are stored beside the other Radio YouTube runtime files, for example `youtube-live-station.txt`, `youtube-live-program.txt`, and `youtube-live-track.txt`.
+
+
+## Automatic video visualization fallback
+
+Radio detects the filters supported by the FFmpeg binary used by the worker and selects a safe video mode automatically:
+
+1. `drawtext`: station card with station name, programme title, and current media title;
+2. `showwaves`: animated audio waveform when `drawtext` is unavailable;
+3. `showspectrum`: animated audio spectrum when `showwaves` is unavailable;
+4. a simple dark color frame as the final fallback.
+
+This prevents a missing optional FFmpeg filter from stopping the YouTube Live stream.
+
+The worker also uses the exact FFmpeg executable found with `command -v ffmpeg`, which is important on shared hosting and cron environments where FFmpeg may be installed in a user directory such as `~/bin`.
