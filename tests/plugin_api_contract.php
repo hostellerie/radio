@@ -389,7 +389,7 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($functions, '$selectedMediaIds = array();') !== false
-        && strpos($functions, "if ($mediaType === 'jingle')") !== false
+        && strpos($functions, "if (\$mediaType === 'jingle')") !== false
         && strpos($functions, '$pendingJingle = $item;') !== false
         && strpos($functions, 'isset($selectedMediaIds[$mediaId])') !== false
         && strpos($functions, '$selectedMediaIds[$mediaId] = true;') !== false
