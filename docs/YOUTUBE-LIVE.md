@@ -55,8 +55,10 @@ The administration page displays the exact command for the current Geeklog insta
 Generic form:
 
 ```sh
-php /path/to/private/plugins/radio/bin/youtube-live.php --geeklog-root=/path/to/public_html
+php /path/to/private/plugins/radio/bin/youtube-live.php --geeklog-root=/path/to/public_html --host=example.com
 ```
+
+On a multisite installation, `--host` is required so Geeklog can select the correct site configuration before `lib-common.php` is loaded. The administration page includes the current site's host automatically in the displayed command.
 
 A single run reconciles the desired state:
 
@@ -68,7 +70,7 @@ A single run reconciles the desired state:
 For scheduled operation, run it once per minute:
 
 ```cron
-* * * * * php /path/to/private/plugins/radio/bin/youtube-live.php --geeklog-root=/path/to/public_html >/dev/null 2>&1
+* * * * * php /path/to/private/plugins/radio/bin/youtube-live.php --geeklog-root=/path/to/public_html --host=example.com >/dev/null 2>&1
 ```
 
 The first/last minute of a scheduled YouTube slot can therefore have up to roughly one minute of scheduler latency. A future daemon/service mode can reduce this without changing the scheduling model.
