@@ -388,6 +388,14 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($functions, '$selectedMediaIds = array();') !== false
+        && strpos($functions, 'isset($selectedMediaIds[$mediaId])') !== false
+        && strpos($functions, '$selectedMediaIds[$mediaId] = true;') !== false
+        && strpos($functions, '$addedThisCycle === 0') !== false,
+    'Generated Radio programmes must never repeat a media_id and must accept a shorter duration when all unique eligible media have been exhausted.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function promoteQueuePreload') !== false
         && strpos($publicPlayer, 'queuePreload.readyState < 2') !== false
         && strpos($publicPlayer, 'if (promoteQueuePreload(followingIndex))') !== false,
