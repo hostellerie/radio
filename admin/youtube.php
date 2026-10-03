@@ -1,26 +1,55 @@
 <?php
 require_once dirname(__FILE__) . '/../../../lib-common.php';
-require_once dirname(__FILE__) . '/../../auth.inc.php';
-require_once __DIR__ . '/admin-ui.inc.php';
 
+function radio_youtube_trace($number, $message)
+{
+    if (function_exists('COM_errorLog')) {
+        COM_errorLog(
+            'RADIO YOUTUBE TRACE ' . str_pad((string) $number, 2, '0', STR_PAD_LEFT)
+            . ': ' . $message,
+            1
+        );
+    }
+}
+
+radio_youtube_trace(2, 'after lib-common.php');
+
+radio_youtube_trace(3, 'before auth.inc.php');
+require_once dirname(__FILE__) . '/../../auth.inc.php';
+radio_youtube_trace(4, 'after auth.inc.php');
+
+radio_youtube_trace(5, 'before admin-ui.inc.php');
+require_once __DIR__ . '/admin-ui.inc.php';
+radio_youtube_trace(6, 'after admin-ui.inc.php');
+
+radio_youtube_trace(7, 'before radio.admin ACL check');
 if (!SEC_hasRights('radio.admin')) {
     COM_accessLog('User tried to access Radio YouTube Live administration without permission.');
     $content = COM_showMessageText($MESSAGE[29], $MESSAGE[30]);
     COM_output(COM_createHTMLDocument($content, array('pagetitle' => $MESSAGE[30])));
+    radio_youtube_trace(8, 'access denied page rendered');
     exit;
 }
 
+radio_youtube_trace(8, 'radio.admin ACL granted');
+
 global $LANG_RADIO, $_CONF;
 
+radio_youtube_trace(9, 'before YouTube library path');
 $youtubeLibrary = $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
+radio_youtube_trace(10, 'YouTube library path resolved: ' . $youtubeLibrary);
 $youtubeLibraryReady = is_file($youtubeLibrary) && is_readable($youtubeLibrary);
+radio_youtube_trace(11, $youtubeLibraryReady ? 'YouTube library file is readable' : 'YouTube library file missing or unreadable');
 
 if ($youtubeLibraryReady) {
+    radio_youtube_trace(12, 'before require youtube.inc.php');
     require_once $youtubeLibrary;
+    radio_youtube_trace(13, 'after require youtube.inc.php');
     $youtubeLibraryReady = function_exists('RADIO_youtubeConfig')
         && function_exists('RADIO_youtubeStatus')
         && function_exists('RADIO_youtubeSaveConfig')
         && function_exists('RADIO_youtubeSetManualRequest');
+    radio_youtube_trace(14, $youtubeLibraryReady ? 'YouTube library functions available' : 'YouTube library functions incomplete');
 }
 
 function radio_youtube_h($value)
@@ -30,6 +59,7 @@ function radio_youtube_h($value)
 
 $message = '';
 
+radio_youtube_trace(15, 'before YouTube library readiness branch');
 if (!$youtubeLibraryReady) {
     $errorText = isset($LANG_RADIO['youtube_module_unavailable'])
         ? $LANG_RADIO['youtube_module_unavailable']
@@ -48,13 +78,19 @@ if (!$youtubeLibraryReady) {
         ''
     );
 
-    COM_output(COM_createHTMLDocument($content, array(
+    radio_youtube_trace(16, 'rendering module unavailable page');
+    $document = COM_createHTMLDocument($content, array(
         'pagetitle' => isset($LANG_RADIO['youtube_live']) ? $LANG_RADIO['youtube_live'] : 'YouTube Live',
         'headercode' => RADIO_adminHeaderCode()
-    )));
+    ));
+    radio_youtube_trace(17, 'module unavailable document created');
+    COM_output($document);
+    radio_youtube_trace(18, 'module unavailable document output complete');
     exit;
 }
 
+radio_youtube_trace(16, 'YouTube library ready');
+radio_youtube_trace(17, 'before POST handling');
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['youtube_live']);
@@ -79,19 +115,32 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         );
     }
 }
+radio_youtube_trace(18, 'after POST handling');
 
+radio_youtube_trace(19, 'before RADIO_youtubeConfig');
 $config = RADIO_youtubeConfig();
+radio_youtube_trace(20, 'after RADIO_youtubeConfig');
 
+radio_youtube_trace(21, 'before RADIO_youtubeStatus');
 $status = RADIO_youtubeStatus();
+radio_youtube_trace(22, 'after RADIO_youtubeStatus');
 
+radio_youtube_trace(23, 'before RADIO_getSchedules');
 $schedules = RADIO_getSchedules(false);
+radio_youtube_trace(24, 'after RADIO_getSchedules count=' . count($schedules));
 
+radio_youtube_trace(25, 'before RADIO_getPrograms');
 $programs = array_values(array_filter(RADIO_getPrograms(200, false), function ($row) {
     return RADIO_hasReadAccess($row) || RADIO_hasEditAccess($row);
 }));
+radio_youtube_trace(26, 'after RADIO_getPrograms count=' . count($programs));
+
+radio_youtube_trace(27, 'before SEC_createToken');
 $token = SEC_createToken();
+radio_youtube_trace(28, 'after SEC_createToken');
 $scheduleIds = array_flip($config['schedule_ids']);
 
+radio_youtube_trace(29, 'before page content construction');
 $content = '';
 
 $content .= '<section class="radio-admin__panel"><h2>'
@@ -210,6 +259,7 @@ $content .= '<section class="radio-admin__panel"><h2>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_beta_warning']) . '</small></p>'
     . '</section>';
 
+radio_youtube_trace(30, 'before RADIO_adminRenderPage');
 $content = RADIO_adminRenderPage(
     'youtube',
     $LANG_RADIO['youtube_live'],
@@ -219,8 +269,15 @@ $content = RADIO_adminRenderPage(
     $content,
     $message
 );
+radio_youtube_trace(31, 'after RADIO_adminRenderPage');
 
-COM_output(COM_createHTMLDocument($content, array(
+radio_youtube_trace(32, 'before COM_createHTMLDocument');
+$document = COM_createHTMLDocument($content, array(
     'pagetitle' => $LANG_RADIO['youtube_live'],
     'headercode' => RADIO_adminHeaderCode()
-)));
+));
+radio_youtube_trace(33, 'after COM_createHTMLDocument');
+
+radio_youtube_trace(34, 'before COM_output');
+COM_output($document);
+radio_youtube_trace(35, 'after COM_output');
