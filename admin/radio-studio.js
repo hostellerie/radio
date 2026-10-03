@@ -89,7 +89,15 @@
             parts.push(reservePart);
         }
 
-        bufferStatus.textContent = parts.join(' | ');
+        while (bufferStatus.firstChild) {
+            bufferStatus.removeChild(bufferStatus.firstChild);
+        }
+        for (var partIndex = 0; partIndex < parts.length; partIndex++) {
+            var line = document.createElement('div');
+            line.className = 'radio-studio__buffer-line';
+            line.textContent = parts[partIndex];
+            bufferStatus.appendChild(line);
+        }
     }
 
     player.addEventListener('radio:buffer-status', function (event) {
