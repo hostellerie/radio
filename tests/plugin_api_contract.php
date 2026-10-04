@@ -329,6 +329,8 @@ radio_contract_require(
         && strpos($studioLive, "RADIO_youtubeStopPid(\$ffmpegPid)") !== false
         && strpos($studioLive, "RADIO_studioYoutubeCleanupStale()") !== false
         && strpos($studioYoutubeWorker, 'RADIO_youtubeStudioFfmpegCommand') !== false
+        && strpos($studioYoutubeWorker, "if (is_file(\$inputPath))") !== false
+        && strpos($studioYoutubeWorker, "@unlink(\$inputPath)") !== false
         && strpos($youtubeLib, 'function RADIO_youtubeStudioFfmpegCommand') !== false,
     'Radio Studio YouTube Live must use a separate control, bounded master-audio chunks and one persistent helper/FFmpeg session.'
 );
