@@ -67,8 +67,18 @@ require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
 function radio_youtube_worker_log($message)
 {
+    global $_CONF;
+
+    $line = '[' . date('Y-m-d H:i:s') . '] [Radio YouTube] ' . (string) $message . PHP_EOL;
+    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
+    $logPath = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : '';
+
+    if ($logPath !== '' && @file_put_contents($logPath, $line, FILE_APPEND | LOCK_EX) !== false) {
+        return;
+    }
+
     if (function_exists('COM_errorLog')) {
-        COM_errorLog('[Radio YouTube] ' . (string) $message, 1);
+        COM_errorLog('[Radio YouTube] Unable to write radio.log: ' . (string) $message, 1);
     }
 }
 
