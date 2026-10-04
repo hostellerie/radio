@@ -97,7 +97,10 @@ function radio_youtube_status_html($status)
     }
 
     $suppressedOccurrence = RADIO_youtubeSuppressedOccurrence(time());
-    if ($suppressedOccurrence !== false) {
+    $currentTargetKey = isset($status['target_key']) ? (string) $status['target_key'] : '';
+    $manualLiveRunning = !empty($status['running'])
+        && strpos($currentTargetKey, 'manual:') === 0;
+    if ($suppressedOccurrence !== false && !$manualLiveRunning) {
         $html .= '<p class="radio-admin__notice"><strong>'
             . radio_youtube_h($LANG_RADIO['youtube_occurrence_stopped_manually'])
             . '</strong>';
