@@ -923,6 +923,9 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $parts[] = (string) (int) $target['elapsed'];
     }
     $parts = array_merge($parts, array(
+        '-vn',
+        '-sn',
+        '-dn',
         '-f', 'concat',
         '-safe', '0',
         '-i', $concat
