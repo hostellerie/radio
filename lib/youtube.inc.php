@@ -39,6 +39,7 @@ function RADIO_youtubeConfigDefaults()
         'show_artwork' => true,
         'show_visualizer' => true,
         'visualizer_size' => 'medium',
+        'waveform_style' => 'line',
         'suppressed_target_key' => '',
         'suppressed_until' => 0,
         'suppressed_program_title' => ''
@@ -96,6 +97,7 @@ function RADIO_youtubeConfig()
         'show_artwork',
         'show_visualizer',
         'visualizer_size',
+        'waveform_style',
         'suppressed_target_key',
         'suppressed_until',
         'suppressed_program_title'
@@ -141,6 +143,9 @@ function RADIO_youtubeConfig()
     $config['visualizer_size'] = in_array($config['visualizer_size'], array('small','medium','large'), true)
         ? $config['visualizer_size']
         : 'medium';
+    $config['waveform_style'] = in_array($config['waveform_style'], array('line','cline','p2p'), true)
+        ? $config['waveform_style']
+        : 'line';
     $config['suppressed_target_key'] = trim((string) $config['suppressed_target_key']);
     $config['suppressed_until'] = max(0, (int) $config['suppressed_until']);
     $config['suppressed_program_title'] = trim((string) $config['suppressed_program_title']);
@@ -184,7 +189,8 @@ function RADIO_youtubeSaveConfig($data)
         'show_track' => true,
         'show_artwork' => true,
         'show_visualizer' => true,
-        'visualizer_size' => 'medium'
+        'visualizer_size' => 'medium',
+        'waveform_style' => 'line'
     ));
 
     $runtime['schedule_ids'] = isset($data['schedule_ids']) && is_array($data['schedule_ids'])
@@ -214,6 +220,18 @@ function RADIO_youtubeSaveConfig($data)
         && in_array($data['visualizer_size'], array('small','medium','large'), true)
         ? (string) $data['visualizer_size']
         : 'medium';
+    $runtime['waveform_style'] = isset($data['waveform_style'])
+        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
+        ? (string) $data['waveform_style']
+        : 'line';
+    $runtime['waveform_style'] = isset($data['waveform_style'])
+        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
+        ? (string) $data['waveform_style']
+        : 'line';
+    $runtime['waveform_style'] = isset($data['waveform_style'])
+        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
+        ? (string) $data['waveform_style']
+        : 'line';
 
     if (!isset($runtime['manual_requested'])) {
         $runtime['manual_requested'] = false;
@@ -296,7 +314,8 @@ function RADIO_youtubeVisualSignature($config = null)
         'show_track' => !empty($config['show_track']),
         'show_artwork' => !empty($config['show_artwork']),
         'show_visualizer' => !empty($config['show_visualizer']),
-        'visualizer_size' => isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium'
+        'visualizer_size' => isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium',
+        'waveform_style' => isset($config['waveform_style']) ? (string) $config['waveform_style'] : 'line'
     );
 
     return sha1(json_encode($visual));
@@ -365,6 +384,78 @@ function RADIO_youtubeFilterPath($path)
     $path = str_replace('\\', '/', (string) $path);
     $path = str_replace(array(':', "'"), array('\\:', "\\'"), $path);
     return $path;
+}
+
+function RADIO_youtubeFfmpegMetrics()
+{
+    $path = RADIO_youtubeLogPath();
+    $result = array(
+        'available' => false,
+        'fps' => null,
+        'bitrate_kbps' => null,
+        'speed' => null,
+        'frame' => null,
+        'time' => '',
+        'age' => null
+    );
+
+    if (!is_file($path) || !is_readable($path)) {
+        return $result;
+    }
+
+    $mtime = @filemtime($path);
+    if ($mtime !== false) {
+        $result['age'] = max(0, time() - (int) $mtime);
+    }
+
+    $size = @filesize($path);
+    if ($size === false || $size < 1) {
+        return $result;
+    }
+
+    $readLength = min(131072, (int) $size);
+    $handle = @fopen($path, 'rb');
+    if ($handle === false) {
+        return $result;
+    }
+    if ($size > $readLength) {
+        @fseek($handle, $size - $readLength);
+    }
+    $raw = @fread($handle, $readLength);
+    @fclose($handle);
+
+    if (!is_string($raw) || $raw === '') {
+        return $result;
+    }
+
+    $lines = preg_split('/[\\r\\n]+/', $raw);
+    for ($i = count($lines) - 1; $i >= 0; $i--) {
+        $line = trim((string) $lines[$i]);
+        if ($line === '' || strpos($line, 'fps=') === false || strpos($line, 'speed=') === false) {
+            continue;
+        }
+
+        if (preg_match('/frame=\\s*(\\d+)/', $line, $m)) {
+            $result['frame'] = (int) $m[1];
+        }
+        if (preg_match('/fps=\\s*([0-9.]+)/', $line, $m)) {
+            $result['fps'] = (float) $m[1];
+        }
+        if (preg_match('/bitrate=\\s*([0-9.]+)kbits\\/s/', $line, $m)) {
+            $result['bitrate_kbps'] = (float) $m[1];
+        }
+        if (preg_match('/speed=\\s*([0-9.]+)x/', $line, $m)) {
+            $result['speed'] = (float) $m[1];
+        }
+        if (preg_match('/time=\\s*([^ ]+)/', $line, $m)) {
+            $result['time'] = (string) $m[1];
+        }
+
+        $result['available'] = $result['fps'] !== null || $result['speed'] !== null || $result['bitrate_kbps'] !== null;
+        break;
+    }
+
+    return $result;
 }
 
 function RADIO_youtubeStatus()
@@ -1032,6 +1123,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $showArtwork = !empty($config['show_artwork']);
         $showVisualizer = !empty($config['show_visualizer']);
         $visualizerSize = isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium';
+        $waveformStyle = isset($config['waveform_style']) ? (string) $config['waveform_style'] : 'line';
 
         /*
          * Templates have deterministic runtime behaviour:
@@ -1089,7 +1181,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 
         if ($renderVisualizer) {
             $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
-                . ':mode=line:rate=25:colors=' . $palette['primary'] . '[wave]';
+                . ':mode=' . $waveformStyle . ':rate=25:colors=' . $palette['primary'] . '[wave]';
         } else {
             $filters[] = '[awave]anullsink';
         }
@@ -1144,7 +1236,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         ));
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
-        $filters[] = '[awave]showwaves=s=860x90:mode=line:rate=25:colors=' . $palette['primary'] . '[wave]';
+        $filters[] = '[awave]showwaves=s=860x90:mode=' . $config['waveform_style']
+            . ':rate=25:colors=' . $palette['primary'] . '[wave]';
         $filters[] = '[' . $videoInputIndex . ':v][wave]overlay=(W-w)/2:H-h-65[v]';
         $parts = array_merge($parts, array(
             '-filter_complex', implode(';', $filters),
@@ -1167,7 +1260,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
     } elseif ($videoMode === 'showwaves') {
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
-        $filters[] = '[awave]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=' . $palette['primary'] . '[v]';
+        $filters[] = '[awave]showwaves=s=' . $config['video_size'] . ':mode=' . $config['waveform_style']
+            . ':rate=25:colors=' . $palette['primary'] . '[v]';
         $parts = array_merge($parts, array(
             '-filter_complex', implode(';', $filters),
             '-map', '[v]',
