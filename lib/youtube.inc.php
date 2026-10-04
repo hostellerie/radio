@@ -379,6 +379,108 @@ function RADIO_youtubeAssText($value)
     return str_replace(',', '‚', $value);
 }
 
+function RADIO_youtubeTextLength($value)
+{
+    if (function_exists('mb_strlen')) {
+        return mb_strlen((string) $value, 'UTF-8');
+    }
+
+    return strlen((string) $value);
+}
+
+function RADIO_youtubeTextSubstr($value, $start, $length = null)
+{
+    if (function_exists('mb_substr')) {
+        return $length === null
+            ? mb_substr((string) $value, (int) $start, null, 'UTF-8')
+            : mb_substr((string) $value, (int) $start, (int) $length, 'UTF-8');
+    }
+
+    return $length === null
+        ? substr((string) $value, (int) $start)
+        : substr((string) $value, (int) $start, (int) $length);
+}
+
+function RADIO_youtubeWrapText($value, $maxChars, $maxLines)
+{
+    $value = trim(preg_replace('/[\\r\\n\\t]+/', ' ', (string) $value));
+    $value = preg_replace('/\\s{2,}/', ' ', $value);
+    $maxChars = max(8, (int) $maxChars);
+    $maxLines = max(1, (int) $maxLines);
+
+    if ($value === '') {
+        return array('');
+    }
+
+    $words = preg_split('/\\s+/u', $value, -1, PREG_SPLIT_NO_EMPTY);
+    if (!is_array($words) || empty($words)) {
+        return array($value);
+    }
+
+    $lines = array();
+    $line = '';
+    $truncated = false;
+
+    foreach ($words as $index => $word) {
+        $candidate = $line === '' ? $word : $line . ' ' . $word;
+
+        if (RADIO_youtubeTextLength($candidate) <= $maxChars) {
+            $line = $candidate;
+            continue;
+        }
+
+        if ($line !== '') {
+            $lines[] = $line;
+            $line = '';
+            if (count($lines) >= $maxLines) {
+                $truncated = true;
+                break;
+            }
+        }
+
+        if (RADIO_youtubeTextLength($word) > $maxChars) {
+            $line = RADIO_youtubeTextSubstr($word, 0, $maxChars);
+            if (RADIO_youtubeTextLength($word) > $maxChars) {
+                $truncated = true;
+            }
+        } else {
+            $line = $word;
+        }
+    }
+
+    if (!$truncated && $line !== '' && count($lines) < $maxLines) {
+        $lines[] = $line;
+    } elseif ($line !== '' && count($lines) < $maxLines) {
+        $lines[] = $line;
+    }
+
+    if (empty($lines)) {
+        $lines[] = RADIO_youtubeTextSubstr($value, 0, $maxChars);
+        $truncated = RADIO_youtubeTextLength($value) > $maxChars;
+    }
+
+    if ($truncated) {
+        $last = count($lines) - 1;
+        $ellipsis = '…';
+        $limit = max(1, $maxChars - RADIO_youtubeTextLength($ellipsis));
+        $lines[$last] = rtrim(RADIO_youtubeTextSubstr($lines[$last], 0, $limit)) . $ellipsis;
+    }
+
+    return array_slice($lines, 0, $maxLines);
+}
+
+function RADIO_youtubeAssWrappedText($value, $maxChars, $maxLines)
+{
+    $lines = RADIO_youtubeWrapText($value, $maxChars, $maxLines);
+    $escaped = array();
+
+    foreach ($lines as $line) {
+        $escaped[] = RADIO_youtubeAssText($line);
+    }
+
+    return implode('\\N', $escaped);
+}
+
 function RADIO_youtubeProgramCoverPath($programId)
 {
     $program = RADIO_getProgram((int) $programId, true);
@@ -466,7 +568,7 @@ function RADIO_youtubeWriteAss($target, &$error)
     $longEnd = RADIO_youtubeAssTime(86400);
     $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Station,,0,0,0,,' . RADIO_youtubeAssText($station) . "\n";
     if ($program !== '') {
-        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssText($program) . "\n";
+        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssWrappedText($program, 60, 2) . "\n";
     }
 
     $items = RADIO_getProgramItems((int) $target['program_id']);
@@ -495,7 +597,7 @@ function RADIO_youtubeWriteAss($target, &$error)
             continue;
         }
         $events .= 'Dialogue: 0,' . RADIO_youtubeAssTime($start) . ',' . RADIO_youtubeAssTime($end)
-            . ',Track,,0,0,0,,' . RADIO_youtubeAssText($title) . "\n";
+            . ',Track,,0,0,0,,' . RADIO_youtubeAssWrappedText($title, 54, 2) . "\n";
     }
 
     $path = RADIO_youtubeAssPath();
