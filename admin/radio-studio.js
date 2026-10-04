@@ -21,7 +21,20 @@
     var broadcastState = studio.querySelector('[data-radio-studio-broadcast-state]');
     var recordButton = studio.querySelector('[data-radio-studio-record]');
     var recordState = studio.querySelector('[data-radio-studio-record-state]');
+    var youtubeButton = studio.querySelector('[data-radio-studio-youtube]');
+    var youtubeState = studio.querySelector('[data-radio-studio-youtube-state]');
     var broadcastActive = false;
+    var youtubeLiveActive = false;
+    var youtubeLiveStarting = false;
+    var youtubeLiveStopping = false;
+    var youtubeLiveRecorder = null;
+    var youtubeLiveSessionId = '';
+    var youtubeLiveChunkIndex = 0;
+    var youtubeLiveQueue = Promise.resolve();
+    var youtubeLiveFailed = false;
+    var youtubeLiveMimeType = '';
+    var youtubeLivePollTimer = 0;
+    var youtubeLiveLastTrack = '';
     var recordingActive = false;
     var recordingStarting = false;
     var recordingRecorder = null;
@@ -111,7 +124,12 @@
     }
 
     player.addEventListener('radio:buffer-status', function (event) {
-        setBufferStatus(event && event.detail ? event.detail : {});
+        var detail = event && event.detail ? event.detail : {};
+        setBufferStatus(detail);
+        if (youtubeLiveActive && detail.current_title
+            && detail.current_title !== youtubeLiveLastTrack) {
+            updateYoutubeLiveMetadata(detail.current_title);
+        }
     });
 
 
@@ -760,9 +778,306 @@
         }
     }
 
+    function youtubeMetricText(live) {
+        live = live || {};
+        var metrics = live.metrics || {};
+        var parts = [];
+
+        if (metrics.fps !== null && typeof metrics.fps !== 'undefined') {
+            parts.push((studio.getAttribute('data-youtube-live-fps-label') || 'FPS')
+                + ' ' + Number(metrics.fps).toFixed(1));
+        }
+        if (metrics.bitrate_kbps !== null && typeof metrics.bitrate_kbps !== 'undefined') {
+            parts.push((studio.getAttribute('data-youtube-live-bitrate-label') || 'Bitrate')
+                + ' ' + Math.round(Number(metrics.bitrate_kbps)) + ' kb/s');
+        }
+        if (metrics.speed !== null && typeof metrics.speed !== 'undefined') {
+            parts.push((studio.getAttribute('data-youtube-live-speed-label') || 'Speed')
+                + ' ' + Number(metrics.speed).toFixed(2) + 'x');
+        }
+
+        return parts.join(' · ');
+    }
+
+    function setYoutubeLiveUi(live) {
+        live = live || {state: 'idle'};
+        var state = live.state || 'idle';
+        var activeState = state === 'starting' || state === 'live' || state === 'stopping';
+
+        youtubeLiveActive = state === 'starting' || state === 'live';
+        youtubeLiveStarting = state === 'starting';
+        youtubeLiveStopping = state === 'stopping';
+
+        if (live.session_id) {
+            youtubeLiveSessionId = live.session_id;
+        }
+
+        if (youtubeButton) {
+            youtubeButton.disabled = youtubeLiveStarting || youtubeLiveStopping;
+            youtubeButton.setAttribute('aria-pressed', activeState ? 'true' : 'false');
+            youtubeButton.classList.toggle('is-active', activeState);
+            youtubeButton.textContent = activeState
+                ? (studio.getAttribute('data-youtube-live-stop-label') || 'Stop YouTube')
+                : (studio.getAttribute('data-youtube-live-start-label') || 'Live YouTube');
+        }
+
+        if (youtubeState) {
+            var label = '';
+            if (state === 'starting') {
+                label = studio.getAttribute('data-youtube-live-starting-label') || 'Connecting YouTube Live…';
+            } else if (state === 'live') {
+                label = studio.getAttribute('data-youtube-live-active-label') || 'YouTube LIVE';
+            } else if (state === 'stopping') {
+                label = studio.getAttribute('data-youtube-live-stopping-label') || 'Stopping YouTube Live…';
+            } else if (state === 'error') {
+                label = studio.getAttribute('data-youtube-live-failed-label') || 'Studio YouTube Live failed.';
+                if (live.last_error) {
+                    label += ' (' + live.last_error + ')';
+                }
+            }
+
+            var metrics = youtubeMetricText(live);
+            youtubeState.textContent = label + (label && metrics ? ' · ' : '') + metrics;
+        }
+
+        studio.classList.toggle('is-youtube-live', activeState);
+
+        if (activeState) {
+            scheduleYoutubeLivePoll();
+        } else if (youtubeLivePollTimer) {
+            window.clearTimeout(youtubeLivePollTimer);
+            youtubeLivePollTimer = 0;
+        }
+    }
+
+    function pollYoutubeLiveStatus() {
+        if (!youtubeButton || pollStopped) {
+            return;
+        }
+
+        fetch(studioUrl('live_status'), {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        }).then(function (response) {
+            return response.json();
+        }).then(function (data) {
+            updateToken(data);
+            if (data.ok && data.youtube_live) {
+                setYoutubeLiveUi(data.youtube_live);
+            }
+        }).catch(function () {
+            // Keep the current visible state; the server-side timeout owns cleanup.
+        }).then(function () {
+            if (youtubeLiveActive || youtubeLiveStarting || youtubeLiveStopping) {
+                scheduleYoutubeLivePoll();
+            }
+        });
+    }
+
+    function scheduleYoutubeLivePoll() {
+        if (pollStopped || youtubeLivePollTimer) {
+            return;
+        }
+        youtubeLivePollTimer = window.setTimeout(function () {
+            youtubeLivePollTimer = 0;
+            pollYoutubeLiveStatus();
+        }, 2000);
+    }
+
+    function failYoutubeLive(error) {
+        youtubeLiveFailed = true;
+        youtubeLiveStarting = false;
+        youtubeLiveStopping = false;
+        youtubeLiveActive = false;
+
+        if (youtubeLiveRecorder && youtubeLiveRecorder.state !== 'inactive') {
+            try {
+                youtubeLiveRecorder.stop();
+            } catch (stopError) {}
+        }
+
+        setYoutubeLiveUi({
+            state: 'error',
+            session_id: youtubeLiveSessionId,
+            last_error: error && error.message ? String(error.message) : 'studio_youtube_live_failed'
+        });
+    }
+
+    function uploadYoutubeLiveChunk(blob, index) {
+        var data = new FormData();
+        data.append('studio_action', 'youtube_live_chunk');
+        data.append('session_id', youtubeLiveSessionId);
+        data.append('chunk_index', String(index));
+        data.append('chunk', blob, 'live-' + index + '.bin');
+
+        return studioPost(data).then(function (result) {
+            if (result.youtube_live) {
+                setYoutubeLiveUi(result.youtube_live);
+            }
+            return result;
+        });
+    }
+
+    function updateYoutubeLiveMetadata(title) {
+        title = String(title || '');
+        if (!youtubeLiveActive || !youtubeLiveSessionId || !title
+            || title === youtubeLiveLastTrack) {
+            return;
+        }
+
+        youtubeLiveLastTrack = title;
+        var data = new FormData();
+        data.append('studio_action', 'youtube_live_metadata');
+        data.append('session_id', youtubeLiveSessionId);
+        data.append('track_title', title);
+        studioPost(data).catch(function () {
+            // Metadata failure must not interrupt the audio stream.
+        });
+    }
+
+    function startYoutubeLive() {
+        if (youtubeLiveActive || youtubeLiveStarting || youtubeLiveStopping) {
+            return;
+        }
+
+        youtubeLiveMimeType = recordingSupportedMime();
+        var stream = recordingMasterStream();
+        if (!youtubeLiveMimeType || !stream || !stream.getAudioTracks
+            || stream.getAudioTracks().length < 1) {
+            if (youtubeState) {
+                youtubeState.textContent = studio.getAttribute('data-youtube-live-unsupported-label')
+                    || 'This browser cannot send the Studio master mix to YouTube.';
+            }
+            return;
+        }
+
+        youtubeLiveStarting = true;
+        youtubeLiveFailed = false;
+        youtubeLiveLastTrack = '';
+        setYoutubeLiveUi({state: 'starting'});
+
+        var startData = new FormData();
+        startData.append('studio_action', 'youtube_live_start');
+        startData.append('mime_type', youtubeLiveMimeType);
+
+        studioPost(startData).then(function (result) {
+            var live = result.youtube_live || {};
+            youtubeLiveSessionId = live.session_id || '';
+            if (!youtubeLiveSessionId) {
+                throw new Error('studio_youtube_session_missing');
+            }
+
+            var options = youtubeLiveMimeType ? {mimeType: youtubeLiveMimeType} : undefined;
+            youtubeLiveRecorder = new window.MediaRecorder(stream, options);
+            youtubeLiveChunkIndex = 0;
+            youtubeLiveQueue = Promise.resolve();
+            youtubeLiveFailed = false;
+
+            youtubeLiveRecorder.addEventListener('dataavailable', function (event) {
+                if (!event.data || event.data.size < 1 || youtubeLiveFailed) {
+                    return;
+                }
+                var chunkIndex = youtubeLiveChunkIndex++;
+                youtubeLiveQueue = youtubeLiveQueue.then(function () {
+                    return uploadYoutubeLiveChunk(event.data, chunkIndex);
+                }).catch(function (error) {
+                    failYoutubeLive(error);
+                    throw error;
+                });
+            });
+
+            youtubeLiveRecorder.addEventListener('error', function (event) {
+                failYoutubeLive(event && event.error ? event.error : new Error('media_recorder_error'));
+            });
+
+            youtubeLiveRecorder.start(1000);
+            youtubeLiveStarting = false;
+            setYoutubeLiveUi(live);
+            scheduleYoutubeLivePoll();
+        }).catch(function (error) {
+            failYoutubeLive(error);
+        });
+    }
+
+    function finalizeYoutubeLiveStop() {
+        return youtubeLiveQueue.then(function () {
+            if (!youtubeLiveSessionId) {
+                return;
+            }
+            var data = new FormData();
+            data.append('studio_action', 'youtube_live_stop');
+            data.append('session_id', youtubeLiveSessionId);
+            return studioPost(data).then(function (result) {
+                if (result.youtube_live) {
+                    setYoutubeLiveUi(result.youtube_live);
+                }
+                scheduleYoutubeLivePoll();
+            });
+        }).catch(function (error) {
+            failYoutubeLive(error);
+        }).then(function () {
+            youtubeLiveRecorder = null;
+            youtubeLiveQueue = Promise.resolve();
+            youtubeLiveChunkIndex = 0;
+        });
+    }
+
+    function stopYoutubeLive() {
+        if ((!youtubeLiveActive && !youtubeLiveStarting) || youtubeLiveStopping) {
+            return;
+        }
+
+        youtubeLiveStopping = true;
+        if (youtubeButton) {
+            youtubeButton.disabled = true;
+        }
+        if (youtubeState) {
+            youtubeState.textContent = studio.getAttribute('data-youtube-live-stopping-label')
+                || 'Stopping YouTube Live…';
+        }
+
+        if (youtubeLiveRecorder && youtubeLiveRecorder.state !== 'inactive') {
+            youtubeLiveRecorder.addEventListener('stop', function onStop() {
+                finalizeYoutubeLiveStop();
+            }, {once: true});
+            try {
+                youtubeLiveRecorder.requestData();
+            } catch (error) {}
+            try {
+                youtubeLiveRecorder.stop();
+            } catch (error) {
+                failYoutubeLive(error);
+            }
+        } else {
+            finalizeYoutubeLiveStop();
+        }
+    }
+
+    if (youtubeButton) {
+        if (typeof window.MediaRecorder !== 'function') {
+            youtubeButton.disabled = true;
+            if (youtubeState) {
+                youtubeState.textContent = studio.getAttribute('data-youtube-live-unsupported-label')
+                    || 'This browser cannot send the Studio master mix to YouTube.';
+            }
+        } else {
+            youtubeButton.addEventListener('click', function () {
+                if (youtubeLiveActive || youtubeLiveStarting) {
+                    stopYoutubeLive();
+                } else {
+                    startYoutubeLive();
+                }
+            });
+        }
+    }
+
     function updateBroadcast(data) {
         if (!data) {
             return;
+        }
+
+        if (data.youtube_live) {
+            setYoutubeLiveUi(data.youtube_live);
         }
 
         broadcastActive = !!data.broadcast_active;
@@ -1327,6 +1642,16 @@
         if (recordingRecorder && recordingRecorder.state !== 'inactive') {
             try {
                 recordingRecorder.stop();
+            } catch (error) {}
+        }
+
+        if (youtubeLivePollTimer) {
+            window.clearTimeout(youtubeLivePollTimer);
+            youtubeLivePollTimer = 0;
+        }
+        if (youtubeLiveRecorder && youtubeLiveRecorder.state !== 'inactive') {
+            try {
+                youtubeLiveRecorder.stop();
             } catch (error) {}
         }
     });
