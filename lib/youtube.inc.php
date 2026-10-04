@@ -224,14 +224,6 @@ function RADIO_youtubeSaveConfig($data)
         && in_array($data['waveform_style'], array('line','cline','p2p'), true)
         ? (string) $data['waveform_style']
         : 'line';
-    $runtime['waveform_style'] = isset($data['waveform_style'])
-        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
-        ? (string) $data['waveform_style']
-        : 'line';
-    $runtime['waveform_style'] = isset($data['waveform_style'])
-        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
-        ? (string) $data['waveform_style']
-        : 'line';
 
     if (!isset($runtime['manual_requested'])) {
         $runtime['manual_requested'] = false;
@@ -282,6 +274,10 @@ function RADIO_youtubeSaveVisualConfig($data)
         && in_array($data['visualizer_size'], array('small','medium','large'), true)
         ? (string) $data['visualizer_size']
         : 'medium';
+    $runtime['waveform_style'] = isset($data['waveform_style'])
+        && in_array($data['waveform_style'], array('line','cline','p2p'), true)
+        ? (string) $data['waveform_style']
+        : 'line';
 
     return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
 }
