@@ -1150,6 +1150,19 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($youtubeLib, "'visual_style' => 'modern_white'") !== false
+        && strpos($youtubeLib, "array('modern_white','studio_green')") !== false
+        && strpos($youtubeLib, "function RADIO_youtubeVisualPalette") !== false
+        && strpos($youtubeLib, "'primary' => '0x61E7C7'") !== false
+        && strpos($youtubeLib, "'background' => '0x080B0F'") !== false
+        && strpos($youtubeLib, "'style' => isset(\$config['visual_style'])") !== false
+        && strpos($youtubeAdmin, 'name="visual_style"') !== false
+        && strpos($youtubeAdmin, "youtube_style_modern_white") !== false
+        && strpos($youtubeAdmin, "youtube_style_studio_green") !== false,
+    'YouTube visuals must provide modern white and Studio green themes, include the selected style in the restart signature, and use the Studio green accent on a near-black background.'
+);
+
+radio_contract_require(
     strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
         && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
