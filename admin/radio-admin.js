@@ -163,4 +163,48 @@
             }
         });
     }
+
+    var youtubeStatus = document.getElementById('radio-youtube-status');
+
+    function refreshYoutubeStatus() {
+        if (!youtubeStatus || document.hidden) {
+            return;
+        }
+
+        var url = youtubeStatus.getAttribute('data-status-url');
+        if (!url) {
+            return;
+        }
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + new Date().getTime(), true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) {
+                return;
+            }
+
+            try {
+                var payload = JSON.parse(xhr.responseText);
+                if (payload && typeof payload.html === 'string') {
+                    youtubeStatus.innerHTML = payload.html;
+                }
+            } catch (error) {
+                // Keep the last known state when a transient refresh fails.
+            }
+        };
+        xhr.send(null);
+    }
+
+    if (youtubeStatus) {
+        window.setTimeout(refreshYoutubeStatus, 1500);
+        window.setInterval(refreshYoutubeStatus, 5000);
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refreshYoutubeStatus();
+            }
+        });
+    }
+
 }());
