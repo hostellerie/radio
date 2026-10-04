@@ -19,7 +19,17 @@
     var bufferStatus = studio.querySelector('[data-radio-studio-buffer]');
     var broadcastButton = studio.querySelector('[data-radio-studio-broadcast]');
     var broadcastState = studio.querySelector('[data-radio-studio-broadcast-state]');
+    var recordButton = studio.querySelector('[data-radio-studio-record]');
+    var recordState = studio.querySelector('[data-radio-studio-record-state]');
     var broadcastActive = false;
+    var recordingActive = false;
+    var recordingStarting = false;
+    var recordingRecorder = null;
+    var recordingSessionId = '';
+    var recordingChunkIndex = 0;
+    var recordingQueue = Promise.resolve();
+    var recordingFailed = false;
+    var recordingMimeType = '';
     var broadcastCurrentItemId = 0;
     var version = '';
     var pollTimer = 0;
@@ -494,6 +504,259 @@
         if (data.csrf_token) {
             tokenValue = data.csrf_token;
             studio.setAttribute('data-radio-csrf-token', tokenValue);
+        }
+    }
+
+    function studioPost(formData) {
+        if (tokenName && tokenValue) {
+            formData.append(tokenName, tokenValue);
+        }
+        if (!formData.has('program_id')) {
+            formData.append('program_id', String(programId));
+        }
+
+        return fetch(mutationEndpoint || endpoint, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            cache: 'no-store'
+        }).then(function (response) {
+            return response.text().then(function (text) {
+                var data;
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    throw new Error(/^\s*</.test(text) ? 'html_response' : 'invalid_json');
+                }
+                updateToken(data);
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || ('http_' + response.status));
+                }
+                return data;
+            });
+        });
+    }
+
+    function setRecordingUi(active, message) {
+        recordingActive = !!active;
+        if (recordButton) {
+            recordButton.disabled = recordingStarting;
+            recordButton.setAttribute('aria-pressed', recordingActive ? 'true' : 'false');
+            recordButton.classList.toggle('is-active', recordingActive);
+            recordButton.textContent = recordingActive
+                ? (studio.getAttribute('data-record-stop-label') || 'Stop recording')
+                : (studio.getAttribute('data-record-start-label') || 'Record');
+        }
+        if (recordState) {
+            recordState.textContent = message || (recordingActive
+                ? (studio.getAttribute('data-recording-label') || 'Recording master mix')
+                : '');
+        }
+        studio.classList.toggle('is-recording', recordingActive);
+    }
+
+    function recordingSupportedMime() {
+        if (typeof window.MediaRecorder !== 'function') {
+            return '';
+        }
+        var candidates = [
+            'audio/webm;codecs=opus',
+            'audio/ogg;codecs=opus',
+            'audio/webm',
+            'audio/mp4'
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            if (typeof window.MediaRecorder.isTypeSupported !== 'function'
+                || window.MediaRecorder.isTypeSupported(candidates[i])) {
+                return candidates[i];
+            }
+        }
+        return '';
+    }
+
+    function recordingMasterStream() {
+        if (!player.radioStudioMaster
+            || typeof player.radioStudioMaster.getStream !== 'function') {
+            return null;
+        }
+        try {
+            if (typeof player.radioStudioMaster.prepare === 'function') {
+                player.radioStudioMaster.prepare();
+            }
+            return player.radioStudioMaster.getStream();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function abortRecordingSession() {
+        if (!recordingSessionId) {
+            return Promise.resolve();
+        }
+        var data = new FormData();
+        data.append('studio_action', 'recording_abort');
+        data.append('session_id', recordingSessionId);
+        return studioPost(data).catch(function () {});
+    }
+
+    function failRecording(error) {
+        recordingFailed = true;
+        recordingStarting = false;
+        var detail = error && error.message ? String(error.message) : '';
+        setRecordingUi(false, (studio.getAttribute('data-record-failed-label') || 'Studio recording failed.')
+            + (detail ? ' (' + detail + ')' : ''));
+
+        if (recordingRecorder && recordingRecorder.state !== 'inactive') {
+            try {
+                recordingRecorder.stop();
+            } catch (stopError) {}
+        }
+    }
+
+    function uploadRecordingChunk(blob, index) {
+        var data = new FormData();
+        data.append('studio_action', 'recording_chunk');
+        data.append('session_id', recordingSessionId);
+        data.append('chunk_index', String(index));
+        data.append('chunk', blob, 'chunk-' + index + '.bin');
+        return studioPost(data);
+    }
+
+    function finalizeRecording() {
+        return recordingQueue.then(function () {
+            if (recordingFailed) {
+                return abortRecordingSession();
+            }
+
+            var data = new FormData();
+            data.append('studio_action', 'recording_stop');
+            data.append('session_id', recordingSessionId);
+            return studioPost(data).then(function (result) {
+                var recording = result.recording || {};
+                var message = studio.getAttribute('data-record-saved-label') || 'Recording saved.';
+                if (recording.filename) {
+                    message += ' ' + recording.filename;
+                }
+                recordingStarting = false;
+                setRecordingUi(false, message);
+            });
+        }).catch(function (error) {
+            failRecording(error);
+            return abortRecordingSession();
+        }).then(function () {
+            recordingRecorder = null;
+            recordingSessionId = '';
+            recordingChunkIndex = 0;
+            recordingQueue = Promise.resolve();
+            recordingFailed = false;
+            recordingMimeType = '';
+        });
+    }
+
+    function startRecording() {
+        if (recordingActive || recordingStarting) {
+            return;
+        }
+
+        recordingMimeType = recordingSupportedMime();
+        var stream = recordingMasterStream();
+        if (!recordingMimeType || !stream || !stream.getAudioTracks || stream.getAudioTracks().length < 1) {
+            setRecordingUi(false, studio.getAttribute('data-record-unsupported-label')
+                || 'This browser cannot capture the Studio master mix.');
+            return;
+        }
+
+        recordingStarting = true;
+        if (recordButton) {
+            recordButton.disabled = true;
+        }
+        if (recordState) {
+            recordState.textContent = studio.getAttribute('data-record-starting-label') || 'Starting recording…';
+        }
+
+        var startData = new FormData();
+        startData.append('studio_action', 'recording_start');
+        startData.append('mime_type', recordingMimeType);
+
+        studioPost(startData).then(function (result) {
+            var recording = result.recording || {};
+            recordingSessionId = recording.session_id || '';
+            if (!recordingSessionId) {
+                throw new Error('recording_session_missing');
+            }
+
+            var options = recordingMimeType ? {mimeType: recordingMimeType} : undefined;
+            recordingRecorder = new window.MediaRecorder(stream, options);
+            recordingChunkIndex = 0;
+            recordingQueue = Promise.resolve();
+            recordingFailed = false;
+
+            recordingRecorder.addEventListener('dataavailable', function (event) {
+                if (!event.data || event.data.size < 1 || recordingFailed) {
+                    return;
+                }
+                var chunkIndex = recordingChunkIndex++;
+                recordingQueue = recordingQueue.then(function () {
+                    return uploadRecordingChunk(event.data, chunkIndex);
+                }).catch(function (error) {
+                    failRecording(error);
+                    throw error;
+                });
+            });
+
+            recordingRecorder.addEventListener('error', function (event) {
+                failRecording(event && event.error ? event.error : new Error('media_recorder_error'));
+            });
+
+            recordingRecorder.addEventListener('stop', function () {
+                finalizeRecording();
+            });
+
+            recordingRecorder.start(2000);
+            recordingStarting = false;
+            setRecordingUi(true, studio.getAttribute('data-recording-label') || 'Recording master mix');
+        }).catch(function (error) {
+            recordingStarting = false;
+            failRecording(error);
+            abortRecordingSession();
+        });
+    }
+
+    function stopRecording() {
+        if (!recordingRecorder || recordingRecorder.state === 'inactive') {
+            return;
+        }
+        if (recordButton) {
+            recordButton.disabled = true;
+        }
+        if (recordState) {
+            recordState.textContent = studio.getAttribute('data-record-starting-label') || 'Finalizing recording…';
+        }
+        try {
+            recordingRecorder.requestData();
+        } catch (error) {}
+        try {
+            recordingRecorder.stop();
+        } catch (error) {
+            failRecording(error);
+        }
+    }
+
+    if (recordButton) {
+        if (typeof window.MediaRecorder !== 'function') {
+            recordButton.disabled = true;
+            if (recordState) {
+                recordState.textContent = studio.getAttribute('data-record-unsupported-label')
+                    || 'This browser cannot capture the Studio master mix.';
+            }
+        } else {
+            recordButton.addEventListener('click', function () {
+                if (recordingActive) {
+                    stopRecording();
+                } else {
+                    startRecording();
+                }
+            });
         }
     }
 
@@ -1054,6 +1317,17 @@
         if (pollTimer) {
             window.clearTimeout(pollTimer);
             pollTimer = 0;
+        }
+
+        /*
+         * Do not leave the browser recorder running after Studio navigation.
+         * Already uploaded chunks remain private and are marked aborted if the
+         * final short request can still be sent.
+         */
+        if (recordingRecorder && recordingRecorder.state !== 'inactive') {
+            try {
+                recordingRecorder.stop();
+            } catch (error) {}
         }
     });
 }());
