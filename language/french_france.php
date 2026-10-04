@@ -597,3 +597,9 @@ $LANG_RADIO['youtube_stop_current_schedule_help'] = 'Arrête uniquement l’occu
 $LANG_RADIO['youtube_scheduled_occurrence_stopped'] = 'L’occurrence YouTube programmée en cours a été arrêtée.';
 
 $LANG_RADIO['youtube_occurrence_stopped_manually'] = 'Occurrence programmée en cours arrêtée manuellement';
+
+$LANG_RADIO['youtube_ffmpeg_disappeared'] = 'Le processus FFmpeg YouTube s’est arrêté de manière inattendue.';
+
+$LANG_RADIO['youtube_launch_method'] = 'Méthode de lancement';
+
+$LANG_RADIO['youtube_last_ffmpeg_error'] = 'Dernier message FFmpeg';
