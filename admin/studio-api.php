@@ -6,6 +6,7 @@ require_once dirname(__FILE__) . '/../../../lib-common.php';
 require_once dirname(__FILE__) . '/../../auth.inc.php';
 require_once __DIR__ . '/admin-ui.inc.php';
 require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
+require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -225,6 +226,9 @@ function radio_studio_state($programId)
         'broadcast_program_id' => $broadcast !== false ? (int) $broadcast['program_id'] : 0,
         'broadcast_session_id' => $broadcast !== false ? (int) $broadcast['session_id'] : 0,
         'broadcast_current_item_id' => $broadcast !== false ? (int) $broadcast['current_item_id'] : 0,
+        'youtube_live' => function_exists('RADIO_studioYoutubePublicStatus')
+            ? RADIO_studioYoutubePublicStatus()
+            : array('state' => 'idle'),
         'csrf_name' => CSRF_TOKEN,
         'csrf_token' => SEC_createToken()
     );
@@ -251,6 +255,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     $studioAction = trim((string) $_POST['studio_action']);
     $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
     $studioUid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
+
+    if ($studioAction === 'youtube_live_start') {
+        $youtubeError = '';
+        $youtubeLive = RADIO_studioYoutubeStart(
+            $programId,
+            isset($_POST['mime_type']) ? (string) $_POST['mime_type'] : '',
+            $studioUid,
+            $youtubeError
+        );
+        if ($youtubeLive === false) {
+            radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
+        }
+        radio_studio_json(array(
+            'ok' => true,
+            'youtube_live' => RADIO_studioYoutubePublicStatus(),
+            'csrf_name' => CSRF_TOKEN,
+            'csrf_token' => SEC_createToken()
+        ), 200);
+    }
+
+    if ($studioAction === 'youtube_live_chunk') {
+        $youtubeError = '';
+        $upload = isset($_FILES['chunk']) && is_array($_FILES['chunk']) ? $_FILES['chunk'] : array();
+        if (empty($upload) || !isset($upload['error']) || (int) $upload['error'] !== UPLOAD_ERR_OK) {
+            radio_studio_json(array('ok' => false, 'error' => 'studio_youtube_chunk_invalid'), 400);
+        }
+
+        $youtubeLive = RADIO_studioYoutubeAppend(
+            isset($_POST['session_id']) ? (string) $_POST['session_id'] : '',
+            isset($upload['tmp_name']) ? (string) $upload['tmp_name'] : '',
+            isset($upload['size']) ? (int) $upload['size'] : 0,
+            isset($_POST['chunk_index']) ? (int) $_POST['chunk_index'] : -1,
+            $studioUid,
+            $youtubeError
+        );
+        if ($youtubeLive === false) {
+            radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
+        }
+        radio_studio_json(array(
+            'ok' => true,
+            'youtube_live' => RADIO_studioYoutubePublicStatus(),
+            'csrf_name' => CSRF_TOKEN,
+            'csrf_token' => SEC_createToken()
+        ), 200);
+    }
+
+    if ($studioAction === 'youtube_live_metadata') {
+        $youtubeError = '';
+        $ok = RADIO_studioYoutubeUpdateMetadata(
+            isset($_POST['session_id']) ? (string) $_POST['session_id'] : '',
+            isset($_POST['track_title']) ? (string) $_POST['track_title'] : '',
+            $studioUid,
+            $youtubeError
+        );
+        if (!$ok) {
+            radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
+        }
+        radio_studio_json(array(
+            'ok' => true,
+            'youtube_live' => RADIO_studioYoutubePublicStatus(),
+            'csrf_name' => CSRF_TOKEN,
+            'csrf_token' => SEC_createToken()
+        ), 200);
+    }
+
+    if ($studioAction === 'youtube_live_stop') {
+        $youtubeError = '';
+        $youtubeLive = RADIO_studioYoutubeRequestStop(
+            isset($_POST['session_id']) ? (string) $_POST['session_id'] : '',
+            $studioUid,
+            $youtubeError
+        );
+        if ($youtubeLive === false) {
+            radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
+        }
+        radio_studio_json(array(
+            'ok' => true,
+            'youtube_live' => RADIO_studioYoutubePublicStatus(),
+            'csrf_name' => CSRF_TOKEN,
+            'csrf_token' => SEC_createToken()
+        ), 200);
+    }
 
     if ($studioAction === 'recording_start') {
         $recordingError = '';
@@ -391,6 +477,15 @@ $action = isset($_REQUEST['action']) ? trim((string) $_REQUEST['action']) : 'sta
 
 if ($action === 'state') {
     radio_studio_json(radio_studio_state($programId), 200);
+}
+
+if ($action === 'live_status') {
+    radio_studio_json(array(
+        'ok' => true,
+        'youtube_live' => RADIO_studioYoutubePublicStatus(),
+        'csrf_name' => CSRF_TOKEN,
+        'csrf_token' => SEC_createToken()
+    ), 200);
 }
 
 if ($action === 'search') {
