@@ -1153,7 +1153,7 @@ radio_contract_require(
     strpos($youtubeLib, "'visual_style' => 'modern_white'") !== false
         && strpos($youtubeLib, "array('modern_white','studio_green')") !== false
         && strpos($youtubeLib, "function RADIO_youtubeVisualPalette") !== false
-        && strpos($youtubeLib, "'primary' => '0x00B85A'") !== false
+        && strpos($youtubeLib, "'primary' => '0x00D060'") !== false
         && strpos($youtubeLib, "'background' => '0x030805'") !== false
         && strpos($youtubeLib, "'style' => isset(\$config['visual_style'])") !== false
         && strpos($youtubeAdmin, 'name="visual_style"') !== false
@@ -1182,6 +1182,15 @@ radio_contract_require(
         && strpos($youtubeLib, "'-stats_period', '15'") !== false
         && strpos($youtubeLib, 'rc-lookahead=0:sync-lookahead=0') !== false,
     'Full Background must reserve CPU headroom, throttle its static artwork input, and emit periodic FFmpeg realtime stats for ingest diagnostics.'
+);
+
+radio_contract_require(
+    strpos($youtubeLib, "'primary' => '0xFFFFFF'") !== false
+        && strpos($youtubeLib, "'secondary' => '0xDDE3E8'") !== false
+        && strpos($youtubeLib, "'primary' => '0x00D060'") !== false
+        && strpos($youtubeLib, "'secondary' => '0x00A84C'") !== false
+        && strpos($youtubeLib, '"Style: Track,DejaVu Sans,16," . $palette[\'ass_primary\']') !== false,
+    'YouTube white and green styles must stay luminous on black; track hierarchy comes from size and weight rather than dim text colour.'
 );
 
 radio_contract_require(
