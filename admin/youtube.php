@@ -208,7 +208,8 @@ if (isset($_GET['youtube_status_json']) && $_GET['youtube_status_json'] === '1')
         'html' => radio_youtube_status_html($liveStatus),
         'running' => !empty($liveStatus['running']),
         'pid' => isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0,
-        'last_check' => isset($liveStatus['last_check']) ? (string) $liveStatus['last_check'] : ''
+        'last_check' => isset($liveStatus['last_check']) ? (string) $liveStatus['last_check'] : '',
+        'server_time' => date('Y-m-d H:i:s')
     ));
     exit;
 }
@@ -271,7 +272,9 @@ if (!$youtubeConfig['enabled'] || trim((string) $youtubeConfig['stream_key']) ==
 
 $content .= '<section class="radio-admin__panel radio-youtube-status">'
     . '<h2>' . radio_youtube_h($LANG_RADIO['youtube_status']) . '</h2>'
-    . '<div id="radio-youtube-status" data-status-url="?youtube_status_json=1">'
+    . '<div id="radio-youtube-status" data-status-url="'
+    . radio_youtube_h(rtrim($_CONF['site_admin_url'], '/') . '/plugins/radio/youtube.php?youtube_status_json=1')
+    . '">'
     . radio_youtube_status_html($status)
     . '</div>'
     . '</section>';
