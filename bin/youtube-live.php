@@ -4,11 +4,9 @@ function radio_youtube_worker_stderr($message)
     @file_put_contents('php://stderr', (string) $message, FILE_APPEND);
 }
 
-$radioYoutubeAllowedSapi = array('cli', 'cgi-fcgi');
-if (!in_array(PHP_SAPI, $radioYoutubeAllowedSapi, true)) {
+if (PHP_SAPI !== 'cli') {
     radio_youtube_worker_stderr(
-        "This worker must run from PHP CLI or CGI/FastCGI invoked by cron. Current SAPI: "
-        . PHP_SAPI . "\n"
+        "This worker requires PHP CLI. Current SAPI: " . PHP_SAPI . "\n"
     );
     exit(1);
 }
