@@ -31,6 +31,7 @@ function RADIO_youtubeConfigDefaults()
             ? (string) $_RADIO_CONF['youtube_audio_bitrate']
             : '128k',
         'visual_template' => 'stationcard',
+        'visual_style' => 'modern_white',
         'show_station' => true,
         'station_name' => '',
         'show_program' => true,
@@ -87,6 +88,7 @@ function RADIO_youtubeConfig()
         'manual_program_id',
         'manual_requested',
         'visual_template',
+        'visual_style',
         'show_station',
         'station_name',
         'show_program',
@@ -127,6 +129,9 @@ function RADIO_youtubeConfig()
     $config['visual_template'] = in_array($config['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
         ? $config['visual_template']
         : 'stationcard';
+    $config['visual_style'] = in_array($config['visual_style'], array('modern_white','studio_green'), true)
+        ? $config['visual_style']
+        : 'modern_white';
     $config['show_station'] = !empty($config['show_station']);
     $config['station_name'] = trim((string) $config['station_name']);
     $config['show_program'] = !empty($config['show_program']);
@@ -172,6 +177,7 @@ function RADIO_youtubeSaveConfig($data)
         'manual_program_id' => 0,
         'manual_requested' => false,
         'visual_template' => 'stationcard',
+        'visual_style' => 'modern_white',
         'show_station' => true,
         'station_name' => '',
         'show_program' => true,
@@ -192,6 +198,10 @@ function RADIO_youtubeSaveConfig($data)
         && in_array($data['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
         ? (string) $data['visual_template']
         : 'stationcard';
+    $runtime['visual_style'] = isset($data['visual_style'])
+        && in_array($data['visual_style'], array('modern_white','studio_green'), true)
+        ? (string) $data['visual_style']
+        : 'modern_white';
     $runtime['show_station'] = !empty($data['show_station']);
     $runtime['station_name'] = isset($data['station_name'])
         ? RADIO_youtubeOverlayText($data['station_name'], 70)
@@ -238,6 +248,10 @@ function RADIO_youtubeSaveVisualConfig($data)
         && in_array($data['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
         ? (string) $data['visual_template']
         : 'stationcard';
+    $runtime['visual_style'] = isset($data['visual_style'])
+        && in_array($data['visual_style'], array('modern_white','studio_green'), true)
+        ? (string) $data['visual_style']
+        : 'modern_white';
     $runtime['show_station'] = !empty($data['show_station']);
     $runtime['station_name'] = isset($data['station_name'])
         ? RADIO_youtubeOverlayText($data['station_name'], 70)
@@ -275,6 +289,7 @@ function RADIO_youtubeVisualSignature($config = null)
     $visual = array(
         'layout_version' => 3,
         'template' => isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard',
+        'style' => isset($config['visual_style']) ? (string) $config['visual_style'] : 'modern_white',
         'show_station' => !empty($config['show_station']),
         'station_name' => isset($config['station_name']) ? (string) $config['station_name'] : '',
         'show_program' => !empty($config['show_program']),
@@ -790,12 +805,39 @@ function RADIO_youtubeArtwork($target)
     );
 }
 
+function RADIO_youtubeVisualPalette($config = null)
+{
+    if (!is_array($config)) {
+        $config = RADIO_youtubeConfig();
+    }
+
+    $style = isset($config['visual_style']) ? (string) $config['visual_style'] : 'modern_white';
+    if ($style === 'studio_green') {
+        return array(
+            'background' => '0x080B0F',
+            'primary' => '0x61E7C7',
+            'secondary' => '0xA5F4E1',
+            'ass_primary' => '&H00C7E761',
+            'ass_secondary' => '&H00E1F4A5'
+        );
+    }
+
+    return array(
+        'background' => '0x080B0F',
+        'primary' => '0xF4F7FA',
+        'secondary' => '0xAAB4C0',
+        'ass_primary' => '&H00FAF7F4',
+        'ass_secondary' => '&H00C0B4AA'
+    );
+}
+
 function RADIO_youtubeWriteAss($target, &$error)
 {
     global $_CONF;
 
     $error = '';
     $config = RADIO_youtubeConfig();
+    $palette = RADIO_youtubeVisualPalette($config);
     $size = isset($config['video_size']) ? (string) $config['video_size'] : '1280x720';
     $width = 1280;
     $height = 720;
@@ -818,9 +860,9 @@ function RADIO_youtubeWriteAss($target, &$error)
         . "WrapStyle: 2\n\n"
         . "[V4+ Styles]\n"
         . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-        . "Style: Station,DejaVu Sans,42,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,260,260,60,1\n"
-        . "Style: Program,DejaVu Sans,28,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,260,260,135,1\n"
-        . "Style: Track,DejaVu Sans,30,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,250,250,245,1\n\n"
+        . "Style: Station,DejaVu Sans,26," . $palette['ass_secondary'] . ",&H000000FF,&H90000000,&H00000000,-1,0,0,0,100,100,2,0,1,1,1,8,220,220,56,1\n"
+        . "Style: Program,DejaVu Sans,46," . $palette['ass_primary'] . ",&H000000FF,&HA0000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,1,8,180,180,108,1\n"
+        . "Style: Track,DejaVu Sans,30," . $palette['ass_primary'] . ",&H000000FF,&HA0000000,&H00000000,0,0,0,0,100,100,0,0,1,2,1,2,190,190,220,1\n\n"
         . "[Events]\n"
         . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
 
@@ -898,6 +940,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 {
     $error = '';
     $config = RADIO_youtubeConfig();
+    $palette = RADIO_youtubeVisualPalette($config);
     $files = RADIO_youtubeProgramFiles($target['program_id'], $error);
     if ($files === false) {
         return false;
@@ -1001,7 +1044,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $parts = array_merge($parts, array(
             '-re',
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
+            '-i', 'color=c=' . $palette['background'] . ':s=' . $config['video_size'] . ':r=25'
         ));
 
         $coverInputIndex = -1;
@@ -1019,7 +1062,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 
         if ($renderVisualizer) {
             $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
-                . ':mode=line:rate=25:colors=0xD8E6F3[wave]';
+                . ':mode=line:rate=25:colors=' . $palette['primary'] . '[wave]';
         } else {
             $filters[] = '[awave]anullsink';
         }
@@ -1069,7 +1112,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $parts = array_merge($parts, array(
             '-re',
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
+            '-i', 'color=c=' . $palette['background'] . ':s=' . $config['video_size'] . ':r=25'
         ));
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
@@ -1084,19 +1127,19 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $parts = array_merge($parts, array(
             '-re',
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-i', 'color=c=' . $palette['background'] . ':s=' . $config['video_size'] . ':r=25',
             '-filter_complex', implode(';', $audioFilters),
             '-map', $videoInputIndex . ':v:0',
             '-map', '[yaudio]',
             '-vf',
-            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=white:fontsize=52:x=(w-text_w)/2:y=h*0.24,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=white:fontsize=38:x=(w-text_w)/2:y=h*0.42,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h*0.58"
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=36:x=(w-text_w)/2:y=h*0.24,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=48:x=(w-text_w)/2:y=h*0.42,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=30:x=(w-text_w)/2:y=h*0.58"
         ));
     } elseif ($videoMode === 'showwaves') {
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
-        $filters[] = '[awave]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=white[v]';
+        $filters[] = '[awave]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=' . $palette['primary'] . '[v]';
         $parts = array_merge($parts, array(
             '-filter_complex', implode(';', $filters),
             '-map', '[v]',
@@ -1116,7 +1159,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $parts = array_merge($parts, array(
             '-re',
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
+            '-i', 'color=c=' . $palette['background'] . ':s=' . $config['video_size'] . ':r=25',
             '-filter_complex', implode(';', $audioFilters),
             '-map', $videoInputIndex . ':v:0',
             '-map', '[yaudio]'
