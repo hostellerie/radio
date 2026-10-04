@@ -1,6 +1,15 @@
 <?php
-if (PHP_SAPI !== 'cli') {
-    fwrite(STDERR, "This worker can only run from CLI.\n");
+function radio_youtube_worker_stderr($message)
+{
+    @file_put_contents('php://stderr', (string) $message, FILE_APPEND);
+}
+
+$radioYoutubeAllowedSapi = array('cli', 'cgi-fcgi');
+if (!in_array(PHP_SAPI, $radioYoutubeAllowedSapi, true)) {
+    radio_youtube_worker_stderr(
+        "This worker must run from PHP CLI or CGI/FastCGI invoked by cron. Current SAPI: "
+        . PHP_SAPI . "\n"
+    );
     exit(1);
 }
 
@@ -22,13 +31,13 @@ $root = rtrim((string) $root, '/\\');
 $host = trim((string) $host);
 
 if ($root === '' || !is_file($root . '/lib-common.php')) {
-    fwrite(STDERR, "Set GEEKLOG_ROOT or pass --geeklog-root=/path/to/public_html.\n");
+    radio_youtube_worker_stderr("Set GEEKLOG_ROOT or pass --geeklog-root=/path/to/public_html.\n");
     exit(2);
 }
 
 if ($host !== '') {
     if (!preg_match('/^[A-Za-z0-9.-]+$/', $host)) {
-        fwrite(STDERR, "Invalid --host value.\n");
+        radio_youtube_worker_stderr("Invalid --host value.\n");
         exit(2);
     }
     $_SERVER['HTTP_HOST'] = $host;
@@ -118,7 +127,7 @@ if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) 
         'schedule_id' => 0,
         'last_error' => 'youtube_ffmpeg_missing'
     ));
-    fwrite(STDERR, "YouTube Live error: FFmpeg is not installed or is not available in PATH.\n");
+    radio_youtube_worker_stderr("YouTube Live error: FFmpeg is not installed or is not available in PATH.\n");
     exit(5);
 }
 
@@ -222,7 +231,7 @@ if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
     );
     RADIO_youtubeWriteStatus(array('last_error' => 'youtube_overlay_write_failed'));
     $status['last_error'] = 'youtube_overlay_write_failed';
-    fwrite(STDERR, "YouTube Live warning: unable to update station card text.\n");
+    radio_youtube_worker_stderr("YouTube Live warning: unable to update station card text.\n");
 }
 
 if ($running && isset($status['target_key']) && $status['target_key'] === $target['key']) {
@@ -271,7 +280,7 @@ if ($command === false) {
         'schedule_id' => (int) $target['schedule_id'],
         'last_error' => $error
     ));
-    fwrite(STDERR, "YouTube Live error: " . $error . "\n");
+    radio_youtube_worker_stderr("YouTube Live error: " . $error . "\n");
     exit(3);
 }
 
@@ -297,7 +306,7 @@ if ($newPid < 2) {
         'schedule_id' => (int) $target['schedule_id'],
         'last_error' => 'youtube_ffmpeg_start_failed'
     ));
-    fwrite(STDERR, "Unable to start FFmpeg.\n");
+    radio_youtube_worker_stderr("Unable to start FFmpeg.\n");
     exit(4);
 }
 
@@ -322,7 +331,7 @@ if (!RADIO_youtubePidRunning($newPid)) {
         'schedule_id' => (int) $target['schedule_id'],
         'last_error' => 'youtube_ffmpeg_exited_early'
     ));
-    fwrite(STDERR, "YouTube Live error: FFmpeg exited immediately. Check youtube-live.log.\n");
+    radio_youtube_worker_stderr("YouTube Live error: FFmpeg exited immediately. Check youtube-live.log.\n");
     exit(4);
 }
 
