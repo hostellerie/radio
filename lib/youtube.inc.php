@@ -451,6 +451,10 @@ function RADIO_youtubeFfmpegMetrics()
         break;
     }
 
+    if ($result['age'] !== null && $result['age'] > 45) {
+        $result['available'] = false;
+    }
+
     return $result;
 }
 
