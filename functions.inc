@@ -151,8 +151,7 @@ function plugin_getfootercode_radio()
         }
     }
 
-    if (RADIO_pathEndsWith($path, '/admin/plugins/radio/upload.php')
-        || RADIO_pathEndsWith($path, '/admin/plugins/radio/edit.php')) {
+    if (strpos($path, '/admin/plugins/radio/') !== false) {
         $footer .= RADIO_adminScriptTag();
     }
 
