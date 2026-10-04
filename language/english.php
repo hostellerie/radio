@@ -587,3 +587,5 @@ $LANG_RADIO['youtube_save_schedules'] = 'Save scheduled slots';
 $LANG_RADIO['youtube_schedules_saved'] = 'Scheduled YouTube slots saved.';
 
 $LANG_RADIO['youtube_next_schedule'] = 'Next scheduled YouTube slot';
+
+$LANG_RADIO['youtube_mode_legacy_help'] = 'legacy preference; manual Start now temporarily overrides schedules, otherwise checked schedules run automatically';
