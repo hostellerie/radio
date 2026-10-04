@@ -65,6 +65,23 @@ global $_CONF;
 require_once $_CONF['path'] . 'plugins/radio/functions.inc';
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 
+function radio_youtube_worker_log($message)
+{
+    if (function_exists('COM_errorLog')) {
+        COM_errorLog('[Radio YouTube] ' . (string) $message, 1);
+    }
+}
+
+function radio_youtube_worker_log_error_once($status, $errorKey, $message)
+{
+    $previous = isset($status['last_error']) ? (string) $status['last_error'] : '';
+    if ($previous !== (string) $errorKey) {
+        radio_youtube_worker_log($message);
+    }
+}
+
+$status = RADIO_youtubeStatus();
+
 $ffmpegPath = '';
 $ffmpegOutput = array();
 $ffmpegCode = 1;
@@ -74,6 +91,11 @@ if ($ffmpegCode === 0 && isset($ffmpegOutput[0])) {
 }
 
 if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) {
+    radio_youtube_worker_log_error_once(
+        $status,
+        'youtube_ffmpeg_missing',
+        'FFmpeg is not installed or is not available in PATH.'
+    );
     RADIO_youtubeWriteStatus(array(
         'running' => false,
         'pid' => 0,
@@ -104,10 +126,12 @@ if ($hasShowwaves && $hasOverlay && $hasSubtitles) {
     $videoMode = 'showspectrum';
 }
 
-$status = RADIO_youtubeStatus();
 $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
 $running = RADIO_youtubePidRunning($pid);
 if (!$running && $pid > 0) {
+    radio_youtube_worker_log(
+        'Streaming process disappeared unexpectedly (PID ' . $pid . ').'
+    );
     $status['pid'] = 0;
     $status['running'] = false;
 }
@@ -130,6 +154,9 @@ if (!$running
             'target_key' => '',
             'last_error' => ''
         ));
+        radio_youtube_worker_log(
+            'Manual programme completed: ' . (string) $status['program_title'] . '.'
+        );
         echo "YouTube Live manual programme completed.\n";
         exit(0);
     }
@@ -142,7 +169,16 @@ if (!$running) {
 $target = RADIO_youtubeTarget(time());
 if ($target === false) {
     if ($running) {
-        RADIO_youtubeStopPid($pid);
+        $stopped = RADIO_youtubeStopPid($pid);
+        if ($stopped) {
+            radio_youtube_worker_log(
+                'YouTube Live stopped'
+                . (!empty($status['program_title']) ? ': ' . (string) $status['program_title'] : '')
+                . '.'
+            );
+        } else {
+            radio_youtube_worker_log('Unable to stop YouTube Live process (PID ' . $pid . ').');
+        }
     }
     RADIO_youtubeWriteStatus(array(
         'running' => false,
@@ -162,7 +198,13 @@ $artworkType = isset($artwork['type']) ? (string) $artwork['type'] : 'none';
 $artworkPath = isset($artwork['path']) ? (string) $artwork['path'] : '';
 
 if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
+    radio_youtube_worker_log_error_once(
+        $status,
+        'youtube_overlay_write_failed',
+        'Unable to update YouTube station card text.'
+    );
     RADIO_youtubeWriteStatus(array('last_error' => 'youtube_overlay_write_failed'));
+    $status['last_error'] = 'youtube_overlay_write_failed';
     fwrite(STDERR, "YouTube Live warning: unable to update station card text.\n");
 }
 
@@ -172,19 +214,35 @@ if ($running && isset($status['target_key']) && $status['target_key'] === $targe
         'pid' => $pid,
         'video_mode' => $videoMode,
         'artwork_type' => $artworkType,
-        'artwork_path' => $artworkPath
+        'artwork_path' => $artworkPath,
+        'last_error' => ''
     ));
     echo "YouTube Live already running for " . $target['program_title'] . ".\n";
     exit(0);
 }
 
 if ($running) {
-    RADIO_youtubeStopPid($pid);
+    $previousTitle = isset($status['program_title']) ? (string) $status['program_title'] : '';
+    $stopped = RADIO_youtubeStopPid($pid);
+    if ($stopped) {
+        radio_youtube_worker_log(
+            'Switching YouTube Live target'
+            . ($previousTitle !== '' ? ' from "' . $previousTitle . '"' : '')
+            . ' to "' . (string) $target['program_title'] . '".'
+        );
+    } else {
+        radio_youtube_worker_log('Unable to stop previous YouTube Live process (PID ' . $pid . ').');
+    }
 }
 
 $error = '';
 $command = RADIO_youtubeFfmpegCommand($target, $error, $ffmpegPath, $videoMode);
 if ($command === false) {
+    radio_youtube_worker_log_error_once(
+        $status,
+        $error,
+        'Unable to prepare YouTube Live FFmpeg command: ' . (string) $error . '.'
+    );
     RADIO_youtubeWriteStatus(array(
         'running' => false,
         'pid' => 0,
@@ -206,6 +264,11 @@ $launch = 'nohup ' . $command . ' >> ' . escapeshellarg($log) . ' 2>&1 < /dev/nu
 $newPid = $code === 0 && isset($output[0]) ? (int) trim($output[0]) : 0;
 
 if ($newPid < 2) {
+    radio_youtube_worker_log_error_once(
+        $status,
+        'youtube_ffmpeg_start_failed',
+        'Unable to start FFmpeg for YouTube Live.'
+    );
     RADIO_youtubeWriteStatus(array(
         'running' => false,
         'pid' => 0,
@@ -226,6 +289,11 @@ if ($newPid < 2) {
  */
 sleep(1);
 if (!RADIO_youtubePidRunning($newPid)) {
+    radio_youtube_worker_log_error_once(
+        $status,
+        'youtube_ffmpeg_exited_early',
+        'FFmpeg exited immediately after YouTube Live start. Check youtube-live.log.'
+    );
     RADIO_youtubeWriteStatus(array(
         'running' => false,
         'pid' => 0,
@@ -253,4 +321,8 @@ RADIO_youtubeWriteStatus(array(
     'last_error' => ''
 ));
 
+radio_youtube_worker_log(
+    'YouTube Live started: ' . (string) $target['program_title']
+    . ' (PID ' . $newPid . ', video mode ' . $videoMode . ').'
+);
 echo "YouTube Live started: " . $target['program_title'] . " (PID " . $newPid . ").\n";
