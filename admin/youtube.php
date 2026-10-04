@@ -224,8 +224,32 @@ if (isset($status['artwork_type'])) {
     $content .= '<p><small>Artwork: ' . radio_youtube_h($artworkLabel) . '</small></p>';
 }
 if (!empty($status['last_check'])) {
-    $content .= '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_last_worker_check'])
-        . ': ' . radio_youtube_h($status['last_check']) . '</small></p>';
+    $lastWorkerTs = strtotime((string) $status['last_check']);
+    $workerAge = $lastWorkerTs !== false ? max(0, time() - $lastWorkerTs) : null;
+    $workerFresh = $workerAge !== null && $workerAge <= 120;
+
+    $content .= '<p><strong>'
+        . ($workerFresh ? '✓ ' : '⚠ ')
+        . radio_youtube_h(
+            $workerFresh
+                ? $LANG_RADIO['youtube_worker_active']
+                : $LANG_RADIO['youtube_worker_stale']
+        )
+        . '</strong><br><small>'
+        . radio_youtube_h($LANG_RADIO['youtube_last_worker_check'])
+        . ': ' . radio_youtube_h($status['last_check']);
+
+    if ($workerFresh) {
+        $content .= '<br>' . radio_youtube_h($LANG_RADIO['youtube_worker_next_expected']);
+    }
+
+    $content .= '</small></p>';
+} else {
+    $content .= '<p><strong>⚠ '
+        . radio_youtube_h($LANG_RADIO['youtube_worker_not_detected'])
+        . '</strong><br><small>'
+        . radio_youtube_h($LANG_RADIO['youtube_worker_not_detected_help'])
+        . '</small></p>';
 }
 $content .= '</section>';
 
