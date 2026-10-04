@@ -231,7 +231,7 @@
 
     if (youtubeStatus) {
         window.setTimeout(refreshYoutubeStatus, 1500);
-        window.setInterval(refreshYoutubeStatus, 5000);
+        window.setInterval(refreshYoutubeStatus, 60000);
 
         document.addEventListener('visibilitychange', function () {
             if (!document.hidden) {
