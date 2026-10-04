@@ -166,6 +166,26 @@
 
     var youtubeStatus = document.getElementById('radio-youtube-status');
 
+    function setYoutubeRefreshError(message) {
+        if (!youtubeStatus) {
+            return;
+        }
+
+        var existing = youtubeStatus.querySelector('.radio-youtube-status__poll-error');
+        if (existing) {
+            existing.parentNode.removeChild(existing);
+        }
+
+        if (!message) {
+            return;
+        }
+
+        var notice = document.createElement('p');
+        notice.className = 'radio-admin__notice radio-youtube-status__poll-error';
+        notice.textContent = message;
+        youtubeStatus.appendChild(notice);
+    }
+
     function refreshYoutubeStatus() {
         if (!youtubeStatus || document.hidden) {
             return;
@@ -173,6 +193,7 @@
 
         var url = youtubeStatus.getAttribute('data-status-url');
         if (!url) {
+            setYoutubeRefreshError('Status refresh URL is missing.');
             return;
         }
 
@@ -180,7 +201,12 @@
         xhr.open('GET', url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + new Date().getTime(), true);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) {
+            if (xhr.readyState !== 4) {
+                return;
+            }
+
+            if (xhr.status < 200 || xhr.status >= 300) {
+                setYoutubeRefreshError('Status refresh failed (HTTP ' + xhr.status + ').');
                 return;
             }
 
@@ -188,9 +214,12 @@
                 var payload = JSON.parse(xhr.responseText);
                 if (payload && typeof payload.html === 'string') {
                     youtubeStatus.innerHTML = payload.html;
+                    setYoutubeRefreshError('');
+                } else {
+                    setYoutubeRefreshError('Status refresh returned an invalid response.');
                 }
             } catch (error) {
-                // Keep the last known state when a transient refresh fails.
+                setYoutubeRefreshError('Status refresh returned invalid JSON.');
             }
         };
         xhr.send(null);
