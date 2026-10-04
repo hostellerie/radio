@@ -585,3 +585,5 @@ $LANG_RADIO['youtube_scheduled_output_help'] = 'Check the Radio schedules that s
 $LANG_RADIO['youtube_save_schedules'] = 'Save scheduled slots';
 
 $LANG_RADIO['youtube_schedules_saved'] = 'Scheduled YouTube slots saved.';
+
+$LANG_RADIO['youtube_next_schedule'] = 'Next scheduled YouTube slot';
