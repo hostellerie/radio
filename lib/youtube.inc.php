@@ -264,6 +264,7 @@ function RADIO_youtubeVisualSignature($config = null)
     }
 
     $visual = array(
+        'layout_version' => 2,
         'template' => isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard',
         'show_station' => !empty($config['show_station']),
         'station_name' => isset($config['station_name']) ? (string) $config['station_name'] : '',
