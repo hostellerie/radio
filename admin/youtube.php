@@ -106,6 +106,10 @@ function radio_youtube_status_html($status)
         $html .= '<p><small>Video mode: ' . radio_youtube_h($status['video_mode']) . '</small></p>';
     }
 
+    if (!empty($status['ffmpeg_path'])) {
+        $html .= '<p><small>FFmpeg: ' . radio_youtube_h($status['ffmpeg_path']) . '</small></p>';
+    }
+
     if (isset($status['artwork_type'])) {
         $artworkLabel = (string) $status['artwork_type'];
         if (!empty($status['artwork_path'])) {
