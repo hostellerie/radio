@@ -40,7 +40,7 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
-## Implementation status snapshot — 0.5.1
+## Implementation status snapshot — 0.6.2
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
 
@@ -55,6 +55,9 @@ Current state:
 - **Eclipse / Agent readiness:** structured dashboard, now-playing, upcoming, replay, source/sync and stats services are implemented. Agent/Eclipse integration still needs end-to-end testing against their current branches.
 - **Hub:** Radio exposes the contracts Hub can consume, but explicit Hub relationship workflows are not yet implemented/tested.
 - **Security / multisite / compatibility:** pre-release hardening is in progress. Shared media now supports independent per-site databases with one common audio directory, MP3 ID3 metadata synchronization and conflict-safe tag writes. CSRF on remote fetches, RSS/Atom SSRF DNS pinning, upload signatures, media/download ACLs and PHP 5.6/8.1/8.3 syntax are CI/audit covered. Geeklog 2.1.1/2.2.2 runtime tests and two-site isolation still remain open.
+- **Studio / browser DJ:** the administration Studio is now operational as a live mixing surface around the programme queue. It supports current/next/reserve buffering, transitions/crossfade, EQ, filter, pan, headroom, echo, visual monitoring and assignable jingle pads. The existing `Broadcast` session remains editorial and is independent from YouTube output.
+- **YouTube Live:** server-side FFmpeg/RTMPS output is implemented with manual and scheduled modes, Station Card / Full Background / Minimal / Visualizer templates, white/green visual styles, selectable `line` / `cline` / `p2p` waveforms, artwork/programme/track overlays and live FPS/bitrate/encoding-speed diagnostics. Current automatic YouTube output still renders programme media server-side; it does not yet receive the browser Studio's post-FX master mix.
+- **Next active step — Studio master output:** introduce one explicit post-FX/post-limiter master audio bus that continues feeding local monitoring while also exposing an independent capture stream. Build recording and Studio-driven YouTube Live on that bus without changing normal Studio playback when those outputs are inactive.
 
 # Phase 0 — Architecture and plugin skeleton
 
@@ -664,49 +667,69 @@ Implement this before an integrated browser mixer.
 
 ### Stage 2 — Integrated Web DJ console
 
-Once the external live workflow is proven stable:
+The first integrated Studio mixer is now substantially implemented. It intentionally evolved from the existing programme/replay engine instead of introducing two unrelated deck implementations.
 
-- [ ] Add an optional browser DJ console restricted to authorized Radio administrators.
-- [ ] Provide two independent decks (`Deck A` / `Deck B`) using Radio media as selectable sources.
-- [ ] Provide per-deck:
-  - play / pause;
-  - cue/start position;
-  - elapsed/remaining time;
-  - gain / volume;
-  - waveform/level feedback;
-  - current media metadata.
-- [ ] Add a crossfader between Deck A and Deck B.
-- [ ] Allow preloading the next media item without interrupting the on-air deck.
+- [x] Add an optional browser DJ console restricted to authorized Radio administrators.
+- [x] Reuse the programme queue as the principal deck, with current, next and reserve media preloading.
+- [x] Provide play/pause, seek/current position, elapsed/remaining information and current media metadata.
+- [x] Provide configurable transitions/crossfade between programme items.
+- [x] Add live Web Audio processing for low/mid/high EQ, filter, pan, headroom and echo.
+- [x] Add visual waveform/spectrum feedback for the Studio mix.
+- [x] Add assignable jingle/sample pads mixed above the programme, with short programme ducking for intelligibility.
+- [x] Keep the existing Studio `Broadcast` session separate from YouTube streaming state.
+- [ ] Add a true independent Deck B only if cueing/manual two-deck operation proves necessary beyond the current next/reserve queue model.
 - [ ] Allow optional microphone input through `getUserMedia()` with explicit browser permission.
 - [ ] Provide microphone gain/mute and clear on-air state.
-- [ ] Mix decks and microphone with the Web Audio API.
 - [ ] Keep local monitoring / preview separate from the public on-air mix where browser capabilities permit it.
-- [ ] Add a prominent `GO LIVE` / `STOP LIVE` control with confirmation and clear status feedback.
 - [ ] Publish current DJ/presenter and current/next track metadata through Radio services.
-- [ ] Record live start/stop and track-transition audit events without unnecessary listener identity data.
-- [ ] Protect against accidental double sessions: only one authorized DJ console may own the live mix for a site at a time.
-- [ ] Handle loss of browser/network connection with a deterministic timeout and fallback to schedule/automatic rotation.
-- [ ] Never store microphone audio in Geeklog unless an explicit future recording/replay feature is enabled.
+- [ ] Protect against accidental double live sessions: only one authorized Studio may own a site live output at a time.
+- [ ] Handle loss of browser/network connection with a deterministic timeout and safe YouTube/recording shutdown or fallback.
 
-Possible console concept:
+### Stage 3 — Master audio bus, recording and Studio YouTube Live
+
+This is the next active implementation step.
+
+Architecture:
 
 ```text
-DECK A                               DECK B
-BLACK COFFEE                         LOST TRUMPET
-▶  04:32 / 54:43                     ▶  00:00 / 06:10
-
-Gain A      ─────●──                 Gain B      ───●────
-Waveform    ~~~~~~~~~                Waveform    ~~~~~~~~~
-
-                 CROSSFADER
-             A ─────●───── B
-
-MICROPHONE
-[ ON / MUTE ]   Gain ───●────
-
-Current output: Deck A + Microphone
-[ GO LIVE ] / [ STOP LIVE ]
+programme / next-reserve mix ─┐
+jingle pads ──────────────────┤
+future microphone ────────────┤
+EQ / filter / pan / echo ─────┘
+                 ↓
+          MASTER LIMITER
+                 ↓
+          MASTER AUDIO BUS
+        ┌────────┼───────────┐
+        ↓        ↓           ↓
+ local monitor  recorder   live transport
+                            ↓
+                         FFmpeg
+                            ↓
+                      YouTube RTMPS
 ```
+
+Implementation rules:
+
+- [ ] Introduce exactly one post-FX/post-limiter master node as the canonical Studio output; do not build separate audio graphs for speakers, recording and YouTube.
+- [ ] Keep local monitoring connected exactly as today so enabling the master bus does not change ordinary Studio sound, gain staging, crossfades, pads or effects.
+- [ ] Expose the master through a `MediaStreamAudioDestinationNode` (when supported) so downstream consumers receive the exact mixed signal after pads and effects.
+- [ ] Treat capture outputs as optional branches. With neither recording nor live output active, Studio behaviour and resource use should remain close to the current implementation.
+- [ ] Add an explicit `Record` / `Stop recording` control in Studio. Recording must always be a deliberate administrator action.
+- [ ] Record the master mix, not the source playlist. The recording therefore includes transitions, pads, effects and future microphone audio exactly as heard on air.
+- [ ] Prefer browser `MediaRecorder` for capture when supported, but persist completed recordings through a bounded, authenticated Radio endpoint rather than relying only on a browser download.
+- [ ] Store Studio recordings in Radio persistent storage, outside executable/plugin directories, with collision-safe filenames and sidecar metadata (programme, start/end, MIME/codec, operator where appropriate).
+- [ ] Never make a recording public automatically. Import/publish/replay must remain an explicit later editorial action.
+- [ ] Add a separate `Live YouTube` control; do not overload the existing `Broadcast` button.
+- [ ] Starting Studio YouTube Live must create one persistent encoder/RTMPS session. Track changes, crossfades, pads and FX must not restart FFmpeg or the YouTube ingest connection.
+- [ ] Allow YouTube to reach a ready/live state before the first track is started. Until Studio audio arrives, the server-side live output should keep valid video timing and silence rather than dropping RTMP.
+- [ ] Reuse the current YouTube visual templates, waveform styles, bitrate/FPS settings and diagnostics for Studio Live rather than creating a second video-rendering implementation.
+- [ ] Keep automatic/scheduled YouTube output and Studio YouTube Live as distinct source modes sharing one encoder/visual layer.
+- [ ] Never expose the YouTube stream key or encoder command to browser JavaScript.
+- [ ] Do not use a single long-running PHP web request as the audio transport. Browser-to-server transport must be chunked/bounded or delegated to a dedicated helper process while Geeklog/PHP remains the authenticated control plane.
+- [ ] Define deterministic behaviour for browser refresh, network loss and abandoned Studio sessions before calling Studio YouTube Live stable.
+- [ ] Surface Studio Live state and encoder health in the Studio: connection state, FPS, bitrate and realtime encoder speed.
+- [ ] Preserve PHP 5.6 syntax in server-side plugin code and use browser feature detection for Web Audio / MediaRecorder support.
 
 ### Streaming/encoding constraints
 
@@ -901,7 +924,7 @@ Focus:
 
 External-source importing should remain experimental until licensing, SSRF, validation, timeout, cache and multisite behaviour are all covered.
 
-## 0.7.x+ — Broadcast and advanced integrations
+## 0.7.x+ — Broadcast, Studio master output and advanced integrations
 
 Candidates:
 
