@@ -1012,9 +1012,17 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         }
 
         if ($template === 'fullbackground' && $coverInputIndex >= 0) {
+            /*
+             * Keep the same stable video clock as Station Card: the lavfi
+             * color input remains the base video stream. The artwork is only
+             * prepared and overlaid full-frame, instead of becoming the
+             * background stream itself.
+             */
             $filters[] = '[' . $coverInputIndex . ':v]scale=' . $videoWidth . ':' . $videoHeight
                 . ':force_original_aspect_ratio=increase,crop=' . $videoWidth . ':' . $videoHeight
-                . ',eq=brightness=-0.28[background]';
+                . ',eq=brightness=-0.28[fullcover]';
+            $filters[] = '[' . $videoInputIndex . ':v][fullcover]'
+                . 'overlay=0:0:shortest=1[background]';
             $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } elseif ($template === 'minimal' || $template === 'visualizer') {
             $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
