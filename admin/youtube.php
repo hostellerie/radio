@@ -74,9 +74,30 @@ function radio_youtube_status_html($status)
             . radio_youtube_h($LANG_RADIO['youtube_running'])
             . '</strong>';
         if (!empty($status['program_title'])) {
-            $html .= '<br>' . radio_youtube_h($status['program_title']);
+            $html .= '<br><span class="radio-youtube-status__program">'
+                . radio_youtube_h($status['program_title'])
+                . '</span>';
         }
         $html .= ' · PID ' . $pid . '</p>';
+
+        if (!empty($status['program_id'])) {
+            $elapsed = 0;
+            if (!empty($status['started_at'])) {
+                $startedAt = strtotime((string) $status['started_at']);
+                if ($startedAt !== false) {
+                    $elapsed = max(0, time() - $startedAt);
+                }
+            }
+
+            $currentMedia = RADIO_resolveProgramPlayback((int) $status['program_id'], $elapsed);
+            if ($currentMedia !== false && !empty($currentMedia['title'])) {
+                $html .= '<p class="radio-youtube-status__track"><strong>'
+                    . radio_youtube_h($LANG_RADIO['youtube_now_playing'])
+                    . '</strong><br>'
+                    . radio_youtube_h($currentMedia['title'])
+                    . '</p>';
+            }
+        }
     } elseif ($reportedRunning) {
         $html .= '<p class="radio-admin__notice"><strong>⚠ '
             . radio_youtube_h($LANG_RADIO['youtube_process_stopped'])
