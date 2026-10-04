@@ -687,7 +687,7 @@ The first integrated Studio mixer is now substantially implemented. It intention
 
 ### Stage 3 — Master audio bus, recording and Studio YouTube Live
 
-This is the next active implementation step.
+The first implementation pass is now in place on `develop-1.0`. Runtime validation on the target Geeklog server and long-session stability testing remain required before this is considered production-ready.
 
 Architecture:
 
@@ -711,35 +711,44 @@ EQ / filter / pan / echo ─────┘
 
 Implementation rules:
 
-- [ ] Introduce exactly one post-FX/post-limiter master node as the canonical Studio output; do not build separate audio graphs for speakers, recording and YouTube.
-- [ ] Keep local monitoring connected exactly as today so enabling the master bus does not change ordinary Studio sound, gain staging, crossfades, pads or effects.
-- [ ] Expose the master through a `MediaStreamAudioDestinationNode` (when supported) so downstream consumers receive the exact mixed signal after pads and effects.
-- [ ] Treat capture outputs as optional branches. With neither recording nor live output active, Studio behaviour and resource use should remain close to the current implementation.
-- [ ] Add an explicit `Record` / `Stop recording` control in Studio. Recording must always be a deliberate administrator action.
-- [ ] Record the master mix, not the source playlist. The recording therefore includes transitions, pads, effects and future microphone audio exactly as heard on air.
-- [ ] Prefer browser `MediaRecorder` for capture when supported, but persist completed recordings through a bounded, authenticated Radio endpoint rather than relying only on a browser download.
-- [ ] Store Studio recordings in Radio persistent storage, outside executable/plugin directories, with collision-safe filenames and sidecar metadata (programme, start/end, MIME/codec, operator where appropriate).
-- [ ] Never make a recording public automatically. Import/publish/replay must remain an explicit later editorial action.
-- [ ] Add a separate `Live YouTube` control; do not overload the existing `Broadcast` button.
-- [ ] Starting Studio YouTube Live must create one persistent encoder/RTMPS session. Track changes, crossfades, pads and FX must not restart FFmpeg or the YouTube ingest connection.
-- [ ] Allow YouTube to reach a ready/live state before the first track is started. Until Studio audio arrives, the server-side live output should keep valid video timing and silence rather than dropping RTMP.
-- [ ] Reuse the current YouTube visual templates, waveform styles, bitrate/FPS settings and diagnostics for Studio Live rather than creating a second video-rendering implementation.
-- [ ] Keep automatic/scheduled YouTube output and Studio YouTube Live as distinct source modes sharing one encoder/visual layer.
-- [ ] Never expose the YouTube stream key or encoder command to browser JavaScript.
-- [ ] Do not use a single long-running PHP web request as the audio transport. Browser-to-server transport must be chunked/bounded or delegated to a dedicated helper process while Geeklog/PHP remains the authenticated control plane.
-- [ ] Define deterministic behaviour for browser refresh, network loss and abandoned Studio sessions before calling Studio YouTube Live stable.
-- [ ] Surface Studio Live state and encoder health in the Studio: connection state, FPS, bitrate and realtime encoder speed.
-- [ ] Preserve PHP 5.6 syntax in server-side plugin code and use browser feature detection for Web Audio / MediaRecorder support.
+- [x] Introduce exactly one post-FX/post-limiter master node as the canonical Studio output; do not build separate audio graphs for speakers, recording and YouTube.
+- [x] Keep local monitoring connected exactly as today so enabling the master bus does not change ordinary Studio sound, gain staging, crossfades, pads or effects.
+- [x] Expose the master through a `MediaStreamAudioDestinationNode` (when supported) so downstream consumers receive the exact mixed signal after pads and effects.
+- [x] Treat capture outputs as optional branches. With neither recording nor live output active, Studio behaviour and resource use should remain close to the current implementation.
+- [x] Add an explicit `Record` / `Stop recording` control in Studio. Recording must always be a deliberate administrator action.
+- [x] Record the master mix, not the source playlist. The recording therefore includes transitions, pads, effects and future microphone audio exactly as heard on air.
+- [x] Prefer browser `MediaRecorder` for capture when supported, but persist completed recordings through a bounded, authenticated Radio endpoint rather than relying only on a browser download.
+- [x] Store Studio recordings in Radio persistent storage, outside executable/plugin directories, with collision-safe filenames and sidecar metadata (programme, start/end, MIME/codec, operator where appropriate).
+- [x] Never make a recording public automatically. Import/publish/replay must remain an explicit later editorial action.
+- [x] Add a separate `Live YouTube` control; do not overload the existing `Broadcast` button.
+- [x] Starting Studio YouTube Live must create one persistent encoder/RTMPS session. Track changes, crossfades, pads and FX must not restart FFmpeg or the YouTube ingest connection.
+- [x] Allow YouTube to reach a ready/live state before the first track is started. Until Studio audio arrives, the server-side live output should keep valid video timing and silence rather than dropping RTMP.
+- [x] Reuse the current YouTube visual templates, waveform styles, bitrate/FPS settings and diagnostics for Studio Live rather than creating a second video-rendering implementation.
+- [x] Keep automatic/scheduled YouTube output and Studio YouTube Live as distinct source modes sharing one encoder/visual layer.
+- [x] Never expose the YouTube stream key or encoder command to browser JavaScript.
+- [x] Do not use a single long-running PHP web request as the audio transport. Browser-to-server transport must be chunked/bounded or delegated to a dedicated helper process while Geeklog/PHP remains the authenticated control plane.
+- [x] Define deterministic behaviour for browser refresh, network loss and abandoned Studio sessions before calling Studio YouTube Live stable.
+- [x] Surface Studio Live state and encoder health in the Studio: connection state, FPS, bitrate and realtime encoder speed.
+- [x] Preserve PHP 5.6 syntax in server-side plugin code and use browser feature detection for Web Audio / MediaRecorder support.
+
+Current implementation notes:
+
+- recording and Studio Live use independent `MediaRecorder` consumers of the same master stream, so either output can be enabled alone or both can run together;
+- browser audio is uploaded in short authenticated chunks; a detached CLI helper owns the continuous pipe into FFmpeg;
+- the automatic YouTube worker explicitly stands down while a Studio Live session owns the ingest;
+- abandoned Studio Live input is terminated by the helper after a bounded input timeout rather than leaving an encoder connected indefinitely;
+- recordings and Studio Live runtime state are site-specific even when Radio media storage is shared across a multisite installation;
+- end-to-end browser/server/YouTube runtime testing, long-session drift testing and failure/reconnect testing remain release gates.
 
 ### Streaming/encoding constraints
 
-- [ ] Do not attempt to stream a continuous DJ mix through a long-running PHP request.
-- [ ] Evaluate browser-to-stream-server transport separately from Geeklog page delivery.
+- [x] Do not attempt to stream a continuous DJ mix through a long-running PHP request.
+- [x] Evaluate browser-to-stream-server transport separately from Geeklog page delivery.
 - [ ] Prefer a provider/adapter boundary so Icecast, Shoutcast or another backend can be swapped without changing Radio programme logic.
-- [ ] Evaluate practical browser encoding/transport options before implementation, including latency, codec support, TLS, authentication and reconnect behaviour.
+- [x] Evaluate practical browser encoding/transport options before implementation, including latency, codec support, TLS, authentication and reconnect behaviour.
 - [ ] Document expected latency between DJ console and listeners.
-- [ ] Provide a fallback path when Web Audio, microphone access or browser encoding is unavailable.
-- [ ] Treat this as an advanced optional feature; normal scheduled/automatic Radio operation must remain usable without a broadcast backend.
+- [x] Provide a fallback path when Web Audio, microphone access or browser encoding is unavailable.
+- [x] Treat this as an advanced optional feature; normal scheduled/automatic Radio operation must remain usable without a broadcast backend.
 
 # Phase 15 — Optional dedicated broadcast backend
 
