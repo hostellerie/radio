@@ -177,6 +177,8 @@ if (!$running && $pid > 0) {
 }
 
 $config = RADIO_youtubeConfig();
+$visualSignature = RADIO_youtubeVisualSignature($config);
+
 if (!$running
     && isset($config['mode']) && $config['mode'] === 'manual'
     && !empty($config['manual_requested'])
@@ -238,8 +240,8 @@ if ($target === false) {
 }
 
 $artwork = RADIO_youtubeArtwork($target);
-$artworkType = isset($artwork['type']) ? (string) $artwork['type'] : 'none';
-$artworkPath = isset($artwork['path']) ? (string) $artwork['path'] : '';
+$artworkType = !empty($config['show_artwork']) && isset($artwork['type']) ? (string) $artwork['type'] : 'none';
+$artworkPath = !empty($config['show_artwork']) && isset($artwork['path']) ? (string) $artwork['path'] : '';
 
 if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
     radio_youtube_worker_log_error_once(
@@ -253,30 +255,44 @@ if (!RADIO_youtubeWriteOverlay($target, $status, time())) {
 }
 
 if ($running && isset($status['target_key']) && $status['target_key'] === $target['key']) {
-    RADIO_youtubeWriteStatus(array(
-        'running' => true,
-        'pid' => $pid,
-        'video_mode' => $videoMode,
-        'ffmpeg_path' => $ffmpegPath,
-        'artwork_type' => $artworkType,
-        'artwork_path' => $artworkPath,
-        'last_error' => ''
-    ));
-    if (!$quiet) {
-        echo "YouTube Live already running for " . $target['program_title'] . ".\n";
+    $activeVisualSignature = isset($status['visual_signature']) ? (string) $status['visual_signature'] : '';
+
+    if ($activeVisualSignature === $visualSignature) {
+        RADIO_youtubeWriteStatus(array(
+            'running' => true,
+            'pid' => $pid,
+            'video_mode' => $videoMode,
+            'visual_template' => $config['visual_template'],
+            'visual_signature' => $visualSignature,
+            'ffmpeg_path' => $ffmpegPath,
+            'artwork_type' => $artworkType,
+            'artwork_path' => $artworkPath,
+            'last_error' => ''
+        ));
+        if (!$quiet) {
+            echo "YouTube Live already running for " . $target['program_title'] . ".\n";
+        }
+        exit(0);
     }
-    exit(0);
+
+    radio_youtube_worker_log(
+        'Applying YouTube visual changes; restarting FFmpeg for template '
+        . (string) $config['visual_template'] . '.'
+    );
 }
 
 if ($running) {
     $previousTitle = isset($status['program_title']) ? (string) $status['program_title'] : '';
+    $sameTarget = isset($status['target_key']) && (string) $status['target_key'] === (string) $target['key'];
     $stopped = RADIO_youtubeStopPid($pid);
     if ($stopped) {
-        radio_youtube_worker_log(
-            'Switching YouTube Live target'
-            . ($previousTitle !== '' ? ' from "' . $previousTitle . '"' : '')
-            . ' to "' . (string) $target['program_title'] . '".'
-        );
+        if (!$sameTarget) {
+            radio_youtube_worker_log(
+                'Switching YouTube Live target'
+                . ($previousTitle !== '' ? ' from "' . $previousTitle . '"' : '')
+                . ' to "' . (string) $target['program_title'] . '".'
+            );
+        }
     } else {
         radio_youtube_worker_log('Unable to stop previous YouTube Live process (PID ' . $pid . ').');
     }
@@ -363,6 +379,8 @@ RADIO_youtubeWriteStatus(array(
     'schedule_id' => (int) $target['schedule_id'],
     'started_at' => date('Y-m-d H:i:s'),
     'video_mode' => $videoMode,
+    'visual_template' => $config['visual_template'],
+    'visual_signature' => $visualSignature,
     'ffmpeg_path' => $ffmpegPath,
     'artwork_type' => $artworkType,
     'artwork_path' => $artworkPath,
