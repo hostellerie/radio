@@ -29,7 +29,15 @@ function RADIO_youtubeConfigDefaults()
             : '2500k',
         'audio_bitrate' => isset($_RADIO_CONF['youtube_audio_bitrate'])
             ? (string) $_RADIO_CONF['youtube_audio_bitrate']
-            : '128k'
+            : '128k',
+        'visual_template' => 'stationcard',
+        'show_station' => true,
+        'station_name' => '',
+        'show_program' => true,
+        'show_track' => true,
+        'show_artwork' => true,
+        'show_visualizer' => true,
+        'visualizer_size' => 'medium'
     );
 }
 
@@ -71,7 +79,19 @@ function RADIO_youtubeConfig()
     $config = RADIO_youtubeConfigDefaults();
     $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
 
-    foreach (array('schedule_ids','manual_program_id','manual_requested') as $runtimeKey) {
+    foreach (array(
+        'schedule_ids',
+        'manual_program_id',
+        'manual_requested',
+        'visual_template',
+        'show_station',
+        'station_name',
+        'show_program',
+        'show_track',
+        'show_artwork',
+        'show_visualizer',
+        'visualizer_size'
+    ) as $runtimeKey) {
         if (array_key_exists($runtimeKey, $runtime)) {
             $config[$runtimeKey] = $runtime[$runtimeKey];
         }
@@ -98,6 +118,18 @@ function RADIO_youtubeConfig()
     $config['audio_bitrate'] = in_array($config['audio_bitrate'], array('96k','128k','160k','192k'), true)
         ? $config['audio_bitrate']
         : '128k';
+    $config['visual_template'] = in_array($config['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
+        ? $config['visual_template']
+        : 'stationcard';
+    $config['show_station'] = !empty($config['show_station']);
+    $config['station_name'] = trim((string) $config['station_name']);
+    $config['show_program'] = !empty($config['show_program']);
+    $config['show_track'] = !empty($config['show_track']);
+    $config['show_artwork'] = !empty($config['show_artwork']);
+    $config['show_visualizer'] = !empty($config['show_visualizer']);
+    $config['visualizer_size'] = in_array($config['visualizer_size'], array('small','medium','large'), true)
+        ? $config['visualizer_size']
+        : 'medium';
 
     return $config;
 }
@@ -129,7 +161,15 @@ function RADIO_youtubeSaveConfig($data)
     $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array(
         'schedule_ids' => array(),
         'manual_program_id' => 0,
-        'manual_requested' => false
+        'manual_requested' => false,
+        'visual_template' => 'stationcard',
+        'show_station' => true,
+        'station_name' => '',
+        'show_program' => true,
+        'show_track' => true,
+        'show_artwork' => true,
+        'show_visualizer' => true,
+        'visualizer_size' => 'medium'
     ));
 
     $runtime['schedule_ids'] = isset($data['schedule_ids']) && is_array($data['schedule_ids'])
@@ -138,6 +178,23 @@ function RADIO_youtubeSaveConfig($data)
     $runtime['manual_program_id'] = isset($data['manual_program_id'])
         ? max(0, (int) $data['manual_program_id'])
         : 0;
+
+    $runtime['visual_template'] = isset($data['visual_template'])
+        && in_array($data['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
+        ? (string) $data['visual_template']
+        : 'stationcard';
+    $runtime['show_station'] = !empty($data['show_station']);
+    $runtime['station_name'] = isset($data['station_name'])
+        ? RADIO_youtubeOverlayText($data['station_name'], 70)
+        : '';
+    $runtime['show_program'] = !empty($data['show_program']);
+    $runtime['show_track'] = !empty($data['show_track']);
+    $runtime['show_artwork'] = !empty($data['show_artwork']);
+    $runtime['show_visualizer'] = !empty($data['show_visualizer']);
+    $runtime['visualizer_size'] = isset($data['visualizer_size'])
+        && in_array($data['visualizer_size'], array('small','medium','large'), true)
+        ? (string) $data['visualizer_size']
+        : 'medium';
 
     if (!isset($runtime['manual_requested'])) {
         $runtime['manual_requested'] = false;
@@ -156,6 +213,26 @@ function RADIO_youtubeSetManualRequest($requested)
     $runtime['manual_requested'] = (bool) $requested;
 
     return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
+}
+
+function RADIO_youtubeVisualSignature($config = null)
+{
+    if (!is_array($config)) {
+        $config = RADIO_youtubeConfig();
+    }
+
+    $visual = array(
+        'template' => isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard',
+        'show_station' => !empty($config['show_station']),
+        'station_name' => isset($config['station_name']) ? (string) $config['station_name'] : '',
+        'show_program' => !empty($config['show_program']),
+        'show_track' => !empty($config['show_track']),
+        'show_artwork' => !empty($config['show_artwork']),
+        'show_visualizer' => !empty($config['show_visualizer']),
+        'visualizer_size' => isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium'
+    );
+
+    return sha1(json_encode($visual));
 }
 
 function RADIO_youtubeOverlayPath($name)
@@ -191,16 +268,18 @@ function RADIO_youtubeWriteOverlay($target, $status, $timestamp)
     }
 
     $media = RADIO_resolveProgramPlayback((int) $target['program_id'], $elapsed);
-    $station = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
+    $config = RADIO_youtubeConfig();
+    $defaultStation = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
         ? (string) $_CONF['site_name']
         : 'Radio';
+    $station = $config['station_name'] !== '' ? $config['station_name'] : $defaultStation;
     $program = isset($target['program_title']) ? (string) $target['program_title'] : '';
     $track = $media !== false && isset($media['title']) ? (string) $media['title'] : '';
 
     $files = array(
-        'station' => RADIO_youtubeOverlayText($station, 70),
-        'program' => RADIO_youtubeOverlayText($program, 90),
-        'track' => RADIO_youtubeOverlayText($track, 120)
+        'station' => $config['show_station'] ? RADIO_youtubeOverlayText($station, 70) : '',
+        'program' => $config['show_program'] ? RADIO_youtubeOverlayText($program, 90) : '',
+        'track' => $config['show_track'] ? RADIO_youtubeOverlayText($track, 120) : ''
     );
 
     foreach ($files as $name => $text) {
@@ -545,9 +624,10 @@ function RADIO_youtubeWriteAss($target, &$error)
         $height = max(180, (int) $m[2]);
     }
 
-    $station = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
+    $defaultStation = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
         ? (string) $_CONF['site_name']
         : 'Radio';
+    $station = $config['station_name'] !== '' ? $config['station_name'] : $defaultStation;
     $program = isset($target['program_title']) ? (string) $target['program_title'] : '';
     $elapsed = isset($target['elapsed']) ? max(0, (int) $target['elapsed']) : 0;
 
@@ -566,8 +646,10 @@ function RADIO_youtubeWriteAss($target, &$error)
 
     $events = '';
     $longEnd = RADIO_youtubeAssTime(86400);
-    $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Station,,0,0,0,,' . RADIO_youtubeAssText($station) . "\n";
-    if ($program !== '') {
+    if ($config['show_station'] && $station !== '') {
+        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Station,,0,0,0,,' . RADIO_youtubeAssText($station) . "\n";
+    }
+    if ($config['show_program'] && $program !== '') {
         $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssWrappedText($program, 60, 2) . "\n";
     }
 
@@ -588,7 +670,7 @@ function RADIO_youtubeWriteAss($target, &$error)
         $start = max(0, $itemStart - $elapsed);
         $end = max($start + 1, $itemEnd - $elapsed);
         $mediaType = isset($item['media_type']) ? (string) $item['media_type'] : '';
-        if ($mediaType === 'jingle') {
+        if ($mediaType === 'jingle' || !$config['show_track']) {
             continue;
         }
 
