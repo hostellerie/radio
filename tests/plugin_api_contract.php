@@ -1163,6 +1163,13 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($youtubeLib, '"Style: Track,DejaVu Sans,20,"') !== false
+        && strpos($youtubeLib, "RADIO_youtubeAssWrappedText(\$title, 52, 2)") !== false
+        && strpos($youtubeLib, ":fontsize=20:x=(w-text_w)/2:y=h*0.66") !== false,
+    'YouTube track titles must stay discreet: smaller typography, at most two lines, and subdued secondary colour.'
+);
+
+radio_contract_require(
     strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
         && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
