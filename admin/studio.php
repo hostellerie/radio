@@ -225,7 +225,14 @@ if ($canEdit) {
         . ' data-broadcast-active-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_active']) . '"'
         . ' data-broadcast-started-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_started']) . '"'
         . ' data-broadcast-stopped-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_stopped']) . '"'
-        . ' data-broadcast-failed-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_failed']) . '"';
+        . ' data-broadcast-failed-label="' . radio_studio_h($LANG_RADIO['studio_broadcast_failed']) . '"'
+        . ' data-record-start-label="' . radio_studio_h($LANG_RADIO['studio_record_start']) . '"'
+        . ' data-record-stop-label="' . radio_studio_h($LANG_RADIO['studio_record_stop']) . '"'
+        . ' data-record-starting-label="' . radio_studio_h($LANG_RADIO['studio_record_starting']) . '"'
+        . ' data-recording-label="' . radio_studio_h($LANG_RADIO['studio_recording']) . '"'
+        . ' data-record-saved-label="' . radio_studio_h($LANG_RADIO['studio_record_saved']) . '"'
+        . ' data-record-failed-label="' . radio_studio_h($LANG_RADIO['studio_record_failed']) . '"'
+        . ' data-record-unsupported-label="' . radio_studio_h($LANG_RADIO['studio_record_unsupported']) . '"';
 }
 
 $content = '<div class="radio-replay radio-program-preview"' . $studioAttrs . '>';
@@ -276,6 +283,10 @@ if ($canEdit) {
         . '<button type="button" class="radio-admin__button radio-studio__broadcast-button"'
         . ' data-radio-studio-broadcast>'
         . radio_studio_h($LANG_RADIO['studio_broadcast_start']) . '</button>'
+        . '<button type="button" class="radio-admin__button radio-studio__record-button"'
+        . ' data-radio-studio-record aria-pressed="false">'
+        . radio_studio_h($LANG_RADIO['studio_record_start']) . '</button>'
+        . '<span class="radio-studio__record-state" data-radio-studio-record-state></span>'
         . '<button type="button" class="radio-admin__button radio-studio__focus-button" data-radio-studio-focus'
         . ' data-focus-on-label="' . radio_studio_h($LANG_RADIO['studio_djmode_open']) . '"'
         . ' data-focus-off-label="' . radio_studio_h($LANG_RADIO['studio_djmode_close']) . '">'
