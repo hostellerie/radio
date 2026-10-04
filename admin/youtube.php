@@ -403,7 +403,8 @@ $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
         $youtubeConfig['mode'] === 'manual'
             ? $LANG_RADIO['youtube_mode_manual']
             : $LANG_RADIO['youtube_mode_scheduled']
-    ) . '</dd>'
+    )
+    . ' <small>(' . radio_youtube_h($LANG_RADIO['youtube_mode_legacy_help']) . ')</small></dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_rtmp_url']) . '</dt><dd>'
     . radio_youtube_h($youtubeConfig['rtmp_url']) . '</dd>'
     . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_stream_key']) . '</dt><dd>'
