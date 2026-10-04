@@ -15,9 +15,11 @@ if (!in_array(PHP_SAPI, $radioYoutubeAllowedSapi, true)) {
 
 $root = getenv('GEEKLOG_ROOT');
 $host = getenv('GEEKLOG_HOST');
-$quiet = false;
+$quietEnv = getenv('RADIO_YOUTUBE_QUIET');
+$quiet = $quietEnv === '1' || strtolower((string) $quietEnv) === 'true';
+$args = isset($argv) && is_array($argv) ? $argv : array();
 
-foreach ($argv as $arg) {
+foreach ($args as $arg) {
     if (strpos($arg, '--geeklog-root=') === 0) {
         $root = substr($arg, strlen('--geeklog-root='));
     } elseif (strpos($arg, '--host=') === 0) {
