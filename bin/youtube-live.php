@@ -464,7 +464,8 @@ RADIO_youtubeWriteStatus(array(
     'artwork_type' => $artworkType,
     'artwork_path' => $artworkPath,
     'launch_method' => $launchMethod,
-    'last_error' => ''
+    'last_error' => '',
+    'last_ffmpeg_message' => ''
 ));
 
 radio_youtube_worker_log(
