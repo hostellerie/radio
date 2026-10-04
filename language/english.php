@@ -569,3 +569,19 @@ $LANG_RADIO['youtube_size_medium'] = 'Medium';
 $LANG_RADIO['youtube_size_large'] = 'Large';
 $LANG_RADIO['youtube_visual_changes_help'] = 'Visual changes are applied by the worker on its next run. If the live is already running, FFmpeg is restarted automatically while keeping the YouTube live request active.';
 $LANG_RADIO['youtube_image_recommendations'] = 'Recommended images: programme artwork 1200 × 1200 px; full-screen/background images 1920 × 1080 px (16:9); JPG or PNG.';
+
+$LANG_RADIO['youtube_manual_live'] = 'Manual live';
+
+$LANG_RADIO['youtube_manual_live_help'] = 'Use this only to start or stop an immediate manual YouTube test. Scheduled slots start automatically and do not require Start now.';
+
+$LANG_RADIO['youtube_save_appearance'] = 'Save appearance';
+
+$LANG_RADIO['youtube_visual_saved'] = 'YouTube video appearance saved.';
+
+$LANG_RADIO['youtube_scheduled_output'] = 'Scheduled YouTube output';
+
+$LANG_RADIO['youtube_scheduled_output_help'] = 'Check the Radio schedules that should also be sent to YouTube, then save. The worker starts and stops them automatically at their scheduled times.';
+
+$LANG_RADIO['youtube_save_schedules'] = 'Save scheduled slots';
+
+$LANG_RADIO['youtube_schedules_saved'] = 'Scheduled YouTube slots saved.';
