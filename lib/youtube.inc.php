@@ -37,7 +37,10 @@ function RADIO_youtubeConfigDefaults()
         'show_track' => true,
         'show_artwork' => true,
         'show_visualizer' => true,
-        'visualizer_size' => 'medium'
+        'visualizer_size' => 'medium',
+        'suppressed_target_key' => '',
+        'suppressed_until' => 0,
+        'suppressed_program_title' => ''
     );
 }
 
@@ -90,7 +93,10 @@ function RADIO_youtubeConfig()
         'show_track',
         'show_artwork',
         'show_visualizer',
-        'visualizer_size'
+        'visualizer_size',
+        'suppressed_target_key',
+        'suppressed_until',
+        'suppressed_program_title'
     ) as $runtimeKey) {
         if (array_key_exists($runtimeKey, $runtime)) {
             $config[$runtimeKey] = $runtime[$runtimeKey];
@@ -130,6 +136,9 @@ function RADIO_youtubeConfig()
     $config['visualizer_size'] = in_array($config['visualizer_size'], array('small','medium','large'), true)
         ? $config['visualizer_size']
         : 'medium';
+    $config['suppressed_target_key'] = trim((string) $config['suppressed_target_key']);
+    $config['suppressed_until'] = max(0, (int) $config['suppressed_until']);
+    $config['suppressed_program_title'] = trim((string) $config['suppressed_program_title']);
 
     return $config;
 }
@@ -352,6 +361,7 @@ function RADIO_youtubeStatus()
         'program_id' => 0,
         'program_title' => '',
         'schedule_id' => 0,
+        'target_end' => 0,
         'started_at' => '',
         'last_check' => '',
         'last_error' => ''
@@ -363,6 +373,65 @@ function RADIO_youtubeWriteStatus($data)
     $status = array_merge(RADIO_youtubeStatus(), $data);
     $status['last_check'] = date('Y-m-d H:i:s');
     return RADIO_youtubeWriteJson(RADIO_youtubeStatePath(), $status);
+}
+
+function RADIO_youtubeSuppressScheduledOccurrence($status)
+{
+    if (!is_array($status)) {
+        return false;
+    }
+
+    $scheduleId = isset($status['schedule_id']) ? (int) $status['schedule_id'] : 0;
+    $targetKey = isset($status['target_key']) ? (string) $status['target_key'] : '';
+    if ($scheduleId < 1 || strpos($targetKey, 'schedule:' . $scheduleId . ':') !== 0) {
+        return false;
+    }
+
+    $until = isset($status['target_end']) ? (int) $status['target_end'] : 0;
+    if ($until <= time()) {
+        $parts = explode(':', $targetKey);
+        $start = isset($parts[2]) ? (int) $parts[2] : 0;
+        if ($start > 0) {
+            foreach (RADIO_getSchedules(false) as $schedule) {
+                if ((int) $schedule['schedule_id'] === $scheduleId) {
+                    $duration = RADIO_scheduleDuration($schedule);
+                    if ($duration > 0) {
+                        $until = $start + $duration;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    if ($until <= time()) {
+        return false;
+    }
+
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
+    $runtime['suppressed_target_key'] = $targetKey;
+    $runtime['suppressed_until'] = $until;
+    $runtime['suppressed_program_title'] = isset($status['program_title'])
+        ? RADIO_youtubeOverlayText($status['program_title'], 120)
+        : '';
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
+}
+
+function RADIO_youtubeSuppressedOccurrence($timestamp)
+{
+    $config = RADIO_youtubeConfig();
+    $timestamp = $timestamp ? (int) $timestamp : time();
+
+    if ($config['suppressed_target_key'] === '' || $config['suppressed_until'] <= $timestamp) {
+        return false;
+    }
+
+    return array(
+        'target_key' => $config['suppressed_target_key'],
+        'until' => $config['suppressed_until'],
+        'program_title' => $config['suppressed_program_title']
+    );
 }
 
 function RADIO_youtubeNextScheduledOccurrence($timestamp)
@@ -471,8 +540,14 @@ function RADIO_youtubeTarget($timestamp)
         if ($occurrence !== false
             && $occurrence['start'] <= $timestamp
             && $occurrence['end'] > $timestamp) {
+            $targetKey = 'schedule:' . $scheduleId . ':' . (int) $occurrence['start'];
+            if ($config['suppressed_target_key'] === $targetKey
+                && $config['suppressed_until'] > $timestamp) {
+                continue;
+            }
+
             return array(
-                'key' => 'schedule:' . $scheduleId . ':' . (int) $occurrence['start'],
+                'key' => $targetKey,
                 'program_id' => (int) $occurrence['program_id'],
                 'program_title' => $occurrence['program_title'],
                 'schedule_id' => $scheduleId,
