@@ -583,3 +583,5 @@ $LANG_RADIO['youtube_scheduled_output_help'] = 'Cochez les programmations Radio 
 $LANG_RADIO['youtube_save_schedules'] = 'Enregistrer les plages';
 
 $LANG_RADIO['youtube_schedules_saved'] = 'Les plages YouTube programmées ont été enregistrées.';
+
+$LANG_RADIO['youtube_next_schedule'] = 'Prochaine plage YouTube';
