@@ -569,3 +569,19 @@ $LANG_RADIO['youtube_size_medium'] = 'Moyenne';
 $LANG_RADIO['youtube_size_large'] = 'Grande';
 $LANG_RADIO['youtube_visual_changes_help'] = 'Les changements visuels sont appliqués au prochain passage du worker. Si le live est déjà en cours, FFmpeg est relancé automatiquement sans désactiver la demande de live YouTube.';
 $LANG_RADIO['youtube_image_recommendations'] = 'Images recommandées : visuel de programme 1200 × 1200 px ; fond plein écran 1920 × 1080 px (16:9) ; JPG ou PNG.';
+
+$LANG_RADIO['youtube_manual_live'] = 'Live manuel';
+
+$LANG_RADIO['youtube_manual_live_help'] = 'Utilisez ce bloc uniquement pour démarrer ou arrêter immédiatement un test YouTube manuel. Les créneaux programmés démarrent automatiquement et ne nécessitent pas le bouton Démarrer maintenant.';
+
+$LANG_RADIO['youtube_save_appearance'] = 'Enregistrer l’apparence';
+
+$LANG_RADIO['youtube_visual_saved'] = 'L’apparence vidéo YouTube a été enregistrée.';
+
+$LANG_RADIO['youtube_scheduled_output'] = 'Diffusion YouTube programmée';
+
+$LANG_RADIO['youtube_scheduled_output_help'] = 'Cochez les programmations Radio qui doivent également être diffusées sur YouTube, puis enregistrez. Le worker les démarre et les arrête automatiquement aux heures prévues.';
+
+$LANG_RADIO['youtube_save_schedules'] = 'Enregistrer les créneaux';
+
+$LANG_RADIO['youtube_schedules_saved'] = 'Les créneaux YouTube programmés ont été enregistrés.';
