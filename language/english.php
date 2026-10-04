@@ -589,3 +589,11 @@ $LANG_RADIO['youtube_schedules_saved'] = 'Scheduled YouTube slots saved.';
 $LANG_RADIO['youtube_next_schedule'] = 'Next scheduled YouTube slot';
 
 $LANG_RADIO['youtube_mode_legacy_help'] = 'legacy preference; manual Start now temporarily overrides schedules, otherwise checked schedules run automatically';
+
+$LANG_RADIO['youtube_stop_current_schedule'] = 'Stop current YouTube live';
+
+$LANG_RADIO['youtube_stop_current_schedule_help'] = 'Stops only the current scheduled occurrence. The schedule remains checked and future recurring occurrences will still start automatically.';
+
+$LANG_RADIO['youtube_scheduled_occurrence_stopped'] = 'The current scheduled YouTube occurrence has been stopped.';
+
+$LANG_RADIO['youtube_occurrence_stopped_manually'] = 'Current scheduled occurrence stopped manually';
