@@ -353,7 +353,7 @@ $command = 'php ' . $worker . ' --geeklog-root=' . $root
     . ($siteHost !== '' ? ' --host=' . $siteHost : '');
 $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
 $radioLog = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : 'radio.log';
-$cronCommand = 'php -d display_errors=1 ' . $worker
+$cronCommand = 'php -q -d display_errors=1 ' . $worker
     . ' --geeklog-root=' . $root
     . ($siteHost !== '' ? ' --host=' . $siteHost : '')
     . ' --quiet >> ' . $radioLog . ' 2>&1';
