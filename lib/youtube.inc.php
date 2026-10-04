@@ -898,8 +898,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 {
     $error = '';
     $config = RADIO_youtubeConfig();
-    $concat = RADIO_youtubeWriteConcat($target['program_id'], $error);
-    if ($concat === false) {
+    $files = RADIO_youtubeProgramFiles($target['program_id'], $error);
+    if ($files === false) {
         return false;
     }
 
@@ -915,21 +915,42 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
     $parts = array(
         $ffmpegPath,
         '-hide_banner',
-        '-loglevel', 'warning',
-        '-re'
+        '-loglevel', 'warning'
     );
-    if (!empty($target['elapsed'])) {
-        $parts[] = '-ss';
-        $parts[] = (string) (int) $target['elapsed'];
+
+    $audioFilters = array();
+    $audioLabels = array();
+    foreach ($files as $index => $file) {
+        $parts = array_merge($parts, array(
+            '-vn',
+            '-sn',
+            '-dn',
+            '-i', $file['path']
+        ));
+        $label = 'yain' . (int) $index;
+        $audioLabels[] = '[' . $label . ']';
+        $audioFilters[] = '[' . (int) $index . ':a:0]'
+            . 'aresample=48000:async=1:first_pts=0,'
+            . 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,'
+            . 'asetpts=PTS-STARTPTS[' . $label . ']';
     }
-    $parts = array_merge($parts, array(
-        '-discard:v', 'all',
-        '-discard:s', 'all',
-        '-discard:d', 'all',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', $concat
-    ));
+
+    if (count($audioLabels) === 1) {
+        $audioFilters[] = $audioLabels[0] . 'anull[yprogram]';
+    } else {
+        $audioFilters[] = implode('', $audioLabels)
+            . 'concat=n=' . count($audioLabels) . ':v=0:a=1[yprogram]';
+    }
+
+    $elapsed = isset($target['elapsed']) ? max(0, (int) $target['elapsed']) : 0;
+    if ($elapsed > 0) {
+        $audioFilters[] = '[yprogram]atrim=start=' . $elapsed
+            . ',asetpts=PTS-STARTPTS,arealtime[yaudio]';
+    } else {
+        $audioFilters[] = '[yprogram]arealtime[yaudio]';
+    }
+
+    $videoInputIndex = count($files);
 
     if ($videoMode === 'stationcard') {
         $assError = '';
@@ -965,11 +986,14 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $cover = $showArtwork && isset($artwork['path']) ? (string) $artwork['path'] : '';
 
         $parts = array_merge($parts, array(
+            '-re',
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
         ));
 
+        $coverInputIndex = -1;
         if ($cover !== '') {
+            $coverInputIndex = $videoInputIndex + 1;
             $parts = array_merge($parts, array(
                 '-loop', '1',
                 '-framerate', '1',
@@ -977,7 +1001,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             ));
         }
 
-        $filters = array('[0:a]aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB,asplit=2[aout][awave]');
+        $filters = $audioFilters;
+        $filters[] = '[yaudio]asplit=2[aout][awave]';
 
         if ($showVisualizer) {
             $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
@@ -986,19 +1011,19 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             $filters[] = '[awave]anullsink';
         }
 
-        if ($template === 'fullbackground' && $cover !== '') {
-            $filters[] = '[2:v]scale=' . $videoWidth . ':' . $videoHeight
+        if ($template === 'fullbackground' && $coverInputIndex >= 0) {
+            $filters[] = '[' . $coverInputIndex . ':v]scale=' . $videoWidth . ':' . $videoHeight
                 . ':force_original_aspect_ratio=increase,crop=' . $videoWidth . ':' . $videoHeight
                 . ',eq=brightness=-0.28[background]';
             $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } elseif ($template === 'minimal' || $template === 'visualizer') {
-            $filters[] = "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
-        } elseif ($cover !== '') {
-            $filters[] = '[2:v]scale=320:320:force_original_aspect_ratio=decrease[cover]';
-            $filters[] = '[1:v][cover]overlay=(W-w)/2:250[background]';
+            $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+        } elseif ($coverInputIndex >= 0) {
+            $filters[] = '[' . $coverInputIndex . ':v]scale=320:320:force_original_aspect_ratio=decrease[cover]';
+            $filters[] = '[' . $videoInputIndex . ':v][cover]overlay=(W-w)/2:250[background]';
             $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } else {
-            $filters[] = "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+            $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         }
 
         if ($showVisualizer) {
@@ -1015,50 +1040,59 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         ));
     } elseif ($videoMode === 'compactwaves') {
         $parts = array_merge($parts, array(
+            '-re',
             '-f', 'lavfi',
-            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
-            '-filter_complex',
-            '[0:a]aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB,asplit=2[aout][awave];'
-            . '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave];'
-            . '[1:v][wave]overlay=(W-w)/2:H-h-65[v]',
+            '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
+        ));
+        $filters = $audioFilters;
+        $filters[] = '[yaudio]asplit=2[aout][awave]';
+        $filters[] = '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave]';
+        $filters[] = '[' . $videoInputIndex . ':v][wave]overlay=(W-w)/2:H-h-65[v]';
+        $parts = array_merge($parts, array(
+            '-filter_complex', implode(';', $filters),
             '-map', '[v]',
             '-map', '[aout]'
         ));
     } elseif ($videoMode === 'drawtext') {
         $parts = array_merge($parts, array(
+            '-re',
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
-            '-map', '1:v:0',
-            '-map', '0:a:0',
-            '-af', 'aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB',
+            '-filter_complex', implode(';', $audioFilters),
+            '-map', $videoInputIndex . ':v:0',
+            '-map', '[yaudio]',
             '-vf',
             "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=white:fontsize=52:x=(w-text_w)/2:y=h*0.24,"
             . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=white:fontsize=38:x=(w-text_w)/2:y=h*0.42,"
             . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h*0.58"
         ));
     } elseif ($videoMode === 'showwaves') {
+        $filters = $audioFilters;
+        $filters[] = '[yaudio]asplit=2[aout][awave]';
+        $filters[] = '[awave]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=white[v]';
         $parts = array_merge($parts, array(
-            '-filter_complex',
-            '[0:a]aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB,asplit=2[aout][awave];'
-            . '[awave]showwaves=s=' . $config['video_size'] . ':mode=line:rate=25:colors=white[v]',
+            '-filter_complex', implode(';', $filters),
             '-map', '[v]',
             '-map', '[aout]'
         ));
     } elseif ($videoMode === 'showspectrum') {
+        $filters = $audioFilters;
+        $filters[] = '[yaudio]asplit=2[aout][aspectrum]';
+        $filters[] = '[aspectrum]showspectrum=s=' . $config['video_size']
+            . ':mode=combined:color=intensity:slide=scroll:fps=25[v]';
         $parts = array_merge($parts, array(
-            '-filter_complex',
-            '[0:a]aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB,asplit=2[aout][aspectrum];'
-            . '[aspectrum]showspectrum=s=' . $config['video_size'] . ':mode=combined:color=intensity:slide=scroll:fps=25[v]',
+            '-filter_complex', implode(';', $filters),
             '-map', '[v]',
             '-map', '[aout]'
         ));
     } else {
         $parts = array_merge($parts, array(
+            '-re',
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25',
-            '-map', '1:v:0',
-            '-map', '0:a:0',
-            '-af', 'aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB'
+            '-filter_complex', implode(';', $audioFilters),
+            '-map', $videoInputIndex . ':v:0',
+            '-map', '[yaudio]'
         ));
     }
 
