@@ -205,14 +205,26 @@ if (isset($_GET['youtube_status_json']) && $_GET['youtube_status_json'] === '1')
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!SEC_checkToken()) {
         $message = COM_showMessageText($LANG_RADIO['invalid_token'], $LANG_RADIO['youtube_live']);
-    } elseif (isset($_POST['save_youtube_runtime'])) {
-        $ok = RADIO_youtubeSaveConfig($_POST);
+    } elseif (isset($_POST['save_youtube_visual'])) {
+        $ok = RADIO_youtubeSaveVisualConfig($_POST);
         $message = COM_showMessageText(
-            $ok ? $LANG_RADIO['youtube_saved'] : $LANG_RADIO['youtube_save_failed'],
+            $ok ? $LANG_RADIO['youtube_visual_saved'] : $LANG_RADIO['youtube_save_failed'],
+            $LANG_RADIO['youtube_live']
+        );
+    } elseif (isset($_POST['save_youtube_schedules'])) {
+        $ok = RADIO_youtubeSaveScheduleIds(
+            isset($_POST['schedule_ids']) && is_array($_POST['schedule_ids'])
+                ? $_POST['schedule_ids']
+                : array()
+        );
+        $message = COM_showMessageText(
+            $ok ? $LANG_RADIO['youtube_schedules_saved'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_start_request'])) {
-        $saved = RADIO_youtubeSaveConfig($_POST);
+        $saved = RADIO_youtubeSaveManualProgram(
+            isset($_POST['manual_program_id']) ? (int) $_POST['manual_program_id'] : 0
+        );
         $ok = $saved && RADIO_youtubeSetManualRequest(true);
         $message = COM_showMessageText(
             $ok ? $LANG_RADIO['youtube_start_requested'] : $LANG_RADIO['youtube_save_failed'],
@@ -254,9 +266,9 @@ $content .= '<section class="radio-admin__panel radio-youtube-status">'
     . '</section>';
 
 $content .= '<section class="radio-admin__panel"><h2>'
-    . radio_youtube_h($LANG_RADIO['youtube_live_control']) . '</h2>'
+    . radio_youtube_h($LANG_RADIO['youtube_manual_live']) . '</h2>'
+    . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_manual_live_help']) . '</small></p>'
     . '<form method="post" action="">'
-    . '<h3>' . radio_youtube_h($LANG_RADIO['youtube_manual_test']) . '</h3>'
     . '<p><label>' . radio_youtube_h($LANG_RADIO['programs']) . ' '
     . '<select name="manual_program_id"><option value="0">—</option>';
 
@@ -271,14 +283,15 @@ $content .= '</select></label></p>'
     . '<button type="submit" name="youtube_start_request" value="1">'
     . radio_youtube_h($LANG_RADIO['youtube_start_now']) . '</button> '
     . '<button type="submit" name="youtube_stop_request" value="1">'
-    . radio_youtube_h($LANG_RADIO['youtube_stop']) . '</button> '
-    . '<button type="submit" name="save_youtube_runtime" value="1">'
-    . radio_youtube_h($LANG_RADIO['save']) . '</button>'
+    . radio_youtube_h($LANG_RADIO['youtube_stop']) . '</button>'
     . '</p>'
-    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">';
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">'
+    . '</form></section>';
 
-$content .= '<div class="radio-youtube-appearance">'
-    . '<h3>' . radio_youtube_h($LANG_RADIO['youtube_video_appearance']) . '</h3>'
+$content .= '<section class="radio-admin__panel"><h2>'
+    . radio_youtube_h($LANG_RADIO['youtube_video_appearance']) . '</h2>'
+    . '<form method="post" action="">'
+    . '<div class="radio-youtube-appearance">'
     . '<p><label>' . radio_youtube_h($LANG_RADIO['youtube_visual_template']) . ' '
     . '<select name="visual_template">'
     . '<option value="stationcard"' . ($youtubeConfig['visual_template'] === 'stationcard' ? ' selected' : '') . '>'
@@ -319,34 +332,46 @@ $content .= '<div class="radio-youtube-appearance">'
     . '</select></label></p>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_visual_changes_help']) . '</small></p>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_image_recommendations']) . '</small></p>'
-    . '</div>';
+    . '</div>'
+    . '<p class="radio-youtube-actions"><button type="submit" name="save_youtube_visual" value="1">'
+    . radio_youtube_h($LANG_RADIO['youtube_save_appearance']) . '</button></p>'
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">'
+    . '</form></section>';
 
-$content .= '<h3>' . radio_youtube_h($LANG_RADIO['youtube_scheduled_slots']) . '</h3>';
+$content .= '<section class="radio-admin__panel"><h2>'
+    . radio_youtube_h($LANG_RADIO['youtube_scheduled_output']) . '</h2>'
+    . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_scheduled_output_help']) . '</small></p>'
+    . '<form method="post" action="">';
 
-if (count($schedules) === 0) {
-    $content .= '<p>' . radio_youtube_h($LANG_RADIO['youtube_no_schedules']) . '</p>';
-} else {
-    foreach ($schedules as $schedule) {
-        if (isset($schedule['program_status']) && $schedule['program_status'] !== 'published') {
-            continue;
-        }
-
-        $id = (int) $schedule['schedule_id'];
-        $recurrenceKey = 'recurrence_' . $schedule['recurrence'];
-        $recurrenceLabel = isset($LANG_RADIO[$recurrenceKey])
-            ? $LANG_RADIO[$recurrenceKey]
-            : (string) $schedule['recurrence'];
-
-        $content .= '<p><label><input type="checkbox" name="schedule_ids[]" value="' . $id . '"'
-            . (isset($scheduleIds[$id]) ? ' checked' : '') . '> '
-            . radio_youtube_h($schedule['program_title']) . ' — '
-            . radio_youtube_h($schedule['starts_at']) . ' — '
-            . radio_youtube_h($recurrenceLabel)
-            . '</label></p>';
+$publishedScheduleCount = 0;
+foreach ($schedules as $schedule) {
+    if (isset($schedule['program_status']) && $schedule['program_status'] !== 'published') {
+        continue;
     }
+    $publishedScheduleCount++;
+    $id = (int) $schedule['schedule_id'];
+    $recurrenceKey = 'recurrence_' . $schedule['recurrence'];
+    $recurrenceLabel = isset($LANG_RADIO[$recurrenceKey])
+        ? $LANG_RADIO[$recurrenceKey]
+        : (string) $schedule['recurrence'];
+
+    $content .= '<p><label><input type="checkbox" name="schedule_ids[]" value="' . $id . '"'
+        . (isset($scheduleIds[$id]) ? ' checked' : '') . '> '
+        . radio_youtube_h($schedule['program_title']) . ' — '
+        . radio_youtube_h($schedule['starts_at']) . ' — '
+        . radio_youtube_h($recurrenceLabel)
+        . '</label></p>';
 }
 
-$content .= '</form></section>';
+if ($publishedScheduleCount === 0) {
+    $content .= '<p>' . radio_youtube_h($LANG_RADIO['youtube_no_schedules']) . '</p>';
+} else {
+    $content .= '<p class="radio-youtube-actions"><button type="submit" name="save_youtube_schedules" value="1">'
+        . radio_youtube_h($LANG_RADIO['youtube_save_schedules']) . '</button></p>';
+}
+
+$content .= '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">'
+    . '</form></section>';
 
 $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . radio_youtube_h($LANG_RADIO['youtube_configuration'])
