@@ -601,3 +601,7 @@ $LANG_RADIO['youtube_ffmpeg_disappeared'] = 'Le processus FFmpeg YouTube s’est
 $LANG_RADIO['youtube_launch_method'] = 'Méthode de lancement';
 
 $LANG_RADIO['youtube_last_ffmpeg_error'] = 'Dernier message FFmpeg';
+
+$LANG_RADIO['schedule_end_automatic'] = 'L’heure de fin est calculée automatiquement à partir de la durée du programme sélectionné.';
+
+$LANG_RADIO['schedule_program_duration_invalid'] = 'Le programme sélectionné n’a pas de durée valide et ne peut pas être planifié.';
