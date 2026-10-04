@@ -3165,11 +3165,16 @@ function RADIO_saveSchedule($id, $data, &$error)
     }
 
     $startTs = RADIO_parseDateTimeLocal(isset($data['starts_at']) ? $data['starts_at'] : '');
-    $endTs = RADIO_parseDateTimeLocal(isset($data['ends_at']) ? $data['ends_at'] : '');
-    if ($startTs === false || $endTs === false || $endTs <= $startTs) {
+    $programDuration = RADIO_programDuration($programId);
+    if ($startTs === false) {
         $error = 'schedule_time_invalid';
         return false;
     }
+    if ($programDuration < 1) {
+        $error = 'schedule_program_duration_invalid';
+        return false;
+    }
+    $endTs = $startTs + $programDuration;
 
     $recurrence = isset($data['recurrence']) ? $data['recurrence'] : 'once';
     if (!in_array($recurrence, RADIO_scheduleRecurrences(), true)) {
