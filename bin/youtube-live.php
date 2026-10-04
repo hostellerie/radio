@@ -105,8 +105,10 @@ function radio_youtube_worker_log_error_once($status, $errorKey, $message)
 $status = RADIO_youtubeStatus();
 
 $ffmpegPath = '';
+$homeDir = rtrim((string) getenv('HOME'), '/\\');
 $ffmpegCandidates = array(
     getenv('FFMPEG_BIN'),
+    $homeDir !== '' ? $homeDir . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'ffmpeg' : '',
     '/usr/bin/ffmpeg',
     '/usr/local/bin/ffmpeg',
     '/opt/local/bin/ffmpeg',
