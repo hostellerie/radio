@@ -1197,6 +1197,31 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($youtubeLib, "'waveform_style' => 'line'") !== false
+        && strpos($youtubeLib, "array('line','cline','p2p')") !== false
+        && strpos($youtubeLib, "'waveform_style' => isset(\$config['waveform_style'])") !== false
+        && strpos($youtubeLib, "':mode=' . \$waveformStyle") !== false
+        && strpos($youtubeAdmin, 'name="waveform_style"') !== false
+        && strpos($youtubeAdmin, "youtube_waveform_cline") !== false
+        && strpos($youtubeAdmin, "youtube_waveform_p2p") !== false,
+    'YouTube visualizer must persist Line, Centered line and Point-to-point waveform modes and include the choice in the visual restart signature.'
+);
+
+radio_contract_require(
+    strpos($youtubeLib, 'function RADIO_youtubeFfmpegMetrics') !== false
+        && strpos($youtubeLib, "'-stats_period', '15'") !== false
+        && strpos($youtubeLib, "preg_match('/fps=") !== false
+        && strpos($youtubeLib, "preg_match('/bitrate=") !== false
+        && strpos($youtubeLib, "preg_match('/speed=") !== false
+        && strpos($youtubeLib, "\$result['age'] > 45") !== false
+        && strpos($youtubeAdmin, "youtube_encoding_diagnostics") !== false
+        && strpos($youtubeAdmin, "youtube_metric_fps") !== false
+        && strpos($youtubeAdmin, "youtube_metric_bitrate") !== false
+        && strpos($youtubeAdmin, "youtube_metric_speed") !== false,
+    'YouTube administration must expose fresh FFmpeg FPS, video bitrate and realtime encoding speed diagnostics.'
+);
+
+radio_contract_require(
     strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
         && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
