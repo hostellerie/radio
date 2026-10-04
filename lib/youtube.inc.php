@@ -1116,7 +1116,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         ));
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
-        $filters[] = '[awave]showwaves=s=860x90:mode=line:rate=25:colors=0xD8E6F3[wave]';
+        $filters[] = '[awave]showwaves=s=860x90:mode=line:rate=25:colors=' . $palette['primary'] . '[wave]';
         $filters[] = '[' . $videoInputIndex . ':v][wave]overlay=(W-w)/2:H-h-65[v]';
         $parts = array_merge($parts, array(
             '-filter_complex', implode(';', $filters),
@@ -1132,9 +1132,9 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             '-map', $videoInputIndex . ':v:0',
             '-map', '[yaudio]',
             '-vf',
-            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=36:x=(w-text_w)/2:y=h*0.24,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=48:x=(w-text_w)/2:y=h*0.42,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=' . $palette['primary'] . ':fontsize=30:x=(w-text_w)/2:y=h*0.58"
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=26:x=(w-text_w)/2:y=h*0.12,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=46:x=(w-text_w)/2:y=h*0.24,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=30:x=(w-text_w)/2:y=h*0.62"
         ));
     } elseif ($videoMode === 'showwaves') {
         $filters = $audioFilters;
