@@ -102,6 +102,53 @@ function radio_youtube_worker_log_error_once($status, $errorKey, $message)
     }
 }
 
+function radio_youtube_worker_ffmpeg_tail($maxLines)
+{
+    $path = RADIO_youtubeLogPath();
+    if (!is_file($path) || !is_readable($path)) {
+        return '';
+    }
+
+    $maxLines = max(1, min(8, (int) $maxLines));
+    $size = @filesize($path);
+    if ($size === false || $size < 1) {
+        return '';
+    }
+
+    $readLength = min(65536, (int) $size);
+    $handle = @fopen($path, 'rb');
+    if ($handle === false) {
+        return '';
+    }
+
+    if ($size > $readLength) {
+        @fseek($handle, $size - $readLength);
+    }
+    $raw = @fread($handle, $readLength);
+    @fclose($handle);
+
+    if (!is_string($raw) || $raw === '') {
+        return '';
+    }
+
+    $lines = preg_split('/\\r?\\n/', $raw);
+    $result = array();
+    for ($i = count($lines) - 1; $i >= 0 && count($result) < $maxLines; $i--) {
+        $line = trim((string) $lines[$i]);
+        if ($line !== '') {
+            array_unshift($result, $line);
+        }
+    }
+
+    $message = implode(' | ', $result);
+    $config = RADIO_youtubeConfig();
+    if (!empty($config['stream_key'])) {
+        $message = str_replace((string) $config['stream_key'], '[stream-key-redacted]', $message);
+    }
+
+    return RADIO_youtubeOverlayText($message, 1500);
+}
+
 $status = RADIO_youtubeStatus();
 
 $ffmpegPath = '';
@@ -169,11 +216,21 @@ if ($hasShowwaves && $hasOverlay && $hasSubtitles) {
 $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
 $running = RADIO_youtubePidRunning($pid);
 if (!$running && $pid > 0) {
+    $ffmpegTail = radio_youtube_worker_ffmpeg_tail(4);
     radio_youtube_worker_log(
         'Streaming process disappeared unexpectedly (PID ' . $pid . ').'
+        . ($ffmpegTail !== '' ? ' FFmpeg: ' . $ffmpegTail : '')
     );
+    RADIO_youtubeWriteStatus(array(
+        'running' => false,
+        'pid' => 0,
+        'last_error' => 'youtube_ffmpeg_disappeared',
+        'last_ffmpeg_message' => $ffmpegTail
+    ));
     $status['pid'] = 0;
     $status['running'] = false;
+    $status['last_error'] = 'youtube_ffmpeg_disappeared';
+    $status['last_ffmpeg_message'] = $ffmpegTail;
 }
 
 $config = RADIO_youtubeConfig();
@@ -324,7 +381,26 @@ if ($command === false) {
 $log = RADIO_youtubeLogPath();
 $output = array();
 $code = 1;
-$launch = 'nohup ' . $command . ' >> ' . escapeshellarg($log) . ' 2>&1 < /dev/null & echo $!';
+
+$setsidPath = '';
+$setsidOutput = array();
+$setsidCode = 1;
+@exec('command -v setsid 2>/dev/null', $setsidOutput, $setsidCode);
+if ($setsidCode === 0 && isset($setsidOutput[0])) {
+    $candidateSetsid = trim((string) $setsidOutput[0]);
+    if ($candidateSetsid !== '' && is_file($candidateSetsid) && is_executable($candidateSetsid)) {
+        $setsidPath = $candidateSetsid;
+    }
+}
+
+$launchMethod = $setsidPath !== '' ? 'nohup+setsid' : 'nohup';
+$detachedCommand = $setsidPath !== ''
+    ? escapeshellarg($setsidPath) . ' ' . $command
+    : $command;
+
+$launch = 'nohup ' . $detachedCommand
+    . ' >> ' . escapeshellarg($log)
+    . ' 2>&1 < /dev/null & echo $!';
 @exec($launch, $output, $code);
 $newPid = $code === 0 && isset($output[0]) ? (int) trim($output[0]) : 0;
 
@@ -387,12 +463,15 @@ RADIO_youtubeWriteStatus(array(
     'ffmpeg_path' => $ffmpegPath,
     'artwork_type' => $artworkType,
     'artwork_path' => $artworkPath,
+    'launch_method' => $launchMethod,
     'last_error' => ''
 ));
 
 radio_youtube_worker_log(
     'YouTube Live started: ' . (string) $target['program_title']
-    . ' (PID ' . $newPid . ', video mode ' . $videoMode . ').'
+    . ' (PID ' . $newPid
+    . ', video mode ' . $videoMode
+    . ', launch ' . $launchMethod . ').'
 );
 if (!$quiet) {
     echo "YouTube Live started: " . $target['program_title'] . " (PID " . $newPid . ").\n";
