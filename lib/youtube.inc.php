@@ -958,7 +958,9 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
     $parts = array(
         $ffmpegPath,
         '-hide_banner',
-        '-loglevel', 'warning'
+        '-loglevel', 'warning',
+        '-stats_period', '15',
+        '-stats'
     );
 
     $audioFilters = array();
@@ -995,6 +997,14 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 
     $videoInputIndex = count($files);
 
+    /*
+     * Full-frame artwork is substantially more expensive to encode than the
+     * mostly-dark Station Card. Keep the normal quality preset everywhere,
+     * but give Full Background extra CPU headroom so a shared host can keep
+     * real-time pace instead of starving YouTube's ingest.
+     */
+    $videoPreset = 'veryfast';
+
     if ($videoMode === 'stationcard') {
         $assError = '';
         $ass = RADIO_youtubeWriteAss($target, $assError);
@@ -1004,6 +1014,9 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         }
 
         $template = isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard';
+        if ($template === 'fullbackground') {
+            $videoPreset = 'superfast';
+        }
         $showArtwork = !empty($config['show_artwork']);
         $showVisualizer = !empty($config['show_visualizer']);
         $visualizerSize = isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium';
@@ -1051,6 +1064,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         if ($cover !== '') {
             $coverInputIndex = $videoInputIndex + 1;
             $parts = array_merge($parts, array(
+                '-thread_queue_size', '64',
+                '-re',
                 '-loop', '1',
                 '-framerate', '1',
                 '-i', $cover
@@ -1075,7 +1090,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
              * background stream itself.
              */
             $filters[] = '[' . $coverInputIndex . ':v]scale=' . $videoWidth . ':' . $videoHeight
-                . ':force_original_aspect_ratio=increase,crop=' . $videoWidth . ':' . $videoHeight
+                . ':force_original_aspect_ratio=increase:flags=fast_bilinear,crop=' . $videoWidth . ':' . $videoHeight
                 . ',setsar=1[fullcover]';
             /*
              * Keep the programme artwork at its original luminance. The
@@ -1168,7 +1183,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
 
     $parts = array_merge($parts, array(
         '-c:v', 'libx264',
-        '-preset', 'veryfast',
+        '-preset', $videoPreset,
         '-tune', 'stillimage',
         '-pix_fmt', 'yuv420p',
         /*
@@ -1183,7 +1198,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         '-minrate', $config['video_bitrate'],
         '-maxrate', $config['video_bitrate'],
         '-bufsize', '5000k',
-        '-x264-params', 'nal-hrd=cbr:force-cfr=1',
+        '-x264-params', 'nal-hrd=cbr:force-cfr=1:rc-lookahead=0:sync-lookahead=0',
         '-c:a', 'aac',
         '-b:a', $config['audio_bitrate'],
         '-ar', '48000'
