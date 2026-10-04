@@ -1169,8 +1169,10 @@ radio_contract_require(
         && strpos($youtubeLib, "RADIO_youtubeAssWrappedText(\$title, 84, 2)") !== false
         && strpos($youtubeLib, "\$waveX = '(W-w)/2'") !== false
         && strpos($youtubeLib, "\$lowerThirdMargin = max(60, (int) floor((\$width - \$waveWidth) / 2))") !== false
-        && strpos($youtubeLib, ":fontsize=17:x=(w-760)/2:y=h*0.735") !== false
-        && strpos($youtubeLib, ":fontsize=15:x=(w-760)/2:y=h*0.79") !== false,
+        && strpos($youtubeLib, "\$bottomSafeMargin = max(42, (int) floor(\$height * 0.06))") !== false
+        && strpos($youtubeLib, "\$waveBottom = max(118, (int) floor(\$videoHeight * 0.16))") !== false
+        && strpos($youtubeLib, ":fontsize=17:x=(w-760)/2:y=h-82") !== false
+        && strpos($youtubeLib, ":fontsize=15:x=(w-760)/2:y=h-50") !== false,
     'YouTube track titles must stay discreet: smaller typography, at most two lines, and subdued secondary colour.'
 );
 
