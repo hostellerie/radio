@@ -1009,6 +1009,7 @@
                     var headroomGain = null;
                     var master = null;
                     var masterLimiter = null;
+                    var captureDestination = null;
                     var analyser = null;
                     var scopeData = null;
                     var scopeFreq = null;
@@ -1124,8 +1125,20 @@
                             headroomGain.connect(master);
 
                             master.connect(masterLimiter);
+
+                            /*
+                             * The post-limiter node is the canonical Studio master bus.
+                             * Local monitoring and capture are parallel branches from the
+                             * same signal, so recording/live consumers receive exactly
+                             * the mix heard in Studio without changing the existing graph.
+                             */
                             masterLimiter.connect(analyser);
                             analyser.connect(context.destination);
+
+                            if (typeof context.createMediaStreamDestination === 'function') {
+                                captureDestination = context.createMediaStreamDestination();
+                                masterLimiter.connect(captureDestination);
+                            }
 
                             ready = true;
                             drawScope();
@@ -1379,6 +1392,18 @@
                         prepare: function () {
                             return setup();
                         },
+                        getMasterStream: function () {
+                            if (!setup() || !captureDestination || !captureDestination.stream) {
+                                return null;
+                            }
+                            return captureDestination.stream;
+                        },
+                        getAudioContext: function () {
+                            return setup() ? context : null;
+                        },
+                        captureSupported: function () {
+                            return !!(setup() && captureDestination && captureDestination.stream);
+                        },
                         apply: function (control, value) {
                             if (control === 'sample-assign') {
                                 assignSample(value);
@@ -1416,6 +1441,25 @@
                         }
                     };
                 }());
+
+                /*
+                 * Expose only the bounded master-output contract needed by the
+                 * Studio controller. Keep the Web Audio graph itself private.
+                 */
+                root.radioStudioMaster = {
+                    prepare: function () {
+                        return studioFx.prepare();
+                    },
+                    getStream: function () {
+                        return studioFx.getMasterStream();
+                    },
+                    getContext: function () {
+                        return studioFx.getAudioContext();
+                    },
+                    isSupported: function () {
+                        return studioFx.captureSupported();
+                    }
+                };
 
                 root.addEventListener('radio:djfx', function (event) {
                     var detail = event && event.detail ? event.detail : {};
