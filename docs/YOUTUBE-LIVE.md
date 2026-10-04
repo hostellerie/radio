@@ -130,12 +130,14 @@ The first/last minute of a scheduled YouTube slot can therefore have up to rough
 4. Select **Manual test**.
 5. Select the programme.
 6. Save the configuration.
-7. Click **Request start**.
-8. Run the worker command once.
+7. Click **Start YouTube Live**.
+8. If the recommended one-minute cron is installed, the worker starts the broadcast automatically on its next pass. Otherwise run the worker command once.
 9. Confirm the ingest in YouTube Studio.
-10. Click **Request stop** and run the worker once again.
+10. Click **Stop YouTube Live**. With cron installed, the worker stops the broadcast automatically on its next pass.
 
 The worker status and last error are shown on the Radio YouTube administration page. FFmpeg output is written to `youtube-live.log` in Radio's media storage directory (the same storage area that contains `youtube-live.ffconcat`).
+
+The administration page also treats `last_check` as a worker heartbeat. A check within the last two minutes is displayed as **Worker active**; an older heartbeat is reported as overdue, and a missing heartbeat as **Worker not detected**. This verifies that the cron worker is actually running without attempting to inspect the server crontab from PHP.
 
 ## Security
 
