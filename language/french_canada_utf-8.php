@@ -585,3 +585,5 @@ $LANG_RADIO['youtube_save_schedules'] = 'Enregistrer les plages';
 $LANG_RADIO['youtube_schedules_saved'] = 'Les plages YouTube programmées ont été enregistrées.';
 
 $LANG_RADIO['youtube_next_schedule'] = 'Prochaine plage YouTube';
+
+$LANG_RADIO['youtube_mode_legacy_help'] = 'préférence historique ; Démarrer maintenant remplace temporairement les plages, sinon les plages cochées démarrent automatiquement';
