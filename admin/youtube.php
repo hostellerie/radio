@@ -84,7 +84,53 @@ function radio_youtube_status_html($status)
             }
         }
 
-        $html .= '</div>';
+        $youtubeConfig = RADIO_youtubeConfig();
+        $metrics = function_exists('RADIO_youtubeFfmpegMetrics')
+            ? RADIO_youtubeFfmpegMetrics()
+            : array('available' => false);
+
+        $targetBitrate = isset($youtubeConfig['video_bitrate'])
+            ? trim((string) $youtubeConfig['video_bitrate'])
+            : '';
+        $targetBitrateKbps = null;
+        if (preg_match('/^([0-9.]+)k$/i', $targetBitrate, $bitrateMatch)) {
+            $targetBitrateKbps = (float) $bitrateMatch[1];
+        }
+
+        $html .= '<div class="radio-youtube-diagnostics">'
+            . '<strong>' . radio_youtube_h($LANG_RADIO['youtube_encoding_diagnostics']) . '</strong>'
+            . '<dl>'
+            . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_metric_fps']) . '</dt><dd>'
+            . (!empty($metrics['available']) && $metrics['fps'] !== null
+                ? radio_youtube_h(number_format((float) $metrics['fps'], 1)) . ' / 25'
+                : '— / 25')
+            . '</dd>'
+            . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_metric_bitrate']) . '</dt><dd>'
+            . (!empty($metrics['available']) && $metrics['bitrate_kbps'] !== null
+                ? radio_youtube_h(number_format((float) $metrics['bitrate_kbps'], 0)) . ' kb/s'
+                : '—')
+            . ($targetBitrateKbps !== null
+                ? ' / ' . radio_youtube_h(number_format($targetBitrateKbps, 0)) . ' kb/s'
+                : '')
+            . '</dd>'
+            . '<dt>' . radio_youtube_h($LANG_RADIO['youtube_metric_speed']) . '</dt><dd>'
+            . (!empty($metrics['available']) && $metrics['speed'] !== null
+                ? radio_youtube_h(number_format((float) $metrics['speed'], 2)) . 'x'
+                : '—')
+            . '</dd>'
+            . '</dl>';
+
+        if (!empty($metrics['available']) && $metrics['speed'] !== null && (float) $metrics['speed'] < 0.98) {
+            $html .= '<p class="radio-admin__notice"><strong>⚠ '
+                . radio_youtube_h($LANG_RADIO['youtube_encoding_too_slow'])
+                . '</strong></p>';
+        } elseif (empty($metrics['available'])) {
+            $html .= '<p class="radio-admin__muted">'
+                . radio_youtube_h($LANG_RADIO['youtube_encoding_waiting'])
+                . '</p>';
+        }
+
+        $html .= '</div></div>';
     } elseif ($workerFresh && $reportedRunning) {
         $html .= '<p class="radio-admin__notice"><strong>⚠ '
             . radio_youtube_h($LANG_RADIO['youtube_process_stopped'])
@@ -419,6 +465,15 @@ $content .= '<section class="radio-admin__panel"><h2>'
     . radio_youtube_h($LANG_RADIO['youtube_size_medium']) . '</option>'
     . '<option value="large"' . ($youtubeConfig['visualizer_size'] === 'large' ? ' selected' : '') . '>'
     . radio_youtube_h($LANG_RADIO['youtube_size_large']) . '</option>'
+    . '</select></label> '
+    . '<label>' . radio_youtube_h($LANG_RADIO['youtube_waveform_style']) . ' '
+    . '<select name="waveform_style">'
+    . '<option value="line"' . ($youtubeConfig['waveform_style'] === 'line' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_waveform_line']) . '</option>'
+    . '<option value="cline"' . ($youtubeConfig['waveform_style'] === 'cline' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_waveform_cline']) . '</option>'
+    . '<option value="p2p"' . ($youtubeConfig['waveform_style'] === 'p2p' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_waveform_p2p']) . '</option>'
     . '</select></label></p>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_visual_changes_help']) . '</small></p>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_image_recommendations']) . '</small></p>'
