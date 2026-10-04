@@ -815,19 +815,19 @@ function RADIO_youtubeVisualPalette($config = null)
     if ($style === 'studio_green') {
         return array(
             'background' => '0x030805',
-            'primary' => '0x00B85A',
-            'secondary' => '0x0A7F43',
-            'ass_primary' => '&H005AB800',
-            'ass_secondary' => '&H00437F0A'
+            'primary' => '0x00D060',
+            'secondary' => '0x00A84C',
+            'ass_primary' => '&H0060D000',
+            'ass_secondary' => '&H004CA800'
         );
     }
 
     return array(
         'background' => '0x080B0F',
-        'primary' => '0xF4F7FA',
-        'secondary' => '0xAAB4C0',
-        'ass_primary' => '&H00FAF7F4',
-        'ass_secondary' => '&H00C0B4AA'
+        'primary' => '0xFFFFFF',
+        'secondary' => '0xDDE3E8',
+        'ass_primary' => '&H00FFFFFF',
+        'ass_secondary' => '&H00E8E3DD'
     );
 }
 
@@ -862,7 +862,7 @@ function RADIO_youtubeWriteAss($target, &$error)
         . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
         . "Style: Station,DejaVu Sans,26," . $palette['ass_secondary'] . ",&H000000FF,&H90000000,&H00000000,-1,0,0,0,100,100,2,0,1,1,1,8,220,220,56,1\n"
         . "Style: Program,DejaVu Sans,18," . $palette['ass_primary'] . ",&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,1,0,1,160,160,185,1\n"
-        . "Style: Track,DejaVu Sans,16," . $palette['ass_secondary'] . ",&H000000FF,&H70000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,1,160,160,158,1\n\n"
+        . "Style: Track,DejaVu Sans,16," . $palette['ass_primary'] . ",&H000000FF,&H50000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,1,160,160,158,1\n\n"
         . "[Events]\n"
         . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
 
@@ -1150,7 +1150,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             '-vf',
             "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=26:x=(w-text_w)/2:y=h*0.12,"
             . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=18:x=160:y=h*0.72,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=16:x=160:y=h*0.76"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=16:x=160:y=h*0.76"
         ));
     } elseif ($videoMode === 'showwaves') {
         $filters = $audioFilters;
