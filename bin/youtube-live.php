@@ -105,11 +105,27 @@ function radio_youtube_worker_log_error_once($status, $errorKey, $message)
 $status = RADIO_youtubeStatus();
 
 $ffmpegPath = '';
+$ffmpegCandidates = array(
+    getenv('FFMPEG_BIN'),
+    '/usr/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg',
+    '/opt/local/bin/ffmpeg',
+    '/opt/homebrew/bin/ffmpeg'
+);
+
 $ffmpegOutput = array();
 $ffmpegCode = 1;
 @exec('command -v ffmpeg 2>/dev/null', $ffmpegOutput, $ffmpegCode);
 if ($ffmpegCode === 0 && isset($ffmpegOutput[0])) {
-    $ffmpegPath = trim((string) $ffmpegOutput[0]);
+    array_unshift($ffmpegCandidates, trim((string) $ffmpegOutput[0]));
+}
+
+foreach ($ffmpegCandidates as $candidate) {
+    $candidate = trim((string) $candidate);
+    if ($candidate !== '' && is_file($candidate) && is_executable($candidate)) {
+        $ffmpegPath = $candidate;
+        break;
+    }
 }
 
 if ($ffmpegPath === '' || !is_file($ffmpegPath) || !is_executable($ffmpegPath)) {
@@ -239,6 +255,7 @@ if ($running && isset($status['target_key']) && $status['target_key'] === $targe
         'running' => true,
         'pid' => $pid,
         'video_mode' => $videoMode,
+        'ffmpeg_path' => $ffmpegPath,
         'artwork_type' => $artworkType,
         'artwork_path' => $artworkPath,
         'last_error' => ''
@@ -344,6 +361,7 @@ RADIO_youtubeWriteStatus(array(
     'schedule_id' => (int) $target['schedule_id'],
     'started_at' => date('Y-m-d H:i:s'),
     'video_mode' => $videoMode,
+    'ffmpeg_path' => $ffmpegPath,
     'artwork_type' => $artworkType,
     'artwork_path' => $artworkPath,
     'last_error' => ''
