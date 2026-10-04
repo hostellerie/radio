@@ -62,7 +62,6 @@ if (count($programs) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['schedule_requires_program'], ENT_QUOTES, 'UTF-8') . '</p>';
 } else {
     $startValue = $selected ? date('Y-m-d\TH:i', strtotime($selected['starts_at'])) : date('Y-m-d\TH:i', strtotime('+1 hour'));
-    $endValue = $selected ? date('Y-m-d\TH:i', strtotime($selected['ends_at'])) : date('Y-m-d\TH:i', strtotime('+2 hours'));
     $selectedDays = $selected && $selected['weekdays'] !== '' ? array_map('intval', explode(',', $selected['weekdays'])) : array();
 
     $content .= '<form method="post" action=""><p><label>' . htmlspecialchars($LANG_RADIO['programs'], ENT_QUOTES, 'UTF-8')
@@ -74,9 +73,8 @@ if (count($programs) === 0) {
     }
     $content .= '</select></label></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['starts_at'], ENT_QUOTES, 'UTF-8')
-        . ' <input type="datetime-local" name="starts_at" value="' . htmlspecialchars($startValue, ENT_QUOTES, 'UTF-8') . '" required></label> '
-        . '<label>' . htmlspecialchars($LANG_RADIO['ends_at'], ENT_QUOTES, 'UTF-8')
-        . ' <input type="datetime-local" name="ends_at" value="' . htmlspecialchars($endValue, ENT_QUOTES, 'UTF-8') . '" required></label></p>'
+        . ' <input type="datetime-local" name="starts_at" value="' . htmlspecialchars($startValue, ENT_QUOTES, 'UTF-8') . '" required></label></p>'
+        . '<p><small>' . htmlspecialchars($LANG_RADIO['schedule_end_automatic'], ENT_QUOTES, 'UTF-8') . '</small></p>'
         . '<p><label>' . htmlspecialchars($LANG_RADIO['recurrence'], ENT_QUOTES, 'UTF-8') . ' <select name="recurrence">';
 
     $recurrences = array('once','daily','weekly','weekdays');
