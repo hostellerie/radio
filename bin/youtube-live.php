@@ -6,12 +6,15 @@ if (PHP_SAPI !== 'cli') {
 
 $root = getenv('GEEKLOG_ROOT');
 $host = getenv('GEEKLOG_HOST');
+$quiet = false;
 
 foreach ($argv as $arg) {
     if (strpos($arg, '--geeklog-root=') === 0) {
         $root = substr($arg, strlen('--geeklog-root='));
     } elseif (strpos($arg, '--host=') === 0) {
         $host = substr($arg, strlen('--host='));
+    } elseif ($arg === '--quiet') {
+        $quiet = true;
     }
 }
 
@@ -167,7 +170,9 @@ if (!$running
         radio_youtube_worker_log(
             'Manual programme completed: ' . (string) $status['program_title'] . '.'
         );
-        echo "YouTube Live manual programme completed.\n";
+        if (!$quiet) {
+            echo "YouTube Live manual programme completed.\n";
+        }
         exit(0);
     }
 }
@@ -199,7 +204,9 @@ if ($target === false) {
         'schedule_id' => 0,
         'last_error' => ''
     ));
-    echo "YouTube Live idle.\n";
+    if (!$quiet) {
+        echo "YouTube Live idle.\n";
+    }
     exit(0);
 }
 
@@ -227,7 +234,9 @@ if ($running && isset($status['target_key']) && $status['target_key'] === $targe
         'artwork_path' => $artworkPath,
         'last_error' => ''
     ));
-    echo "YouTube Live already running for " . $target['program_title'] . ".\n";
+    if (!$quiet) {
+        echo "YouTube Live already running for " . $target['program_title'] . ".\n";
+    }
     exit(0);
 }
 
@@ -335,4 +344,6 @@ radio_youtube_worker_log(
     'YouTube Live started: ' . (string) $target['program_title']
     . ' (PID ' . $newPid . ', video mode ' . $videoMode . ').'
 );
-echo "YouTube Live started: " . $target['program_title'] . " (PID " . $newPid . ").\n";
+if (!$quiet) {
+    echo "YouTube Live started: " . $target['program_title'] . " (PID " . $newPid . ").\n";
+}
