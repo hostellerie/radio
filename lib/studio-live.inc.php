@@ -135,6 +135,62 @@ function RADIO_studioYoutubeActive($status = null)
     return $lastChunk !== false && (time() - $lastChunk) <= 20;
 }
 
+function RADIO_studioYoutubeCleanupStale()
+{
+    $status = RADIO_studioYoutubeStatus();
+    if (!in_array($status['state'], array('starting','live','stopping'), true)) {
+        return $status;
+    }
+
+    $helperPid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
+    if ($helperPid > 1 && RADIO_youtubePidRunning($helperPid)) {
+        return $status;
+    }
+
+    $now = time();
+    $startedAt = !empty($status['started_at']) ? strtotime((string) $status['started_at']) : false;
+    $lastChunkAt = !empty($status['last_chunk_at']) ? strtotime((string) $status['last_chunk_at']) : false;
+
+    $fresh = false;
+    if ($status['state'] === 'starting' && $startedAt !== false && ($now - $startedAt) <= 30) {
+        $fresh = true;
+    } elseif ($status['state'] === 'live' && $lastChunkAt !== false && ($now - $lastChunkAt) <= 20) {
+        $fresh = true;
+    } elseif ($status['state'] === 'stopping' && $startedAt !== false && ($now - $startedAt) <= 30) {
+        $fresh = true;
+    }
+
+    if ($fresh) {
+        return $status;
+    }
+
+    $ffmpegPid = isset($status['ffmpeg_pid']) ? (int) $status['ffmpeg_pid'] : 0;
+    if ($ffmpegPid > 1 && RADIO_youtubePidRunning($ffmpegPid)) {
+        RADIO_youtubeStopPid($ffmpegPid);
+    }
+
+    $sessionId = isset($status['session_id']) ? (string) $status['session_id'] : '';
+    $inputPath = RADIO_studioYoutubeInputPath($sessionId);
+    if ($inputPath !== '' && is_file($inputPath)) {
+        @unlink($inputPath);
+    }
+
+    $nextState = $status['state'] === 'stopping' ? 'idle' : 'error';
+    $lastError = $status['state'] === 'stopping'
+        ? ''
+        : 'studio_youtube_stale_session';
+
+    RADIO_studioYoutubeWriteStatus(array(
+        'state' => $nextState,
+        'helper_pid' => 0,
+        'ffmpeg_pid' => 0,
+        'stop_requested' => false,
+        'last_error' => $lastError
+    ));
+
+    return RADIO_studioYoutubeStatus();
+}
+
 function RADIO_studioYoutubeFindPhpCli()
 {
     $candidates = array(
@@ -187,7 +243,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         return false;
     }
 
-    $current = RADIO_studioYoutubeStatus();
+    $current = RADIO_studioYoutubeCleanupStale();
     if (RADIO_studioYoutubeActive($current)) {
         $error = 'studio_youtube_already_live';
         return false;
@@ -417,7 +473,7 @@ function RADIO_studioYoutubeRequestStop($sessionId, $uid, &$error)
 
 function RADIO_studioYoutubePublicStatus()
 {
-    $status = RADIO_studioYoutubeStatus();
+    $status = RADIO_studioYoutubeCleanupStale();
     $metrics = function_exists('RADIO_youtubeFfmpegMetrics')
         ? RADIO_youtubeFfmpegMetrics()
         : array('available' => false);
