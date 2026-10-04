@@ -491,6 +491,7 @@ $LANG_RADIO['admin_youtube_intro'] = 'Send selected Radio programmes to YouTube 
 $LANG_RADIO['admin_youtube_help_title'] = 'Server-side YouTube output';
 $LANG_RADIO['admin_youtube_help_text'] = 'This beta keeps the current Radio players unchanged. The CLI worker starts or stops FFmpeg for selected scheduled slots or for a manual test programme.';
 $LANG_RADIO['youtube_status'] = 'YouTube Live status';
+$LANG_RADIO['youtube_status_unknown'] = 'Live status unknown — worker inactive';
 $LANG_RADIO['youtube_now_playing'] = 'Now playing';
 $LANG_RADIO['youtube_status_auto_refresh'] = 'Status refreshes automatically every 5 seconds.';
 $LANG_RADIO['youtube_process_stopped'] = 'The streaming process stopped unexpectedly.';
