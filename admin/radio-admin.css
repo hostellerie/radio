@@ -961,3 +961,40 @@ body.radio-studio-focus-active{
     .radio-admin__panel select{width:100%}
     .radio-admin__panel form button{margin:.2rem .2rem .2rem 0}
 }
+
+
+.radio-admin__details {
+    padding: 0;
+}
+
+.radio-admin__details > summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.radio-admin__details[open] > summary {
+    border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+.radio-admin__details-body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.radio-youtube-status__state {
+    margin-bottom: 0.75rem;
+}
+
+.radio-youtube-status__state--running strong {
+    font-weight: 700;
+}
+
+.radio-youtube-status__refresh {
+    opacity: 0.75;
+}
+
+.radio-youtube-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
