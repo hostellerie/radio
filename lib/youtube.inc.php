@@ -1329,6 +1329,209 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
     return implode(' ', $escaped);
 }
 
+function RADIO_youtubeWriteStudioOverlay($programId, $trackTitle)
+{
+    global $_CONF;
+
+    $config = RADIO_youtubeConfig();
+    $program = RADIO_getProgram((int) $programId, false);
+    if ($program === false) {
+        return false;
+    }
+
+    $station = trim((string) $config['station_name']);
+    if ($station === '') {
+        $station = isset($_CONF['site_name']) ? (string) $_CONF['site_name'] : 'Radio';
+    }
+
+    $files = array(
+        'station' => !empty($config['show_station']) ? RADIO_youtubeOverlayText($station, 70) : '',
+        'program' => !empty($config['show_program'])
+            ? RADIO_youtubeOverlayText(isset($program['title']) ? $program['title'] : '', 90)
+            : '',
+        'track' => !empty($config['show_track']) ? RADIO_youtubeOverlayText($trackTitle, 140) : ''
+    );
+
+    foreach ($files as $name => $text) {
+        $path = RADIO_youtubeOverlayPath($name);
+        if (@file_put_contents($path, $text . PHP_EOL, LOCK_EX) === false) {
+            return false;
+        }
+        @chmod($path, 0600);
+    }
+
+    return true;
+}
+
+function RADIO_youtubeStudioFfmpegCommand($programId, &$error, $ffmpegPath = 'ffmpeg', $videoMode = 'stationcard')
+{
+    $error = '';
+    $config = RADIO_youtubeConfig();
+    $palette = RADIO_youtubeVisualPalette($config);
+    $program = RADIO_getProgram((int) $programId, false);
+
+    if ($program === false) {
+        $error = 'youtube_program_missing';
+        return false;
+    }
+    if (empty($config['stream_key'])) {
+        $error = 'youtube_stream_key_missing';
+        return false;
+    }
+
+    $ffmpegPath = trim((string) $ffmpegPath);
+    if ($ffmpegPath === '') {
+        $ffmpegPath = 'ffmpeg';
+    }
+
+    $videoMode = in_array($videoMode, array('stationcard','drawtext','showwaves','color'), true)
+        ? $videoMode
+        : 'color';
+
+    $destination = rtrim($config['rtmp_url'], '/') . '/' . ltrim($config['stream_key'], '/');
+    $parts = array(
+        $ffmpegPath,
+        '-hide_banner',
+        '-loglevel', 'warning',
+        '-stats_period', '15',
+        '-stats',
+        '-thread_queue_size', '512',
+        '-i', 'pipe:0'
+    );
+
+    $videoInputIndex = 1;
+    $parts = array_merge($parts, array(
+        '-re',
+        '-f', 'lavfi',
+        '-i', 'color=c=' . $palette['background'] . ':s=' . $config['video_size'] . ':r=25'
+    ));
+
+    $template = isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard';
+    $showArtwork = !empty($config['show_artwork']);
+    $showVisualizer = !empty($config['show_visualizer']);
+    $renderVisualizer = $template === 'visualizer'
+        ? true
+        : ($template === 'minimal' ? false : $showVisualizer);
+
+    $visualizerSize = isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium';
+    $waveformStyle = isset($config['waveform_style']) ? (string) $config['waveform_style'] : 'line';
+    $waveWidth = 760;
+    $waveHeight = 80;
+    if ($visualizerSize === 'small') {
+        $waveWidth = 620;
+        $waveHeight = 50;
+    } elseif ($visualizerSize === 'large') {
+        $waveWidth = 960;
+        $waveHeight = 120;
+    }
+
+    $videoWidth = 1280;
+    $videoHeight = 720;
+    if (preg_match('/^(\\d+)x(\\d+)$/', (string) $config['video_size'], $sizeMatch)) {
+        $videoWidth = max(320, (int) $sizeMatch[1]);
+        $videoHeight = max(180, (int) $sizeMatch[2]);
+    }
+
+    $target = array(
+        'program_id' => (int) $programId,
+        'program_title' => isset($program['title']) ? (string) $program['title'] : ''
+    );
+    $artwork = RADIO_youtubeArtwork($target);
+    $cover = $showArtwork && isset($artwork['path']) ? (string) $artwork['path'] : '';
+    $coverInputIndex = -1;
+
+    if ($cover !== '' && $template !== 'minimal' && $template !== 'visualizer') {
+        $coverInputIndex = 2;
+        $parts = array_merge($parts, array(
+            '-thread_queue_size', '64',
+            '-re',
+            '-loop', '1',
+            '-framerate', '1',
+            '-i', $cover
+        ));
+    }
+
+    $filters = array(
+        '[0:a:0]aresample=48000:async=1:first_pts=0,'
+            . 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,'
+            . 'asetpts=PTS-STARTPTS[yaudio]'
+    );
+
+    if ($renderVisualizer && ($videoMode === 'stationcard' || $videoMode === 'showwaves')) {
+        $filters[] = '[yaudio]asplit=2[aout][awave]';
+        $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
+            . ':mode=' . $waveformStyle . ':rate=25:colors=' . $palette['primary'] . '[wave]';
+    } else {
+        $filters[] = '[yaudio]anull[aout]';
+    }
+
+    if ($coverInputIndex >= 0 && $template === 'fullbackground') {
+        $filters[] = '[' . $coverInputIndex . ':v]scale=' . $videoWidth . ':' . $videoHeight
+            . ':force_original_aspect_ratio=increase:flags=fast_bilinear,crop=' . $videoWidth . ':' . $videoHeight
+            . ',setsar=1[fullcover]';
+        $filters[] = '[' . $videoInputIndex . ':v][fullcover]overlay=0:0:eof_action=repeat[background]';
+    } elseif ($coverInputIndex >= 0) {
+        $filters[] = '[' . $coverInputIndex . ':v]scale=380:380:force_original_aspect_ratio=decrease[cover]';
+        $filters[] = '[' . $videoInputIndex . ':v][cover]overlay=(W-w)/2:235[background]';
+    } else {
+        $filters[] = '[' . $videoInputIndex . ':v]null[background]';
+    }
+
+    if ($videoMode === 'stationcard' || $videoMode === 'drawtext') {
+        $textFilters = array(
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station'))
+                . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=22:x=(w-text_w)/2:y=h*0.10",
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program'))
+                . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=17:x=(w-760)/2:y=h-72",
+            "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track'))
+                . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=15:x=(w-760)/2:y=h-50"
+        );
+        $filters[] = '[background]' . implode(',', $textFilters) . '[card]';
+    } else {
+        $filters[] = '[background]null[card]';
+    }
+
+    if ($renderVisualizer && ($videoMode === 'stationcard' || $videoMode === 'showwaves')) {
+        $waveBottom = max(100, (int) floor($videoHeight * 0.14));
+        $filters[] = '[card][wave]overlay=(W-w)/2:H-h-' . $waveBottom . '[v]';
+    } else {
+        $filters[] = '[card]null[v]';
+    }
+
+    $parts = array_merge($parts, array(
+        '-filter_complex', implode(';', $filters),
+        '-map', '[v]',
+        '-map', '[aout]',
+        '-c:v', 'libx264',
+        '-preset', $template === 'fullbackground' ? 'superfast' : 'veryfast',
+        '-tune', 'stillimage',
+        '-pix_fmt', 'yuv420p',
+        '-r', '25',
+        '-g', '50',
+        '-sc_threshold', '0',
+        '-b:v', $config['video_bitrate'],
+        '-minrate', $config['video_bitrate'],
+        '-maxrate', $config['video_bitrate'],
+        '-bufsize', '5000k',
+        '-x264-params', 'nal-hrd=cbr:force-cfr=1:rc-lookahead=0:sync-lookahead=0',
+        '-c:a', 'aac',
+        '-b:a', $config['audio_bitrate'],
+        '-ar', '48000',
+        '-max_interleave_delta', '0',
+        '-avoid_negative_ts', 'make_zero',
+        '-flvflags', 'no_duration_filesize',
+        '-f', 'flv',
+        $destination
+    ));
+
+    $escaped = array();
+    foreach ($parts as $part) {
+        $escaped[] = escapeshellarg($part);
+    }
+
+    return implode(' ', $escaped);
+}
+
 function RADIO_youtubePidRunning($pid)
 {
     $pid = (int) $pid;
