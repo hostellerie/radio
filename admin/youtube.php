@@ -353,10 +353,11 @@ $command = 'php ' . $worker . ' --geeklog-root=' . $root
     . ($siteHost !== '' ? ' --host=' . $siteHost : '');
 $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
 $radioLog = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : 'radio.log';
-$cronCommand = 'php -q -d display_errors=1 ' . $worker
-    . ' --geeklog-root=' . $root
-    . ($siteHost !== '' ? ' --host=' . $siteHost : '')
-    . ' --quiet >> ' . $radioLog . ' 2>&1';
+$cronCommand = 'GEEKLOG_ROOT=' . escapeshellarg($root)
+    . ($siteHost !== '' ? ' GEEKLOG_HOST=' . escapeshellarg($siteHost) : '')
+    . ' RADIO_YOUTUBE_QUIET=1'
+    . ' php -q -d display_errors=1 ' . escapeshellarg($worker)
+    . ' >> ' . escapeshellarg($radioLog) . ' 2>&1';
 
 $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . radio_youtube_h($LANG_RADIO['youtube_worker'])
