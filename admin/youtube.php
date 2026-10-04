@@ -397,6 +397,12 @@ if (!empty($_CONF['site_url'])) {
 }
 $command = 'php ' . $worker . ' --geeklog-root=' . $root
     . ($siteHost !== '' ? ' --host=' . $siteHost : '');
+$logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
+$radioLog = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : 'radio.log';
+$cronCommand = 'php -d display_errors=1 ' . $worker
+    . ' --geeklog-root=' . $root
+    . ($siteHost !== '' ? ' --host=' . $siteHost : '')
+    . ' --quiet >> ' . $radioLog . ' 2>&1';
 
 $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . radio_youtube_h($LANG_RADIO['youtube_worker'])
@@ -404,7 +410,7 @@ $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_worker_help']) . '</p>'
     . '<pre><code>' . radio_youtube_h($command) . '</code></pre>'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_worker_cron_help']) . '</p>'
-    . '<pre><code>* * * * * ' . radio_youtube_h($command) . ' >/dev/null 2>&1</code></pre>'
+    . '<pre><code>* * * * * ' . radio_youtube_h($cronCommand) . '</code></pre>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_beta_warning']) . '</small></p>'
     . '</div></details>';
 
