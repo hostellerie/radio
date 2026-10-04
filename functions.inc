@@ -3288,8 +3288,20 @@ function RADIO_deleteSchedule($id)
 
 function RADIO_scheduleDuration($schedule)
 {
-    $start = strtotime($schedule['starts_at']);
-    $end = strtotime($schedule['ends_at']);
+    $programId = isset($schedule['program_id']) ? (int) $schedule['program_id'] : 0;
+    if ($programId > 0) {
+        $programDuration = RADIO_programDuration($programId);
+        if ($programDuration > 0) {
+            return $programDuration;
+        }
+    }
+
+    /*
+     * Legacy fallback for old/incomplete schedule rows. New schedules derive
+     * their effective duration from the current programme duration.
+     */
+    $start = isset($schedule['starts_at']) ? strtotime($schedule['starts_at']) : false;
+    $end = isset($schedule['ends_at']) ? strtotime($schedule['ends_at']) : false;
     return ($start !== false && $end !== false && $end > $start) ? ($end - $start) : 0;
 }
 
