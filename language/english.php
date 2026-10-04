@@ -531,6 +531,7 @@ $LANG_RADIO['youtube_worker_active'] = 'Worker active';
 $LANG_RADIO['youtube_worker_stale'] = 'Worker check overdue';
 $LANG_RADIO['youtube_worker_not_detected'] = 'Worker not detected';
 $LANG_RADIO['youtube_worker_not_detected_help'] = 'No recent worker heartbeat was found. Install the cron command below, then refresh this page after one minute.';
+$LANG_RADIO['youtube_cli_not_detected'] = 'PHP CLI was not detected. The YouTube worker cannot run safely with PHP CGI/FastCGI.';
 $LANG_RADIO['youtube_worker_next_expected'] = 'Next expected check: within 1 minute';
 $LANG_RADIO['youtube_beta_warning'] = 'Beta: scheduled/manual YouTube output currently supports local programme media only and uses a lightweight station card with artwork/text when available plus an audio visualizer fallback. The normal web Radio and Studio remain independent.';
 $LANG_RADIO['youtube_local_only'] = 'This programme contains an external/live media source. The YouTube beta currently supports local files only.';
