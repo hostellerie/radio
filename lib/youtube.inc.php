@@ -1068,13 +1068,17 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         '-x264-params', 'nal-hrd=cbr:force-cfr=1',
         '-c:a', 'aac',
         '-b:a', $config['audio_bitrate'],
-        '-ar', '44100'
+        '-ar', '48000'
     ));
     if (!empty($target['remaining'])) {
         $parts[] = '-t';
         $parts[] = (string) (int) $target['remaining'];
     }
-    $parts = array_merge($parts, array('-f', 'flv', $destination));
+    $parts = array_merge($parts, array(
+        '-flvflags', 'no_duration_filesize',
+        '-f', 'flv',
+        $destination
+    ));
 
     $escaped = array();
     foreach ($parts as $part) {
