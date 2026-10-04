@@ -165,6 +165,7 @@
     }
 
     var youtubeStatus = document.getElementById('radio-youtube-status');
+    var youtubeStopScheduled = document.getElementById('radio-youtube-stop-scheduled');
 
     function setYoutubeRefreshError(message) {
         if (!youtubeStatus) {
@@ -214,6 +215,9 @@
                 var payload = JSON.parse(xhr.responseText);
                 if (payload && typeof payload.html === 'string') {
                     youtubeStatus.innerHTML = payload.html;
+                    if (youtubeStopScheduled) {
+                        youtubeStopScheduled.hidden = !payload.scheduled_running;
+                    }
                     setYoutubeRefreshError('');
                 } else {
                     setYoutubeRefreshError('Status refresh returned an invalid response.');
