@@ -434,24 +434,26 @@ function RADIO_youtubeTarget($timestamp)
 
     $timestamp = $timestamp ? (int) $timestamp : time();
 
-    if ($config['mode'] === 'manual') {
-        if (!$config['manual_requested'] || $config['manual_program_id'] < 1) {
-            return false;
-        }
+    /*
+     * Manual start is a temporary override, not a mutually exclusive mode.
+     * When no manual request is active, enabled YouTube schedules must still
+     * be evaluated. This keeps the admin UI intuitive: "Start now" is manual,
+     * while checked scheduled slots always run automatically.
+     */
+    if (!empty($config['manual_requested']) && $config['manual_program_id'] > 0) {
         $program = RADIO_getProgram($config['manual_program_id'], true);
-        if ($program === false) {
-            return false;
+        if ($program !== false) {
+            return array(
+                'key' => 'manual:' . (int) $program['program_id'],
+                'program_id' => (int) $program['program_id'],
+                'program_title' => $program['title'],
+                'schedule_id' => 0,
+                'start' => $timestamp,
+                'end' => 0,
+                'elapsed' => 0,
+                'remaining' => 0
+            );
         }
-        return array(
-            'key' => 'manual:' . (int) $program['program_id'],
-            'program_id' => (int) $program['program_id'],
-            'program_title' => $program['title'],
-            'schedule_id' => 0,
-            'start' => $timestamp,
-            'end' => 0,
-            'elapsed' => 0,
-            'remaining' => 0
-        );
     }
 
     $allowed = array_flip($config['schedule_ids']);
