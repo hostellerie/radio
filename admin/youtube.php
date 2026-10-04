@@ -96,6 +96,17 @@ function radio_youtube_status_html($status)
             . '</div>';
     }
 
+    $suppressedOccurrence = RADIO_youtubeSuppressedOccurrence(time());
+    if ($suppressedOccurrence !== false) {
+        $html .= '<p class="radio-admin__notice"><strong>'
+            . radio_youtube_h($LANG_RADIO['youtube_occurrence_stopped_manually'])
+            . '</strong>';
+        if (!empty($suppressedOccurrence['program_title'])) {
+            $html .= '<br>' . radio_youtube_h($suppressedOccurrence['program_title']);
+        }
+        $html .= '</p>';
+    }
+
     if (!empty($status['last_error'])) {
         $errorKey = (string) $status['last_error'];
         $errorText = isset($LANG_RADIO[$errorKey]) ? $LANG_RADIO[$errorKey] : $errorKey;
@@ -208,6 +219,11 @@ if (isset($_GET['youtube_status_json']) && $_GET['youtube_status_json'] === '1')
         'html' => radio_youtube_status_html($liveStatus),
         'running' => !empty($liveStatus['running']),
         'pid' => isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0,
+        'schedule_id' => isset($liveStatus['schedule_id']) ? (int) $liveStatus['schedule_id'] : 0,
+        'scheduled_running' => !empty($liveStatus['running'])
+            && !empty($liveStatus['schedule_id'])
+            && !empty($liveStatus['target_key'])
+            && strpos((string) $liveStatus['target_key'], 'schedule:') === 0,
         'last_check' => isset($liveStatus['last_check']) ? (string) $liveStatus['last_check'] : '',
         'server_time' => date('Y-m-d H:i:s')
     ));
@@ -240,6 +256,30 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $ok = $saved && RADIO_youtubeSetManualRequest(true);
         $message = COM_showMessageText(
             $ok ? $LANG_RADIO['youtube_start_requested'] : $LANG_RADIO['youtube_save_failed'],
+            $LANG_RADIO['youtube_live']
+        );
+    } elseif (isset($_POST['youtube_stop_scheduled_occurrence'])) {
+        $liveStatus = RADIO_youtubeStatus();
+        $suppressed = RADIO_youtubeSuppressScheduledOccurrence($liveStatus);
+        $pid = isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0;
+        $stopped = $pid < 2 || RADIO_youtubeStopPid($pid);
+
+        if ($suppressed && $stopped) {
+            RADIO_youtubeWriteStatus(array(
+                'running' => false,
+                'pid' => 0,
+                'target_key' => '',
+                'program_id' => 0,
+                'program_title' => '',
+                'schedule_id' => 0,
+                'target_end' => 0,
+                'last_error' => ''
+            ));
+        }
+
+        $ok = $suppressed && $stopped;
+        $message = COM_showMessageText(
+            $ok ? $LANG_RADIO['youtube_scheduled_occurrence_stopped'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_request'])) {
@@ -277,6 +317,17 @@ $content .= '<section class="radio-admin__panel radio-youtube-status">'
     . '">'
     . radio_youtube_status_html($status)
     . '</div>'
+    . '<form id="radio-youtube-stop-scheduled" method="post" action=""'
+    . ((!empty($status['running']) && !empty($status['schedule_id'])
+        && !empty($status['target_key'])
+        && strpos((string) $status['target_key'], 'schedule:') === 0) ? '' : ' hidden')
+    . '>'
+    . '<p class="radio-youtube-actions"><button type="submit" name="youtube_stop_scheduled_occurrence" value="1">'
+    . radio_youtube_h($LANG_RADIO['youtube_stop_current_schedule'])
+    . '</button></p>'
+    . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_stop_current_schedule_help']) . '</small></p>'
+    . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">'
+    . '</form>'
     . '</section>';
 
 $content .= '<section class="radio-admin__panel"><h2>'
