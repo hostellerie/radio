@@ -585,3 +585,5 @@ $LANG_RADIO['youtube_scheduled_output_help'] = 'Cochez les programmations Radio 
 $LANG_RADIO['youtube_save_schedules'] = 'Enregistrer les créneaux';
 
 $LANG_RADIO['youtube_schedules_saved'] = 'Les créneaux YouTube programmés ont été enregistrés.';
+
+$LANG_RADIO['youtube_next_schedule'] = 'Prochain créneau YouTube';
