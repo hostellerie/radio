@@ -132,6 +132,21 @@ function radio_youtube_status_html($status)
         $html .= '<p><small>FFmpeg: ' . radio_youtube_h($status['ffmpeg_path']) . '</small></p>';
     }
 
+    if (!empty($status['launch_method'])) {
+        $html .= '<p><small>'
+            . radio_youtube_h($LANG_RADIO['youtube_launch_method'])
+            . ': ' . radio_youtube_h($status['launch_method'])
+            . '</small></p>';
+    }
+
+    if (!empty($status['last_ffmpeg_message'])) {
+        $html .= '<p class="radio-admin__notice"><small><strong>'
+            . radio_youtube_h($LANG_RADIO['youtube_last_ffmpeg_error'])
+            . ':</strong><br>'
+            . radio_youtube_h($status['last_ffmpeg_message'])
+            . '</small></p>';
+    }
+
     if (isset($status['artwork_type'])) {
         $artworkLabel = (string) $status['artwork_type'];
         if (!empty($status['artwork_path'])) {
