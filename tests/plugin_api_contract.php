@@ -269,6 +269,7 @@ $studioJs = file_get_contents($root . '/admin/radio-studio.js');
 $studioOutput = file_get_contents($root . '/lib/studio-output.inc.php');
 $studioLive = file_get_contents($root . '/lib/studio-live.inc.php');
 $studioYoutubeWorker = file_get_contents($root . '/bin/studio-youtube-live.php');
+$youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $legacyPreview = file_get_contents($root . '/admin/preview.php');
 
 radio_contract_require(
@@ -1112,7 +1113,6 @@ radio_contract_require(
 $installDefaults = file_get_contents($root . '/install_defaults.php');
 $updates = file_get_contents($root . '/install_updates.php');
 $youtubeAdmin = file_get_contents($root . '/admin/youtube.php');
-$youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $youtubeWorker = file_get_contents($root . '/bin/youtube-live.php');
 $adminNav = file_get_contents($root . '/admin/admin-ui.inc.php');
 $adminNavTemplate = file_get_contents($root . '/templates/admin/navigation.thtml');
