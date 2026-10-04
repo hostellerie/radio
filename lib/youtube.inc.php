@@ -856,7 +856,7 @@ function RADIO_youtubeWriteAss($target, &$error)
     $lowerThirdMargin = max(60, (int) floor(($width - $waveWidth) / 2));
     $bottomSafeMargin = max(42, (int) floor($height * 0.06));
     $trackBottomMargin = $bottomSafeMargin;
-    $programBottomMargin = $bottomSafeMargin + 34;
+    $programBottomMargin = $bottomSafeMargin + 24;
 
     $defaultStation = isset($_CONF['site_name']) && trim((string) $_CONF['site_name']) !== ''
         ? (string) $_CONF['site_name']
@@ -1124,7 +1124,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         }
 
         if ($renderVisualizer) {
-            $waveBottom = max(118, (int) floor($videoHeight * 0.16));
+            $waveBottom = max(100, (int) floor($videoHeight * 0.14));
             $waveX = '(W-w)/2';
             $filters[] = '[card][wave]overlay=' . $waveX . ':H-h-' . $waveBottom . '[v]';
         } else {
@@ -1161,7 +1161,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             '-map', '[yaudio]',
             '-vf',
             "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=22:x=(w-text_w)/2:y=h*0.10,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=17:x=(w-760)/2:y=h-82,"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=17:x=(w-760)/2:y=h-72,"
             . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=15:x=(w-760)/2:y=h-50"
         ));
     } elseif ($videoMode === 'showwaves') {
