@@ -109,7 +109,7 @@ function radio_youtube_worker_ffmpeg_tail($maxLines)
         return '';
     }
 
-    $maxLines = max(1, min(8, (int) $maxLines));
+    $maxLines = max(1, min(24, (int) $maxLines));
     $size = @filesize($path);
     if ($size === false || $size < 1) {
         return '';
@@ -146,7 +146,7 @@ function radio_youtube_worker_ffmpeg_tail($maxLines)
         $message = str_replace((string) $config['stream_key'], '[stream-key-redacted]', $message);
     }
 
-    return RADIO_youtubeOverlayText($message, 1500);
+    return RADIO_youtubeOverlayText($message, 5000);
 }
 
 $status = RADIO_youtubeStatus();
@@ -216,7 +216,7 @@ if ($hasShowwaves && $hasOverlay && $hasSubtitles) {
 $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
 $running = RADIO_youtubePidRunning($pid);
 if (!$running && $pid > 0) {
-    $ffmpegTail = radio_youtube_worker_ffmpeg_tail(4);
+    $ffmpegTail = radio_youtube_worker_ffmpeg_tail(16);
     radio_youtube_worker_log(
         'Streaming process disappeared unexpectedly (PID ' . $pid . ').'
         . ($ffmpegTail !== '' ? ' FFmpeg: ' . $ffmpegTail : '')
