@@ -871,7 +871,7 @@ function RADIO_youtubeWriteAss($target, &$error)
         . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
         . "Style: Station,DejaVu Sans,22," . $palette['ass_secondary'] . ",&H000000FF,&H70000000,&H00000000,-1,0,0,0,100,100,1,0,1,1,0,8,220,220,52,1\n"
         . "Style: Program,DejaVu Sans,17," . $palette['ass_primary'] . ",&H000000FF,&H70000000,&H00000000,-1,0,0,0,100,100,0,0,1,1,0,1," . $lowerThirdMargin . "," . $lowerThirdMargin . ",178,1\n"
-        . "Style: Track,DejaVu Sans,15," . $palette['ass_primary'] . ",&H000000FF,&H40000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,1," . $lowerThirdMargin . "," . $lowerThirdMargin . ",146,1\n\n"
+        . "Style: Track,DejaVu Sans,15," . $palette['ass_primary'] . ",&H000000FF,&H40000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,1," . $lowerThirdMargin . "," . $lowerThirdMargin . ",136,1\n\n"
         . "[Events]\n"
         . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
 
@@ -910,7 +910,7 @@ function RADIO_youtubeWriteAss($target, &$error)
             continue;
         }
         $events .= 'Dialogue: 0,' . RADIO_youtubeAssTime($start) . ',' . RADIO_youtubeAssTime($end)
-            . ',Track,,0,0,0,,' . RADIO_youtubeAssWrappedText($title, 60, 2) . "\n";
+            . ',Track,,0,0,0,,' . RADIO_youtubeAssWrappedText($title, 84, 2) . "\n";
     }
 
     $path = RADIO_youtubeAssPath();
@@ -1159,7 +1159,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             '-vf',
             "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station')) . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=22:x=(w-text_w)/2:y=h*0.10,"
             . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('program')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=17:x=(w-760)/2:y=h*0.735,"
-            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=15:x=(w-760)/2:y=h*0.775"
+            . "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('track')) . "':reload=1:fontcolor=" . $palette['primary'] . ":fontsize=15:x=(w-760)/2:y=h*0.79"
         ));
     } elseif ($videoMode === 'showwaves') {
         $filters = $audioFilters;
