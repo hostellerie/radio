@@ -1170,6 +1170,17 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($youtubeLib, "\$videoPreset = 'veryfast'") !== false
+        && strpos($youtubeLib, "\$videoPreset = 'superfast'") !== false
+        && strpos($youtubeLib, "'-preset', \$videoPreset") !== false
+        && strpos($youtubeLib, "'-thread_queue_size', '64'") !== false
+        && strpos($youtubeLib, 'flags=fast_bilinear') !== false
+        && strpos($youtubeLib, "'-stats_period', '15'") !== false
+        && strpos($youtubeLib, 'rc-lookahead=0:sync-lookahead=0') !== false,
+    'Full Background must reserve CPU headroom, throttle its static artwork input, and emit periodic FFmpeg realtime stats for ingest diagnostics.'
+);
+
+radio_contract_require(
     strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
         && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
