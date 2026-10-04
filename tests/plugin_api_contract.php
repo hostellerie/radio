@@ -1140,6 +1140,16 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($youtubeLib, "\$renderVisualizer = \$template === 'visualizer'") !== false
+        && strpos($youtubeLib, "\$template === 'minimal' ? false : \$showVisualizer") !== false
+        && strpos($youtubeLib, "'-r', '25'") !== false
+        && strpos($youtubeLib, "'-sc_threshold', '0'") !== false
+        && strpos($youtubeLib, 'brightness=-0.28') === false
+        && strpos($youtubeLib, 'overlay=0:0:eof_action=repeat[background]') !== false,
+    'YouTube visual templates must keep Minimal lightweight, force Visualizer animation, share a stable 25 fps encoder clock, and preserve Full Background artwork luminance.'
+);
+
+radio_contract_require(
     strpos($youtubeWorker, "PHP_SAPI !== 'cli'") !== false
         && strpos($youtubeWorker, 'GEEKLOG_ROOT') !== false
         && strpos($youtubeWorker, 'RADIO_youtubeTarget(time())') !== false
