@@ -76,6 +76,7 @@ require_once $root . '/lib-common.php';
 global $_CONF;
 require_once $_CONF['path'] . 'plugins/radio/functions.inc';
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
+require_once $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
 
 function radio_youtube_worker_log($message)
 {
@@ -234,6 +235,33 @@ if (!$running && $pid > 0) {
 }
 
 $config = RADIO_youtubeConfig();
+
+/*
+ * The Studio master mix owns the single YouTube ingest while Studio Live is
+ * starting, live or stopping. Never let the automatic worker launch a second
+ * RTMP encoder against the same stream key.
+ */
+$studioYoutubeStatus = RADIO_studioYoutubeStatus();
+if (RADIO_studioYoutubeActive($studioYoutubeStatus)) {
+    if ($running && $pid > 1) {
+        RADIO_youtubeStopPid($pid);
+    }
+    RADIO_youtubeWriteStatus(array(
+        'running' => false,
+        'pid' => 0,
+        'target_key' => '',
+        'program_id' => 0,
+        'program_title' => '',
+        'schedule_id' => 0,
+        'target_end' => 0,
+        'last_error' => ''
+    ));
+    if (!$quiet) {
+        echo "YouTube Live automatic worker idle: Studio Live owns the ingest.\n";
+    }
+    exit(0);
+}
+
 $visualSignature = RADIO_youtubeVisualSignature($config);
 
 if (!$running
