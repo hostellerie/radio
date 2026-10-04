@@ -552,6 +552,9 @@ $LANG_RADIO['youtube_help_official'] = "Aide officielle YouTube pour la diffusio
 
 $LANG_RADIO['youtube_video_appearance'] = 'Apparence vidéo';
 $LANG_RADIO['youtube_visual_template'] = 'Template';
+$LANG_RADIO['youtube_visual_style'] = 'Style de couleur';
+$LANG_RADIO['youtube_style_modern_white'] = 'Blanc moderne sur noir';
+$LANG_RADIO['youtube_style_studio_green'] = 'Vert Studio sur noir';
 $LANG_RADIO['youtube_template_stationcard'] = 'Carte radio';
 $LANG_RADIO['youtube_template_fullbackground'] = 'Fond plein écran';
 $LANG_RADIO['youtube_template_minimal'] = 'Minimal';
