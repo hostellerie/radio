@@ -597,3 +597,9 @@ $LANG_RADIO['youtube_stop_current_schedule_help'] = 'Stops only the current sche
 $LANG_RADIO['youtube_scheduled_occurrence_stopped'] = 'The current scheduled YouTube occurrence has been stopped.';
 
 $LANG_RADIO['youtube_occurrence_stopped_manually'] = 'Current scheduled occurrence stopped manually';
+
+$LANG_RADIO['youtube_ffmpeg_disappeared'] = 'The YouTube FFmpeg process stopped unexpectedly.';
+
+$LANG_RADIO['youtube_launch_method'] = 'Launch method';
+
+$LANG_RADIO['youtube_last_ffmpeg_error'] = 'Last FFmpeg message';
