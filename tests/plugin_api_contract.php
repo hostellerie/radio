@@ -201,7 +201,7 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.1") !== false
+    strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.2") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
         && strpos($updatesFile, 'radio_update_0_3_0_to_0_3_1') !== false
@@ -223,8 +223,11 @@ radio_contract_require(
         && strpos($updatesFile, "'0.6.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.6.1'") !== false
         && strpos($updatesFile, 'radio_update_0_6_0_to_0_6_1') !== false
+        && strpos($updatesFile, "'0.6.1' => array(") !== false
+        && strpos($updatesFile, "'next' => '0.6.2'") !== false
+        && strpos($updatesFile, 'radio_update_0_6_1_to_0_6_2') !== false
         && strpos($functions, 'RADIO_ensureConfig()') !== false,
-    'Radio 0.6.1 must preserve the existing upgrade chain through 0.6.0 and reconcile configuration during upgrade.'
+    'Radio 0.6.2 must preserve the existing upgrade chain through 0.6.1 and reconcile configuration during upgrade.'
 );
 
 $mysqlInstall = file_get_contents($root . '/sql/mysql_install.php');
