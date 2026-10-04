@@ -339,6 +339,28 @@ $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . '</div></details>';
 
 $worker = $_CONF['path'] . 'plugins/radio/bin/youtube-live.php';
+
+$phpCli = '';
+$phpCandidates = array(
+    '/usr/bin/php',
+    '/usr/local/bin/php',
+    '/usr/bin/php8.1',
+    '/usr/local/bin/php8.1',
+    '/usr/bin/php81',
+    '/usr/local/bin/php81',
+    'php-cli',
+    'php'
+);
+foreach ($phpCandidates as $candidate) {
+    $probeOutput = array();
+    $probeCode = 1;
+    @exec(escapeshellcmd($candidate) . ' -r ' . escapeshellarg('echo PHP_SAPI;') . ' 2>/dev/null', $probeOutput, $probeCode);
+    if ($probeCode === 0 && isset($probeOutput[0]) && trim((string) $probeOutput[0]) === 'cli') {
+        $phpCli = $candidate;
+        break;
+    }
+}
+
 $root = isset($_CONF['path_html']) && $_CONF['path_html'] !== ''
     ? rtrim((string) $_CONF['path_html'], '/\\')
     : '<GEEKLOG_PUBLIC_ROOT>';
@@ -349,20 +371,24 @@ if (!empty($_CONF['site_url'])) {
         $siteHost = trim($parsedHost);
     }
 }
-$command = 'php ' . $worker . ' --geeklog-root=' . $root
-    . ($siteHost !== '' ? ' --host=' . $siteHost : '');
+$command = ($phpCli !== '' ? $phpCli : 'php-cli') . ' ' . escapeshellarg($worker)
+    . ' --geeklog-root=' . escapeshellarg($root)
+    . ($siteHost !== '' ? ' --host=' . escapeshellarg($siteHost) : '');
 $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
 $radioLog = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : 'radio.log';
-$cronCommand = 'GEEKLOG_ROOT=' . escapeshellarg($root)
-    . ($siteHost !== '' ? ' GEEKLOG_HOST=' . escapeshellarg($siteHost) : '')
-    . ' RADIO_YOUTUBE_QUIET=1'
-    . ' php -q -d display_errors=1 ' . escapeshellarg($worker)
-    . ' >> ' . escapeshellarg($radioLog) . ' 2>&1';
+$cronCommand = ($phpCli !== '' ? $phpCli : 'php-cli')
+    . ' -d display_errors=0 ' . escapeshellarg($worker)
+    . ' --geeklog-root=' . escapeshellarg($root)
+    . ($siteHost !== '' ? ' --host=' . escapeshellarg($siteHost) : '')
+    . ' --quiet >> ' . escapeshellarg($radioLog) . ' 2>&1';
 
 $content .= '<details class="radio-admin__panel radio-admin__details"><summary>'
     . radio_youtube_h($LANG_RADIO['youtube_worker'])
     . '</summary><div class="radio-admin__details-body">'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_worker_help']) . '</p>'
+    . ($phpCli === ''
+        ? '<p class="radio-admin__notice">⚠ ' . radio_youtube_h($LANG_RADIO['youtube_cli_not_detected']) . '</p>'
+        : '<p><strong>PHP CLI:</strong> <code>' . radio_youtube_h($phpCli) . '</code></p>')
     . '<pre><code>' . radio_youtube_h($command) . '</code></pre>'
     . '<p>' . radio_youtube_h($LANG_RADIO['youtube_worker_cron_help']) . '</p>'
     . '<pre><code>* * * * * ' . radio_youtube_h($cronCommand) . '</code></pre>'
