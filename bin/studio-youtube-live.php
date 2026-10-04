@@ -185,6 +185,9 @@ $descriptors = array(
 $pipes = array();
 $process = @proc_open($command, $descriptors, $pipes);
 if (!is_resource($process) || !isset($pipes[0]) || !is_resource($pipes[0])) {
+    if (is_file($inputPath)) {
+        @unlink($inputPath);
+    }
     RADIO_studioYoutubeWriteStatus(array(
         'state' => 'error',
         'last_error' => 'youtube_ffmpeg_start_failed',
@@ -211,6 +214,9 @@ if ($input === false) {
     @fclose($pipes[0]);
     @proc_terminate($process);
     @proc_close($process);
+    if (is_file($inputPath)) {
+        @unlink($inputPath);
+    }
     RADIO_studioYoutubeWriteStatus(array(
         'state' => 'error',
         'last_error' => 'studio_youtube_input_missing',
@@ -322,6 +328,15 @@ if (is_array($processStatus) && !empty($processStatus['running'])) {
     @proc_terminate($process);
 }
 @proc_close($process);
+
+/*
+ * The browser-to-helper input file is only a transient relay buffer. Once the
+ * persistent FFmpeg session ends—normally or with an error—it must not remain
+ * in site storage.
+ */
+if (is_file($inputPath)) {
+    @unlink($inputPath);
+}
 
 if ($normalStop) {
     RADIO_studioYoutubeWriteStatus(array(
