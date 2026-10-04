@@ -129,6 +129,17 @@ function radio_youtube_status_html($status)
         $html .= '<p><small>Artwork: ' . radio_youtube_h($artworkLabel) . '</small></p>';
     }
 
+    $nextSchedule = RADIO_youtubeNextScheduledOccurrence(time());
+    if ($nextSchedule !== false) {
+        $nextLabel = date('Y-m-d H:i:s', (int) $nextSchedule['start']);
+        $html .= '<p class="radio-youtube-status__next"><strong>'
+            . radio_youtube_h($LANG_RADIO['youtube_next_schedule'])
+            . '</strong><br>'
+            . radio_youtube_h($nextSchedule['program_title'])
+            . ' — ' . radio_youtube_h($nextLabel)
+            . '</p>';
+    }
+
     if (!empty($status['last_check'])) {
         $html .= '<p><strong>'
             . ($workerFresh ? '✓ ' : '⚠ ')
