@@ -138,6 +138,56 @@ function RADIO_studioRecordingWriteMeta($sessionId, $meta)
     return true;
 }
 
+function RADIO_studioRecordingCleanupStale($maxAgeSeconds)
+{
+    $maxAgeSeconds = max(300, (int) $maxAgeSeconds);
+
+    if (!RADIO_studioEnsureRecordingStorage()) {
+        return 0;
+    }
+
+    $dir = RADIO_studioRecordingDir();
+    $files = @glob($dir . '*.json');
+    if (!is_array($files)) {
+        return 0;
+    }
+
+    $now = time();
+    $cleaned = 0;
+
+    foreach ($files as $metaPath) {
+        $sessionId = basename((string) $metaPath, '.json');
+        if (!preg_match('/^[a-f0-9]{40}$/', $sessionId)) {
+            continue;
+        }
+
+        $meta = RADIO_studioRecordingReadMeta($sessionId);
+        if ($meta === false || !isset($meta['status']) || $meta['status'] !== 'recording') {
+            continue;
+        }
+
+        $startedAt = !empty($meta['started_at']) ? strtotime((string) $meta['started_at']) : false;
+        if ($startedAt === false || ($now - $startedAt) <= $maxAgeSeconds) {
+            continue;
+        }
+
+        $partPath = RADIO_studioRecordingPartPath($sessionId);
+        if ($partPath !== '' && is_file($partPath)) {
+            @unlink($partPath);
+        }
+
+        $meta['status'] = 'aborted';
+        $meta['ended_at'] = date('Y-m-d H:i:s');
+        $meta['abort_reason'] = 'stale_session_timeout';
+
+        if (RADIO_studioRecordingWriteMeta($sessionId, $meta)) {
+            $cleaned++;
+        }
+    }
+
+    return $cleaned;
+}
+
 function RADIO_studioRecordingStart($programId, $mime, $uid, &$error)
 {
     $error = '';
@@ -150,6 +200,8 @@ function RADIO_studioRecordingStart($programId, $mime, $uid, &$error)
         $error = 'storage_unavailable';
         return false;
     }
+
+    RADIO_studioRecordingCleanupStale(21600);
 
     $sessionId = RADIO_studioRecordingSessionId();
     $partPath = RADIO_studioRecordingPartPath($sessionId);
