@@ -273,7 +273,7 @@ function RADIO_youtubeVisualSignature($config = null)
     }
 
     $visual = array(
-        'layout_version' => 2,
+        'layout_version' => 3,
         'template' => isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard',
         'show_station' => !empty($config['show_station']),
         'station_name' => isset($config['station_name']) ? (string) $config['station_name'] : '',
@@ -818,9 +818,9 @@ function RADIO_youtubeWriteAss($target, &$error)
         . "WrapStyle: 2\n\n"
         . "[V4+ Styles]\n"
         . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-        . "Style: Station,DejaVu Sans,46,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,260,260,60,1\n"
-        . "Style: Program,DejaVu Sans,30,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,260,260,135,1\n"
-        . "Style: Track,DejaVu Sans,30,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,250,250,210,1\n\n"
+        . "Style: Station,DejaVu Sans,42,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,260,260,60,1\n"
+        . "Style: Program,DejaVu Sans,28,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,260,260,135,1\n"
+        . "Style: Track,DejaVu Sans,30,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,250,250,245,1\n\n"
         . "[Events]\n"
         . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
 
@@ -1027,8 +1027,8 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         } elseif ($template === 'minimal' || $template === 'visualizer') {
             $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } elseif ($coverInputIndex >= 0) {
-            $filters[] = '[' . $coverInputIndex . ':v]scale=320:320:force_original_aspect_ratio=decrease[cover]';
-            $filters[] = '[' . $videoInputIndex . ':v][cover]overlay=(W-w)/2:250[background]';
+            $filters[] = '[' . $coverInputIndex . ':v]scale=380:380:force_original_aspect_ratio=decrease[cover]';
+            $filters[] = '[' . $videoInputIndex . ':v][cover]overlay=(W-w)/2:235[background]';
             $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } else {
             $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
