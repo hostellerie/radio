@@ -587,3 +587,11 @@ $LANG_RADIO['youtube_schedules_saved'] = 'Les plages YouTube programmées ont é
 $LANG_RADIO['youtube_next_schedule'] = 'Prochaine plage YouTube';
 
 $LANG_RADIO['youtube_mode_legacy_help'] = 'préférence historique ; Démarrer maintenant remplace temporairement les plages, sinon les plages cochées démarrent automatiquement';
+
+$LANG_RADIO['youtube_stop_current_schedule'] = 'Arrêter le direct YouTube en cours';
+
+$LANG_RADIO['youtube_stop_current_schedule_help'] = 'Arrête uniquement la plage programmée en cours. La plage reste cochée et les prochaines occurrences récurrentes démarreront toujours automatiquement.';
+
+$LANG_RADIO['youtube_scheduled_occurrence_stopped'] = 'La plage YouTube programmée en cours a été arrêtée.';
+
+$LANG_RADIO['youtube_occurrence_stopped_manually'] = 'Plage programmée en cours arrêtée manuellement';
