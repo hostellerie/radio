@@ -790,9 +790,9 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, 'if ($isAdmin || $isRadioConfig)') !== false
         && strpos($functions, 'return RADIO_adminStylesheetLink();') !== false
-        && strpos($functions, "RADIO_pathEndsWith(\$path, '/admin/plugins/radio/upload.php')") !== false
+        && strpos($functions, "strpos(\$path, '/admin/plugins/radio/') !== false") !== false
         && strpos($functions, 'RADIO_adminScriptTag()') !== false,
-    'Radio admin CSS and JavaScript must remain available while public Radio is disabled.'
+    'Radio admin CSS and JavaScript must remain available on Radio administration pages while public Radio is disabled.'
 );
 radio_contract_require(
     strpos($publicJs, 'function initHomePlayer') !== false
