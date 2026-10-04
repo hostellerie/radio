@@ -587,3 +587,5 @@ $LANG_RADIO['youtube_save_schedules'] = 'Enregistrer les créneaux';
 $LANG_RADIO['youtube_schedules_saved'] = 'Les créneaux YouTube programmés ont été enregistrés.';
 
 $LANG_RADIO['youtube_next_schedule'] = 'Prochain créneau YouTube';
+
+$LANG_RADIO['youtube_mode_legacy_help'] = 'préférence historique ; Démarrer maintenant remplace temporairement les schedules, sinon les créneaux cochés démarrent automatiquement';
