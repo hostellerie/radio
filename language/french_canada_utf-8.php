@@ -529,6 +529,7 @@ $LANG_RADIO['youtube_worker_active'] = 'Worker actif';
 $LANG_RADIO['youtube_worker_stale'] = 'Contrôle du worker en retard';
 $LANG_RADIO['youtube_worker_not_detected'] = 'Worker non détecté';
 $LANG_RADIO['youtube_worker_not_detected_help'] = 'Aucun passage récent du worker n’a été détecté. Installez la commande cron ci-dessous, puis actualisez cette page après une minute.';
+$LANG_RADIO['youtube_cli_not_detected'] = 'PHP CLI n’a pas été détecté. Le worker YouTube ne peut pas fonctionner correctement avec PHP CGI/FastCGI.';
 $LANG_RADIO['youtube_worker_next_expected'] = 'Prochain contrôle attendu : dans moins d’une minute';
 $LANG_RADIO['youtube_beta_warning'] = 'Bêta : la sortie YouTube programmée/manuelle prend actuellement en charge uniquement les médias locaux des programmes et utilise une vidéo noire légère. La Radio web et le Studio restent indépendants.';
 $LANG_RADIO['youtube_local_only'] = 'Ce programme contient une source externe/live. La bêta YouTube ne prend actuellement en charge que les fichiers locaux.';
