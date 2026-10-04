@@ -365,6 +365,66 @@ function RADIO_youtubeWriteStatus($data)
     return RADIO_youtubeWriteJson(RADIO_youtubeStatePath(), $status);
 }
 
+function RADIO_youtubeNextScheduledOccurrence($timestamp)
+{
+    $config = RADIO_youtubeConfig();
+    $allowed = array_flip($config['schedule_ids']);
+    if (empty($allowed)) {
+        return false;
+    }
+
+    $timestamp = $timestamp ? (int) $timestamp : time();
+    $today = strtotime(date('Y-m-d', $timestamp) . ' 00:00:00');
+    $best = false;
+
+    foreach (RADIO_getSchedules(false) as $schedule) {
+        $scheduleId = isset($schedule['schedule_id']) ? (int) $schedule['schedule_id'] : 0;
+        if ($scheduleId < 1
+            || empty($schedule['enabled'])
+            || !isset($allowed[$scheduleId])
+            || (isset($schedule['program_status']) && $schedule['program_status'] !== 'published')) {
+            continue;
+        }
+
+        if (isset($schedule['recurrence']) && $schedule['recurrence'] === 'once') {
+            $candidate = RADIO_scheduleOccurrence(
+                $schedule,
+                date('Y-m-d', strtotime($schedule['starts_at']))
+            );
+            if ($candidate !== false && $candidate['start'] > $timestamp
+                && ($best === false || $candidate['start'] < $best['start'])) {
+                $best = $candidate;
+            }
+            continue;
+        }
+
+        $scanStart = $today;
+        if (!empty($schedule['active_from'])) {
+            $activeFrom = strtotime($schedule['active_from'] . ' 00:00:00');
+            if ($activeFrom !== false && $activeFrom > $scanStart) {
+                $scanStart = $activeFrom;
+            }
+        }
+
+        for ($offset = 0; $offset < 8; $offset++) {
+            $dateTs = strtotime('+' . $offset . ' day', $scanStart);
+            if ($dateTs === false) {
+                continue;
+            }
+            $candidate = RADIO_scheduleOccurrence($schedule, date('Y-m-d', $dateTs));
+            if ($candidate === false || $candidate['start'] <= $timestamp) {
+                continue;
+            }
+            if ($best === false || $candidate['start'] < $best['start']) {
+                $best = $candidate;
+            }
+            break;
+        }
+    }
+
+    return $best;
+}
+
 function RADIO_youtubeTarget($timestamp)
 {
     $config = RADIO_youtubeConfig();
