@@ -102,6 +102,17 @@ function radio_youtube_status_html($status)
         $html .= '<p class="radio-admin__notice">' . radio_youtube_h($errorText) . '</p>';
     }
 
+    if (!empty($status['visual_template'])) {
+        $templateKey = 'youtube_template_' . (string) $status['visual_template'];
+        $templateLabel = isset($LANG_RADIO[$templateKey])
+            ? $LANG_RADIO[$templateKey]
+            : (string) $status['visual_template'];
+        $html .= '<p><small>'
+            . radio_youtube_h($LANG_RADIO['youtube_visual_template'])
+            . ': ' . radio_youtube_h($templateLabel)
+            . '</small></p>';
+    }
+
     if (!empty($status['video_mode'])) {
         $html .= '<p><small>Video mode: ' . radio_youtube_h($status['video_mode']) . '</small></p>';
     }
@@ -265,6 +276,50 @@ $content .= '</select></label></p>'
     . radio_youtube_h($LANG_RADIO['save']) . '</button>'
     . '</p>'
     . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">';
+
+$content .= '<div class="radio-youtube-appearance">'
+    . '<h3>' . radio_youtube_h($LANG_RADIO['youtube_video_appearance']) . '</h3>'
+    . '<p><label>' . radio_youtube_h($LANG_RADIO['youtube_visual_template']) . ' '
+    . '<select name="visual_template">'
+    . '<option value="stationcard"' . ($youtubeConfig['visual_template'] === 'stationcard' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_template_stationcard']) . '</option>'
+    . '<option value="fullbackground"' . ($youtubeConfig['visual_template'] === 'fullbackground' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_template_fullbackground']) . '</option>'
+    . '<option value="minimal"' . ($youtubeConfig['visual_template'] === 'minimal' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_template_minimal']) . '</option>'
+    . '<option value="visualizer"' . ($youtubeConfig['visual_template'] === 'visualizer' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_template_visualizer']) . '</option>'
+    . '</select></label></p>'
+    . '<p><label><input type="checkbox" name="show_station" value="1"'
+    . (!empty($youtubeConfig['show_station']) ? ' checked' : '') . '> '
+    . radio_youtube_h($LANG_RADIO['youtube_show_station']) . '</label></p>'
+    . '<p><label>' . radio_youtube_h($LANG_RADIO['youtube_station_name']) . ' '
+    . '<input type="text" name="station_name" value="' . radio_youtube_h($youtubeConfig['station_name']) . '" size="32" maxlength="70"'
+    . ' placeholder="' . radio_youtube_h($LANG_RADIO['youtube_station_name_placeholder']) . '"></label></p>'
+    . '<p><label><input type="checkbox" name="show_program" value="1"'
+    . (!empty($youtubeConfig['show_program']) ? ' checked' : '') . '> '
+    . radio_youtube_h($LANG_RADIO['youtube_show_program']) . '</label></p>'
+    . '<p><label><input type="checkbox" name="show_track" value="1"'
+    . (!empty($youtubeConfig['show_track']) ? ' checked' : '') . '> '
+    . radio_youtube_h($LANG_RADIO['youtube_show_track']) . '</label></p>'
+    . '<p><label><input type="checkbox" name="show_artwork" value="1"'
+    . (!empty($youtubeConfig['show_artwork']) ? ' checked' : '') . '> '
+    . radio_youtube_h($LANG_RADIO['youtube_show_artwork']) . '</label></p>'
+    . '<p><label><input type="checkbox" name="show_visualizer" value="1"'
+    . (!empty($youtubeConfig['show_visualizer']) ? ' checked' : '') . '> '
+    . radio_youtube_h($LANG_RADIO['youtube_show_visualizer']) . '</label> '
+    . '<label>' . radio_youtube_h($LANG_RADIO['youtube_visualizer_size']) . ' '
+    . '<select name="visualizer_size">'
+    . '<option value="small"' . ($youtubeConfig['visualizer_size'] === 'small' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_size_small']) . '</option>'
+    . '<option value="medium"' . ($youtubeConfig['visualizer_size'] === 'medium' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_size_medium']) . '</option>'
+    . '<option value="large"' . ($youtubeConfig['visualizer_size'] === 'large' ? ' selected' : '') . '>'
+    . radio_youtube_h($LANG_RADIO['youtube_size_large']) . '</option>'
+    . '</select></label></p>'
+    . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_visual_changes_help']) . '</small></p>'
+    . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_image_recommendations']) . '</small></p>'
+    . '</div>';
 
 $content .= '<h3>' . radio_youtube_h($LANG_RADIO['youtube_scheduled_slots']) . '</h3>';
 
