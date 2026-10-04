@@ -63,13 +63,22 @@ function radio_youtube_status_html($status)
 
     $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
     $reportedRunning = !empty($status['running']) && $pid > 1;
-    $processAlive = $reportedRunning
+    $lastWorkerTs = !empty($status['last_check']) ? strtotime((string) $status['last_check']) : false;
+    $workerAge = $lastWorkerTs !== false ? max(0, time() - $lastWorkerTs) : null;
+    $workerFresh = $workerAge !== null && $workerAge <= 120;
+    $processAlive = $workerFresh
+        && $reportedRunning
         && function_exists('RADIO_youtubePidRunning')
         && RADIO_youtubePidRunning($pid);
 
     $html = '';
 
-    if ($processAlive) {
+    if (!$workerFresh) {
+        $html .= '<div class="radio-youtube-idle-card">'
+            . '<span class="radio-youtube-idle-dot"></span>'
+            . '<strong>' . radio_youtube_h($LANG_RADIO['youtube_status_unknown']) . '</strong>'
+            . '</div>';
+    } elseif ($processAlive) {
         $html .= '<div class="radio-youtube-live-card">'
             . '<div class="radio-youtube-live-card__header">'
             . '<span class="radio-youtube-live-badge"><span class="radio-youtube-live-badge__dot"></span>LIVE</span>'
@@ -103,7 +112,7 @@ function radio_youtube_status_html($status)
         }
 
         $html .= '</div>';
-    } elseif ($reportedRunning) {
+    } elseif ($workerFresh && $reportedRunning) {
         $html .= '<p class="radio-admin__notice"><strong>⚠ '
             . radio_youtube_h($LANG_RADIO['youtube_process_stopped'])
             . '</strong></p>';
@@ -133,10 +142,6 @@ function radio_youtube_status_html($status)
     }
 
     if (!empty($status['last_check'])) {
-        $lastWorkerTs = strtotime((string) $status['last_check']);
-        $workerAge = $lastWorkerTs !== false ? max(0, time() - $lastWorkerTs) : null;
-        $workerFresh = $workerAge !== null && $workerAge <= 120;
-
         $html .= '<p><strong>'
             . ($workerFresh ? '✓ ' : '⚠ ')
             . radio_youtube_h(
