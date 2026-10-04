@@ -1078,3 +1078,34 @@ body.radio-studio-focus-active{
         animation: none;
     }
 }
+
+
+.radio-youtube-appearance {
+    margin: 1.25rem 0;
+    padding: 1rem;
+    border: 1px solid rgba(127, 127, 127, 0.2);
+    border-radius: 0.6rem;
+}
+
+.radio-youtube-appearance h3 {
+    margin-top: 0;
+}
+
+.radio-youtube-appearance p {
+    margin: 0.65rem 0;
+}
+
+.radio-youtube-appearance input[type="text"] {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.radio-youtube-appearance select {
+    max-width: 100%;
+}
+
+@media (min-width: 760px) {
+    .radio-youtube-appearance {
+        max-width: 760px;
+    }
+}
