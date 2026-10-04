@@ -266,6 +266,9 @@ $rotationAdmin = file_get_contents($root . '/admin/rotation.php');
 $studioPage = file_get_contents($root . '/admin/studio.php');
 $studioApi = file_get_contents($root . '/admin/studio-api.php');
 $studioJs = file_get_contents($root . '/admin/radio-studio.js');
+$studioOutput = file_get_contents($root . '/lib/studio-output.inc.php');
+$studioLive = file_get_contents($root . '/lib/studio-live.inc.php');
+$studioYoutubeWorker = file_get_contents($root . '/bin/studio-youtube-live.php');
 $legacyPreview = file_get_contents($root . '/admin/preview.php');
 
 radio_contract_require(
@@ -287,6 +290,39 @@ radio_contract_require(
         && strpos($studioPage, 'radio-program-picker__filters') !== false
         && strpos($studioPage, "RADIO_mediaUrl((int) \$item['media_id'], false)") !== false,
     'Radio Studio must provide private continuous preview, a server-rendered queue and media search.'
+);
+
+radio_contract_require(
+    strpos($publicJs, 'context.createMediaStreamDestination()') !== false
+        && strpos($publicJs, 'masterLimiter.connect(captureDestination)') !== false
+        && strpos($publicJs, 'root.radioStudioMaster') !== false
+        && strpos($publicJs, 'getMasterStream') !== false,
+    'Radio Studio must expose one post-limiter master capture bus without replacing local monitoring.'
+);
+
+radio_contract_require(
+    strpos($studioPage, 'data-radio-studio-record') !== false
+        && strpos($studioJs, "studio_action', 'recording_start'") !== false
+        && strpos($studioJs, "recordingRecorder.start(2000)") !== false
+        && strpos($studioApi, "if (\$studioAction === 'recording_chunk')") !== false
+        && strpos($studioOutput, 'function RADIO_studioRecordingAppend') !== false
+        && strpos($studioOutput, "RADIO_studioSiteStorageDir") !== false,
+    'Radio Studio recording must capture the master mix through bounded authenticated chunks into site-specific persistent storage.'
+);
+
+radio_contract_require(
+    strpos($studioPage, 'data-radio-studio-youtube') !== false
+        && strpos($studioJs, "studio_action', 'youtube_live_start'") !== false
+        && strpos($studioJs, "youtubeLiveRecorder.start(1000)") !== false
+        && strpos($studioJs, "studio_action', 'youtube_live_chunk'") !== false
+        && strpos($studioJs, "studio_action', 'youtube_live_stop'") !== false
+        && strpos($studioApi, "if (\$studioAction === 'youtube_live_start')") !== false
+        && strpos($studioApi, "if (\$action === 'live_status')") !== false
+        && strpos($studioLive, 'function RADIO_studioYoutubeStart') !== false
+        && strpos($studioLive, 'function RADIO_studioYoutubeAppend') !== false
+        && strpos($studioYoutubeWorker, 'RADIO_youtubeStudioFfmpegCommand') !== false
+        && strpos($youtubeLib, 'function RADIO_youtubeStudioFfmpegCommand') !== false,
+    'Radio Studio YouTube Live must use a separate control, bounded master-audio chunks and one persistent helper/FFmpeg session.'
 );
 
 radio_contract_require(
@@ -1194,6 +1230,12 @@ radio_contract_require(
         && strpos($youtubeLib, "'secondary' => '0x00A84C'") !== false
         && strpos($youtubeLib, '"Style: Track,DejaVu Sans,16," . $palette[\'ass_primary\']') !== false,
     'YouTube white and green styles must stay luminous on black; track hierarchy comes from size and weight rather than dim text colour.'
+);
+
+radio_contract_require(
+    strpos($youtubeWorker, 'RADIO_studioYoutubeActive') !== false
+        && strpos($youtubeWorker, 'Studio Live owns the ingest') !== false,
+    'Automatic YouTube worker must stand down while Studio Live owns the stream key.'
 );
 
 radio_contract_require(
