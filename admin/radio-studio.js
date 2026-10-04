@@ -51,6 +51,7 @@
     var stateRevision = 0;
     var stateRequestInFlight = false;
     var stateNextAllowedAt = 0;
+    var studioPostSerial = Promise.resolve();
 
     function setStatus(message) {
         if (status) {
@@ -525,32 +526,40 @@
         }
     }
 
-    function studioPost(formData) {
-        if (tokenName && tokenValue) {
-            formData.append(tokenName, tokenValue);
-        }
-        if (!formData.has('program_id')) {
-            formData.append('program_id', String(programId));
-        }
+    function queueStudioPost(callback) {
+        var request = studioPostSerial.then(callback);
+        studioPostSerial = request.catch(function () {});
+        return request;
+    }
 
-        return fetch(mutationEndpoint || endpoint, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin',
-            cache: 'no-store'
-        }).then(function (response) {
-            return response.text().then(function (text) {
-                var data;
-                try {
-                    data = JSON.parse(text);
-                } catch (error) {
-                    throw new Error(/^\s*</.test(text) ? 'html_response' : 'invalid_json');
-                }
-                updateToken(data);
-                if (!response.ok || !data.ok) {
-                    throw new Error(data.error || ('http_' + response.status));
-                }
-                return data;
+    function studioPost(formData) {
+        return queueStudioPost(function () {
+            if (tokenName && tokenValue) {
+                formData.append(tokenName, tokenValue);
+            }
+            if (!formData.has('program_id')) {
+                formData.append('program_id', String(programId));
+            }
+
+            return fetch(mutationEndpoint || endpoint, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                cache: 'no-store'
+            }).then(function (response) {
+                return response.text().then(function (text) {
+                    var data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
+                        throw new Error(/^\s*</.test(text) ? 'html_response' : 'invalid_json');
+                    }
+                    updateToken(data);
+                    if (!response.ok || !data.ok) {
+                        throw new Error(data.error || ('http_' + response.status));
+                    }
+                    return data;
+                });
             });
         });
     }
@@ -1408,15 +1417,17 @@
         mutationInFlight++;
         stateRevision++;
 
-        if (tokenName && tokenValue) {
-            body.set(tokenName, tokenValue);
-        }
+        queueStudioPost(function () {
+            if (tokenName && tokenValue) {
+                body.set(tokenName, tokenValue);
+            }
 
-        fetch(mutationEndpoint || endpoint, {
-            method: 'POST',
-            body: body,
-            credentials: 'same-origin',
-            cache: 'no-store'
+            return fetch(mutationEndpoint || endpoint, {
+                method: 'POST',
+                body: body,
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
         })
             .then(function (response) {
                 return response.text().then(function (text) {
