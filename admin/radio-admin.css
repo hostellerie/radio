@@ -1061,6 +1061,28 @@ body.radio-studio-focus-active{
     border-top: 1px solid rgba(220, 53, 69, 0.18);
 }
 
+.radio-youtube-diagnostics {
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(220, 53, 69, 0.18);
+}
+
+.radio-youtube-diagnostics dl {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) 1fr;
+    gap: 0.25rem 0.9rem;
+    margin: 0.55rem 0 0;
+}
+
+.radio-youtube-diagnostics dt {
+    font-weight: 600;
+}
+
+.radio-youtube-diagnostics dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
 @keyframes radio-youtube-live-pulse {
     0%,
     100% {
