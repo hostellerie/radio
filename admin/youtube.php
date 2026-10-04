@@ -70,9 +70,12 @@ function radio_youtube_status_html($status)
     $html = '';
 
     if ($processAlive) {
-        $html .= '<p class="radio-youtube-status__state radio-youtube-status__state--running"><strong>● '
-            . radio_youtube_h($LANG_RADIO['youtube_running'])
-            . '</strong>';
+        $html .= '<div class="radio-youtube-live-card">'
+            . '<div class="radio-youtube-live-card__header">'
+            . '<span class="radio-youtube-live-badge"><span class="radio-youtube-live-badge__dot"></span>LIVE</span>'
+            . '<strong>' . radio_youtube_h($LANG_RADIO['youtube_running']) . '</strong>'
+            . '</div>'
+            . '<p class="radio-youtube-status__state radio-youtube-status__state--running">';
         if (!empty($status['program_title'])) {
             $html .= '<br><span class="radio-youtube-status__program">'
                 . radio_youtube_h($status['program_title'])
@@ -98,14 +101,17 @@ function radio_youtube_status_html($status)
                     . '</p>';
             }
         }
+
+        $html .= '</div>';
     } elseif ($reportedRunning) {
         $html .= '<p class="radio-admin__notice"><strong>⚠ '
             . radio_youtube_h($LANG_RADIO['youtube_process_stopped'])
             . '</strong></p>';
     } else {
-        $html .= '<p class="radio-youtube-status__state"><strong>○ '
-            . radio_youtube_h($LANG_RADIO['youtube_idle'])
-            . '</strong></p>';
+        $html .= '<div class="radio-youtube-idle-card">'
+            . '<span class="radio-youtube-idle-dot"></span>'
+            . '<strong>' . radio_youtube_h($LANG_RADIO['youtube_idle']) . '</strong>'
+            . '</div>';
     }
 
     if (!empty($status['last_error'])) {
