@@ -965,6 +965,19 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $showVisualizer = !empty($config['show_visualizer']);
         $visualizerSize = isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium';
 
+        /*
+         * Templates have deterministic runtime behaviour:
+         * - minimal never builds an audio visualization;
+         * - visualizer always builds one;
+         * - stationcard/fullbackground honour the user toggle.
+         *
+         * This keeps Minimal genuinely lightweight and prevents the Visualizer
+         * template from silently becoming a text-only card.
+         */
+        $renderVisualizer = $template === 'visualizer'
+            ? true
+            : ($template === 'minimal' ? false : $showVisualizer);
+
         $waveWidth = 760;
         $waveHeight = 80;
         if ($visualizerSize === 'small') {
@@ -1004,7 +1017,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         $filters = $audioFilters;
         $filters[] = '[yaudio]asplit=2[aout][awave]';
 
-        if ($showVisualizer) {
+        if ($renderVisualizer) {
             $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
                 . ':mode=line:rate=25:colors=0xD8E6F3[wave]';
         } else {
@@ -1020,9 +1033,15 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
              */
             $filters[] = '[' . $coverInputIndex . ':v]scale=' . $videoWidth . ':' . $videoHeight
                 . ':force_original_aspect_ratio=increase,crop=' . $videoWidth . ':' . $videoHeight
-                . ',eq=brightness=-0.28[fullcover]';
+                . ',setsar=1[fullcover]';
+            /*
+             * Keep the programme artwork at its original luminance. The
+             * previous brightness=-0.28 treatment made Full Background look
+             * unnecessarily dim. eof_action=repeat also makes the static
+             * artwork resilient if its input timestamps are sparse.
+             */
             $filters[] = '[' . $videoInputIndex . ':v][fullcover]'
-                . 'overlay=0:0:shortest=1[background]';
+                . 'overlay=0:0:eof_action=repeat[background]';
             $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         } elseif ($template === 'minimal' || $template === 'visualizer') {
             $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
@@ -1034,7 +1053,7 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             $filters[] = '[' . $videoInputIndex . ":v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
         }
 
-        if ($showVisualizer) {
+        if ($renderVisualizer) {
             $waveBottom = $template === 'visualizer' ? 105 : 55;
             $filters[] = '[card][wave]overlay=(W-w)/2:H-h-' . $waveBottom . '[v]';
         } else {
@@ -1109,7 +1128,14 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
         '-preset', 'veryfast',
         '-tune', 'stillimage',
         '-pix_fmt', 'yuv420p',
+        /*
+         * Force a stable 25 fps output clock for every visual template.
+         * Detailed full-frame artwork can otherwise expose timestamp/frame
+         * pacing differences that a simple Station Card does not.
+         */
+        '-r', '25',
         '-g', '50',
+        '-sc_threshold', '0',
         '-b:v', $config['video_bitrate'],
         '-minrate', $config['video_bitrate'],
         '-maxrate', $config['video_bitrate'],
