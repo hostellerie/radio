@@ -813,7 +813,7 @@
         }
 
         if (youtubeButton) {
-            youtubeButton.disabled = youtubeLiveStarting || youtubeLiveStopping;
+            youtubeButton.disabled = youtubeLiveStopping;
             youtubeButton.setAttribute('aria-pressed', activeState ? 'true' : 'false');
             youtubeButton.classList.toggle('is-active', activeState);
             youtubeButton.textContent = activeState
@@ -1537,6 +1537,7 @@
                 if (!data.ok) {
                     return;
                 }
+                updateBroadcast(data);
                 if (!version) {
                     version = data.version || '';
                     renderQueue(data.items || []);
