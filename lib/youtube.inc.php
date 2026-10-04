@@ -814,11 +814,11 @@ function RADIO_youtubeVisualPalette($config = null)
     $style = isset($config['visual_style']) ? (string) $config['visual_style'] : 'modern_white';
     if ($style === 'studio_green') {
         return array(
-            'background' => '0x080B0F',
-            'primary' => '0x61E7C7',
-            'secondary' => '0xA5F4E1',
-            'ass_primary' => '&H00C7E761',
-            'ass_secondary' => '&H00E1F4A5'
+            'background' => '0x030805',
+            'primary' => '0x00B85A',
+            'secondary' => '0x0A7F43',
+            'ass_primary' => '&H005AB800',
+            'ass_secondary' => '&H00437F0A'
         );
     }
 
