@@ -1,6 +1,7 @@
 <?php
 
 require_once dirname(__FILE__) . '/studio-output.inc.php';
+require_once dirname(__FILE__) . '/youtube.inc.php';
 
 function RADIO_studioYoutubeDir()
 {
@@ -115,6 +116,18 @@ function RADIO_studioYoutubeActive($status = null)
     $helperPid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
     if ($helperPid > 1 && function_exists('RADIO_youtubePidRunning')
         && RADIO_youtubePidRunning($helperPid)) {
+        return true;
+    }
+
+    /*
+     * Treat a freshly-created starting/stopping session as owning the ingest
+     * even during the short interval before the detached helper PID is saved.
+     * This closes the race with the once-per-minute automatic worker.
+     */
+    $startedAt = !empty($status['started_at']) ? strtotime((string) $status['started_at']) : false;
+    if ($startedAt !== false
+        && in_array($status['state'], array('starting','stopping'), true)
+        && (time() - $startedAt) <= 30) {
         return true;
     }
 
