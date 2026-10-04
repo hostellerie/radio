@@ -1165,7 +1165,9 @@ radio_contract_require(
 radio_contract_require(
     strpos($youtubeLib, '"Style: Track,DejaVu Sans,20,"') !== false
         && strpos($youtubeLib, "RADIO_youtubeAssWrappedText(\$title, 52, 2)") !== false
-        && strpos($youtubeLib, ":fontsize=20:x=(w-text_w)/2:y=h*0.66") !== false,
+        && strpos($youtubeLib, "0,1,160,160,150,1") !== false
+        && strpos($youtubeLib, "\$waveX = \$template === 'visualizer' ? 160 : '(W-w)/2'") !== false
+        && strpos($youtubeLib, ":fontsize=20:x=160:y=h*0.72") !== false,
     'YouTube track titles must stay discreet: smaller typography, at most two lines, and subdued secondary colour.'
 );
 
