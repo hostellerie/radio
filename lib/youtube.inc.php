@@ -203,6 +203,48 @@ function RADIO_youtubeSaveConfig($data)
     return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
 }
 
+function RADIO_youtubeSaveManualProgram($programId)
+{
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
+    $runtime['manual_program_id'] = max(0, (int) $programId);
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
+}
+
+function RADIO_youtubeSaveScheduleIds($scheduleIds)
+{
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
+    $runtime['schedule_ids'] = is_array($scheduleIds)
+        ? array_values(array_unique(array_filter(array_map('intval', $scheduleIds))))
+        : array();
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
+}
+
+function RADIO_youtubeSaveVisualConfig($data)
+{
+    $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array());
+
+    $runtime['visual_template'] = isset($data['visual_template'])
+        && in_array($data['visual_template'], array('stationcard','fullbackground','minimal','visualizer'), true)
+        ? (string) $data['visual_template']
+        : 'stationcard';
+    $runtime['show_station'] = !empty($data['show_station']);
+    $runtime['station_name'] = isset($data['station_name'])
+        ? RADIO_youtubeOverlayText($data['station_name'], 70)
+        : '';
+    $runtime['show_program'] = !empty($data['show_program']);
+    $runtime['show_track'] = !empty($data['show_track']);
+    $runtime['show_artwork'] = !empty($data['show_artwork']);
+    $runtime['show_visualizer'] = !empty($data['show_visualizer']);
+    $runtime['visualizer_size'] = isset($data['visualizer_size'])
+        && in_array($data['visualizer_size'], array('small','medium','large'), true)
+        ? (string) $data['visualizer_size']
+        : 'medium';
+
+    return RADIO_youtubeWriteJson(RADIO_youtubeConfigPath(), $runtime);
+}
+
 function RADIO_youtubeSetManualRequest($requested)
 {
     $runtime = RADIO_youtubeReadJson(RADIO_youtubeConfigPath(), array(
@@ -638,9 +680,9 @@ function RADIO_youtubeWriteAss($target, &$error)
         . "WrapStyle: 2\n\n"
         . "[V4+ Styles]\n"
         . "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-        . "Style: Station,DejaVu Sans,48,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,40,40,60,1\n"
-        . "Style: Program,DejaVu Sans,32,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,60,60,135,1\n"
-        . "Style: Track,DejaVu Sans,34,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,70,70,230,1\n\n"
+        . "Style: Station,DejaVu Sans,46,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,260,260,60,1\n"
+        . "Style: Program,DejaVu Sans,30,&H00D8E6F3,&H000000FF,&H80000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,8,260,260,135,1\n"
+        . "Style: Track,DejaVu Sans,30,&H00FFFFFF,&H000000FF,&H80000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,250,250,210,1\n\n"
         . "[Events]\n"
         . "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n";
 
@@ -650,7 +692,7 @@ function RADIO_youtubeWriteAss($target, &$error)
         $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Station,,0,0,0,,' . RADIO_youtubeAssText($station) . "\n";
     }
     if ($config['show_program'] && $program !== '') {
-        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssWrappedText($program, 60, 2) . "\n";
+        $events .= 'Dialogue: 0,0:00:00.00,' . $longEnd . ',Program,,0,0,0,,' . RADIO_youtubeAssWrappedText($program, 34, 2) . "\n";
     }
 
     $items = RADIO_getProgramItems((int) $target['program_id']);
@@ -679,7 +721,7 @@ function RADIO_youtubeWriteAss($target, &$error)
             continue;
         }
         $events .= 'Dialogue: 0,' . RADIO_youtubeAssTime($start) . ',' . RADIO_youtubeAssTime($end)
-            . ',Track,,0,0,0,,' . RADIO_youtubeAssWrappedText($title, 54, 2) . "\n";
+            . ',Track,,0,0,0,,' . RADIO_youtubeAssWrappedText($title, 32, 3) . "\n";
     }
 
     $path = RADIO_youtubeAssPath();
