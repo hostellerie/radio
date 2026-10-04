@@ -589,3 +589,11 @@ $LANG_RADIO['youtube_schedules_saved'] = 'Les créneaux YouTube programmés ont 
 $LANG_RADIO['youtube_next_schedule'] = 'Prochain créneau YouTube';
 
 $LANG_RADIO['youtube_mode_legacy_help'] = 'préférence historique ; Démarrer maintenant remplace temporairement les schedules, sinon les créneaux cochés démarrent automatiquement';
+
+$LANG_RADIO['youtube_stop_current_schedule'] = 'Arrêter le live YouTube en cours';
+
+$LANG_RADIO['youtube_stop_current_schedule_help'] = 'Arrête uniquement l’occurrence programmée en cours. Le créneau reste coché et les prochaines occurrences récurrentes démarreront toujours automatiquement.';
+
+$LANG_RADIO['youtube_scheduled_occurrence_stopped'] = 'L’occurrence YouTube programmée en cours a été arrêtée.';
+
+$LANG_RADIO['youtube_occurrence_stopped_manually'] = 'Occurrence programmée en cours arrêtée manuellement';
