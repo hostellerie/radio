@@ -1153,8 +1153,8 @@ radio_contract_require(
     strpos($youtubeLib, "'visual_style' => 'modern_white'") !== false
         && strpos($youtubeLib, "array('modern_white','studio_green')") !== false
         && strpos($youtubeLib, "function RADIO_youtubeVisualPalette") !== false
-        && strpos($youtubeLib, "'primary' => '0x61E7C7'") !== false
-        && strpos($youtubeLib, "'background' => '0x080B0F'") !== false
+        && strpos($youtubeLib, "'primary' => '0x00B85A'") !== false
+        && strpos($youtubeLib, "'background' => '0x030805'") !== false
         && strpos($youtubeLib, "'style' => isset(\$config['visual_style'])") !== false
         && strpos($youtubeAdmin, 'name="visual_style"') !== false
         && strpos($youtubeAdmin, "youtube_style_modern_white") !== false
