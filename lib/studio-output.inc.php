@@ -8,15 +8,44 @@
  * remains open as a continuous audio transport.
  */
 
+function RADIO_studioSiteStorageDir()
+{
+    global $_CONF;
+
+    $base = isset($_CONF['path_data']) ? rtrim((string) $_CONF['path_data'], "/\\") : '';
+    if ($base === '') {
+        return '';
+    }
+
+    return dirname($base) . DIRECTORY_SEPARATOR . basename($base) . '-radio' . DIRECTORY_SEPARATOR;
+}
+
+function RADIO_studioEnsureSiteStorage()
+{
+    $dir = RADIO_studioSiteStorageDir();
+    if ($dir === '') {
+        return false;
+    }
+    if (is_dir($dir)) {
+        return is_writable($dir);
+    }
+    if (!@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        COM_errorLog('Radio: cannot create site-specific Studio storage directory ' . $dir, 1);
+        return false;
+    }
+
+    return is_writable($dir);
+}
+
 function RADIO_studioRecordingDir()
 {
-    $base = RADIO_storageDir();
+    $base = RADIO_studioSiteStorageDir();
     return $base === '' ? '' : $base . 'recordings' . DIRECTORY_SEPARATOR;
 }
 
 function RADIO_studioEnsureRecordingStorage()
 {
-    if (!RADIO_ensureStorage()) {
+    if (!RADIO_studioEnsureSiteStorage()) {
         return false;
     }
 
