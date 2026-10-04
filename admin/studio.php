@@ -232,7 +232,17 @@ if ($canEdit) {
         . ' data-recording-label="' . radio_studio_h($LANG_RADIO['studio_recording']) . '"'
         . ' data-record-saved-label="' . radio_studio_h($LANG_RADIO['studio_record_saved']) . '"'
         . ' data-record-failed-label="' . radio_studio_h($LANG_RADIO['studio_record_failed']) . '"'
-        . ' data-record-unsupported-label="' . radio_studio_h($LANG_RADIO['studio_record_unsupported']) . '"';
+        . ' data-record-unsupported-label="' . radio_studio_h($LANG_RADIO['studio_record_unsupported']) . '"'
+        . ' data-youtube-live-start-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_start']) . '"'
+        . ' data-youtube-live-stop-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_stop']) . '"'
+        . ' data-youtube-live-starting-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_starting']) . '"'
+        . ' data-youtube-live-active-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_active']) . '"'
+        . ' data-youtube-live-stopping-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_stopping']) . '"'
+        . ' data-youtube-live-failed-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_failed']) . '"'
+        . ' data-youtube-live-unsupported-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_unsupported']) . '"'
+        . ' data-youtube-live-fps-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_fps']) . '"'
+        . ' data-youtube-live-bitrate-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_bitrate']) . '"'
+        . ' data-youtube-live-speed-label="' . radio_studio_h($LANG_RADIO['studio_youtube_live_speed']) . '"';
 }
 
 $content = '<div class="radio-replay radio-program-preview"' . $studioAttrs . '>';
@@ -287,6 +297,10 @@ if ($canEdit) {
         . ' data-radio-studio-record aria-pressed="false">'
         . radio_studio_h($LANG_RADIO['studio_record_start']) . '</button>'
         . '<span class="radio-studio__record-state" data-radio-studio-record-state></span>'
+        . '<button type="button" class="radio-admin__button radio-studio__youtube-button"'
+        . ' data-radio-studio-youtube aria-pressed="false">'
+        . radio_studio_h($LANG_RADIO['studio_youtube_live_start']) . '</button>'
+        . '<span class="radio-studio__youtube-state" data-radio-studio-youtube-state></span>'
         . '<button type="button" class="radio-admin__button radio-studio__focus-button" data-radio-studio-focus'
         . ' data-focus-on-label="' . radio_studio_h($LANG_RADIO['studio_djmode_open']) . '"'
         . ' data-focus-off-label="' . radio_studio_h($LANG_RADIO['studio_djmode_close']) . '">'
