@@ -231,6 +231,7 @@ if ($target === false) {
         'program_id' => 0,
         'program_title' => '',
         'schedule_id' => 0,
+        'target_end' => 0,
         'last_error' => ''
     ));
     if (!$quiet) {
@@ -264,6 +265,7 @@ if ($running && isset($status['target_key']) && $status['target_key'] === $targe
             'video_mode' => $videoMode,
             'visual_template' => $config['visual_template'],
             'visual_signature' => $visualSignature,
+            'target_end' => isset($target['end']) ? (int) $target['end'] : 0,
             'ffmpeg_path' => $ffmpegPath,
             'artwork_type' => $artworkType,
             'artwork_path' => $artworkPath,
@@ -377,6 +379,7 @@ RADIO_youtubeWriteStatus(array(
     'program_id' => (int) $target['program_id'],
     'program_title' => $target['program_title'],
     'schedule_id' => (int) $target['schedule_id'],
+    'target_end' => isset($target['end']) ? (int) $target['end'] : 0,
     'started_at' => date('Y-m-d H:i:s'),
     'video_mode' => $videoMode,
     'visual_template' => $config['visual_template'],
