@@ -307,6 +307,9 @@ radio_contract_require(
         && strpos($studioJs, "recordingRecorder.start(2000)") !== false
         && strpos($studioApi, "if (\$studioAction === 'recording_chunk')") !== false
         && strpos($studioOutput, 'function RADIO_studioRecordingAppend') !== false
+        && strpos($studioOutput, 'function RADIO_studioRecordingCleanupStale') !== false
+        && strpos($studioOutput, 'RADIO_studioRecordingCleanupStale(21600)') !== false
+        && strpos($studioOutput, "'abort_reason'] = 'stale_session_timeout'") !== false
         && strpos($studioOutput, "RADIO_studioSiteStorageDir") !== false,
     'Radio Studio recording must capture the master mix through bounded authenticated chunks into site-specific persistent storage.'
 );
