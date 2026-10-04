@@ -552,6 +552,9 @@ $LANG_RADIO['youtube_help_official'] = "Official YouTube encoder setup help";
 
 $LANG_RADIO['youtube_video_appearance'] = 'Video appearance';
 $LANG_RADIO['youtube_visual_template'] = 'Template';
+$LANG_RADIO['youtube_visual_style'] = 'Colour style';
+$LANG_RADIO['youtube_style_modern_white'] = 'Modern white on black';
+$LANG_RADIO['youtube_style_studio_green'] = 'Studio green on black';
 $LANG_RADIO['youtube_template_stationcard'] = 'Station Card (Recommended)';
 $LANG_RADIO['youtube_template_fullbackground'] = 'Full Background';
 $LANG_RADIO['youtube_template_minimal'] = 'Minimal';
