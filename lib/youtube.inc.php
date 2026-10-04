@@ -756,8 +756,31 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             return false;
         }
 
+        $template = isset($config['visual_template']) ? (string) $config['visual_template'] : 'stationcard';
+        $showArtwork = !empty($config['show_artwork']);
+        $showVisualizer = !empty($config['show_visualizer']);
+        $visualizerSize = isset($config['visualizer_size']) ? (string) $config['visualizer_size'] : 'medium';
+
+        $waveWidth = 760;
+        $waveHeight = 80;
+        if ($visualizerSize === 'small') {
+            $waveWidth = 620;
+            $waveHeight = 50;
+        } elseif ($visualizerSize === 'large') {
+            $waveWidth = 960;
+            $waveHeight = 120;
+        }
+
+        $videoWidth = 1280;
+        $videoHeight = 720;
+        if (preg_match('/^(\\d+)x(\\d+)$/', (string) $config['video_size'], $sizeMatch)) {
+            $videoWidth = max(320, (int) $sizeMatch[1]);
+            $videoHeight = max(180, (int) $sizeMatch[2]);
+        }
+
         $artwork = RADIO_youtubeArtwork($target);
-        $cover = isset($artwork['path']) ? (string) $artwork['path'] : '';
+        $cover = $showArtwork && isset($artwork['path']) ? (string) $artwork['path'] : '';
+
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
             '-i', 'color=c=0x101820:s=' . $config['video_size'] . ':r=25'
@@ -767,28 +790,46 @@ function RADIO_youtubeFfmpegCommand($target, &$error, $ffmpegPath = 'ffmpeg', $v
             $parts = array_merge($parts, array(
                 '-loop', '1',
                 '-framerate', '1',
-                '-i', $cover,
-                '-filter_complex',
-                '[0:a]asplit=2[aout][awave];'
-                . '[awave]showwaves=s=700x70:mode=line:rate=25:colors=0xD8E6F3[wave];'
-                . '[2:v]scale=320:320:force_original_aspect_ratio=decrease[cover];'
-                . '[1:v][cover]overlay=(W-w)/2:250[bg];'
-                . "[bg]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
-                . '[card][wave]overlay=(W-w)/2:H-h-55[v]',
-                '-map', '[v]',
-                '-map', '[aout]'
-            ));
-        } else {
-            $parts = array_merge($parts, array(
-                '-filter_complex',
-                '[0:a]asplit=2[aout][awave];'
-                . '[awave]showwaves=s=700x70:mode=line:rate=25:colors=0xD8E6F3[wave];'
-                . "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card];"
-                . '[card][wave]overlay=(W-w)/2:H-h-55[v]',
-                '-map', '[v]',
-                '-map', '[aout]'
+                '-i', $cover
             ));
         }
+
+        $filters = array('[0:a]asplit=2[aout][awave]');
+
+        if ($showVisualizer) {
+            $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
+                . ':mode=line:rate=25:colors=0xD8E6F3[wave]';
+        } else {
+            $filters[] = '[awave]anullsink';
+        }
+
+        if ($template === 'fullbackground' && $cover !== '') {
+            $filters[] = '[2:v]scale=' . $videoWidth . ':' . $videoHeight
+                . ':force_original_aspect_ratio=increase,crop=' . $videoWidth . ':' . $videoHeight
+                . ',eq=brightness=-0.28[background]';
+            $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+        } elseif ($template === 'minimal' || $template === 'visualizer') {
+            $filters[] = "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+        } elseif ($cover !== '') {
+            $filters[] = '[2:v]scale=320:320:force_original_aspect_ratio=decrease[cover]';
+            $filters[] = '[1:v][cover]overlay=(W-w)/2:250[background]';
+            $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+        } else {
+            $filters[] = "[1:v]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+        }
+
+        if ($showVisualizer) {
+            $waveBottom = $template === 'visualizer' ? 105 : 55;
+            $filters[] = '[card][wave]overlay=(W-w)/2:H-h-' . $waveBottom . '[v]';
+        } else {
+            $filters[] = '[card]null[v]';
+        }
+
+        $parts = array_merge($parts, array(
+            '-filter_complex', implode(';', $filters),
+            '-map', '[v]',
+            '-map', '[aout]'
+        ));
     } elseif ($videoMode === 'compactwaves') {
         $parts = array_merge($parts, array(
             '-f', 'lavfi',
