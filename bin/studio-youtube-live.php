@@ -144,24 +144,6 @@ if ($hasShowwaves && $hasOverlay && $hasDrawtext) {
     $videoMode = 'showwaves';
 }
 
-$error = '';
-$command = RADIO_youtubeStudioFfmpegCommand(
-    (int) $status['program_id'],
-    $error,
-    $ffmpegPath,
-    $videoMode
-);
-if ($command === false) {
-    RADIO_studioYoutubeWriteStatus(array(
-        'state' => 'error',
-        'last_error' => $error,
-        'helper_pid' => 0,
-        'ffmpeg_pid' => 0
-    ));
-    radio_studio_youtube_log('Unable to build FFmpeg command: ' . $error . '.');
-    exit(4);
-}
-
 $inputPath = RADIO_studioYoutubeInputPath($sessionId);
 if ($inputPath === '' || !is_file($inputPath)) {
     RADIO_studioYoutubeWriteStatus(array(
@@ -170,6 +152,27 @@ if ($inputPath === '' || !is_file($inputPath)) {
         'helper_pid' => 0,
         'ffmpeg_pid' => 0
     ));
+    exit(4);
+}
+
+$error = '';
+$command = RADIO_youtubeStudioFfmpegCommand(
+    (int) $status['program_id'],
+    $error,
+    $ffmpegPath,
+    $videoMode
+);
+if ($command === false) {
+    if (is_file($inputPath)) {
+        @unlink($inputPath);
+    }
+    RADIO_studioYoutubeWriteStatus(array(
+        'state' => 'error',
+        'last_error' => $error,
+        'helper_pid' => 0,
+        'ffmpeg_pid' => 0
+    ));
+    radio_studio_youtube_log('Unable to build FFmpeg command: ' . $error . '.');
     exit(4);
 }
 
