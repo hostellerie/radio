@@ -1464,6 +1464,10 @@
                     } catch (error) {
                         var kind = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
                         var detail = 'http_' + response.status;
+                        var serverStage = response.headers.get('X-Radio-Studio-Stage');
+                        if (serverStage) {
+                            detail += '_stage_' + serverStage;
+                        }
                         if (!text || !text.trim()) {
                             detail += '_empty_response';
                         }
