@@ -571,6 +571,18 @@
                             }
                         }
 
+                        if (!text || !text.trim()) {
+                            detail += '_empty_response';
+                        } else if (responseType === 'invalid_json') {
+                            var plain = text
+                                .replace(/\s+/g, ' ')
+                                .trim()
+                                .substring(0, 160);
+                            if (plain) {
+                                detail += '_' + plain;
+                            }
+                        }
+
                         throw new Error(responseType + ':' + detail);
                     }
                     updateToken(data);
