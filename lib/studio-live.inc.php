@@ -5,14 +5,26 @@ require_once dirname(__FILE__) . '/youtube.inc.php';
 
 function RADIO_studioYoutubeTrace($message)
 {
-    $path = function_exists('RADIO_youtubeLogPath') ? RADIO_youtubeLogPath() : '';
-    if ($path === '') {
-        return;
-    }
+    global $_CONF;
 
     $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio YouTube] '
         . trim((string) $message) . "\n";
-    @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+
+    $youtubePath = function_exists('RADIO_youtubeLogPath') ? RADIO_youtubeLogPath() : '';
+    if ($youtubePath !== '') {
+        @file_put_contents($youtubePath, $line, FILE_APPEND | LOCK_EX);
+    }
+
+    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
+    if ($logDir !== '') {
+        @file_put_contents(
+            $logDir . DIRECTORY_SEPARATOR . 'radio.log',
+            $line,
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
+    error_log(trim($line));
 }
 
 function RADIO_studioYoutubeDir()
@@ -90,7 +102,7 @@ function RADIO_studioYoutubeStatus()
 
 function RADIO_studioYoutubeWriteStatus($data)
 {
-    if (!RADIO_studioYoutubeEnsureStorage()) {
+    RADIO_studioYoutubeTrace('Checking Studio YouTube storage.');\n    if (!RADIO_studioYoutubeEnsureStorage()) {
         return false;
     }
 
@@ -238,14 +250,14 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         . ' by user ' . (int) $uid
         . ' with MIME ' . (string) $mime . '.'
     );
-    $mimeInfo = RADIO_studioRecordingMimeInfo($mime);
+    RADIO_studioYoutubeTrace('Resolving Studio MIME.');\n    $mimeInfo = RADIO_studioRecordingMimeInfo($mime);
     if ($mimeInfo === false) {
         $error = 'studio_recording_mime_unsupported';
         RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
-    $config = RADIO_youtubeConfig();
+    RADIO_studioYoutubeTrace('Loading YouTube configuration.');\n    $config = RADIO_youtubeConfig();
     if (empty($config['enabled'])) {
         $error = 'youtube_disabled';
         RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
@@ -257,14 +269,14 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         return false;
     }
 
-    $program = RADIO_getProgram((int) $programId, false);
+    RADIO_studioYoutubeTrace('Loading programme.');\n    $program = RADIO_getProgram((int) $programId, false);
     if ($program === false) {
         $error = 'youtube_program_missing';
         RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
-    $current = RADIO_studioYoutubeCleanupStale();
+    RADIO_studioYoutubeTrace('Checking existing Studio YouTube session.');\n    $current = RADIO_studioYoutubeCleanupStale();
     if (RADIO_studioYoutubeActive($current)) {
         $error = 'studio_youtube_already_live';
         RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
@@ -281,7 +293,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
      * Studio owns the single YouTube ingest while it is active. Stop any
      * automatic/manual programme encoder before launching the Studio helper.
      */
-    $automatic = RADIO_youtubeStatus();
+    RADIO_studioYoutubeTrace('Checking existing automatic YouTube encoder.');\n    $automatic = RADIO_youtubeStatus();
     $automaticPid = isset($automatic['pid']) ? (int) $automatic['pid'] : 0;
     if ($automaticPid > 1 && RADIO_youtubePidRunning($automaticPid)) {
         RADIO_youtubeStopPid($automaticPid);
@@ -293,7 +305,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         ));
     }
 
-    $sessionId = RADIO_studioRecordingSessionId();
+    RADIO_studioYoutubeTrace('Creating Studio YouTube session.');\n    $sessionId = RADIO_studioRecordingSessionId();
     $inputPath = RADIO_studioYoutubeInputPath($sessionId);
     if ($inputPath === '' || @file_put_contents($inputPath, '') === false) {
         $error = 'studio_youtube_start_failed';
@@ -301,13 +313,13 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     }
     @chmod($inputPath, 0600);
 
-    if (!RADIO_youtubeWriteStudioOverlay((int) $programId, '')) {
+    RADIO_studioYoutubeTrace('Writing Studio YouTube overlay.');\n    if (!RADIO_youtubeWriteStudioOverlay((int) $programId, '')) {
         @unlink($inputPath);
         $error = 'youtube_overlay_write_failed';
         return false;
     }
 
-    $phpCli = RADIO_studioYoutubeFindPhpCli();
+    RADIO_studioYoutubeTrace('Detecting PHP CLI.');\n    $phpCli = RADIO_studioYoutubeFindPhpCli();
     if ($phpCli === '') {
         @unlink($inputPath);
         $error = 'youtube_cli_not_detected';
@@ -349,7 +361,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         'last_error' => ''
     );
 
-    if (!RADIO_studioYoutubeWriteStatus($status)) {
+    RADIO_studioYoutubeTrace('Writing initial Studio YouTube state.');\n    if (!RADIO_studioYoutubeWriteStatus($status)) {
         @unlink($inputPath);
         $error = 'studio_youtube_start_failed';
         return false;
@@ -365,7 +377,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
 
     $output = array();
     $code = 1;
-    @exec('nohup ' . $command . ' >> ' . escapeshellarg($logPath) . ' 2>&1 < /dev/null & echo $!', $output, $code);
+    RADIO_studioYoutubeTrace('Launching detached Studio YouTube helper.');\n    @exec('nohup ' . $command . ' >> ' . escapeshellarg($logPath) . ' 2>&1 < /dev/null & echo $!', $output, $code);
     $helperPid = $code === 0 && isset($output[0]) ? (int) trim((string) $output[0]) : 0;
 
     if ($helperPid < 2) {
