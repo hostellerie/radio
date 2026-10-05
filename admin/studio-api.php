@@ -114,15 +114,36 @@ function radio_studio_json($data, $status)
     exit;
 }
 
+function radio_studio_api_trace($message)
+{
+    global $_CONF;
+
+    $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio API] '
+        . trim((string) $message) . "\n";
+
+    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
+    if ($logDir !== '') {
+        @file_put_contents(
+            $logDir . DIRECTORY_SEPARATOR . 'radio.log',
+            $line,
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
+    error_log(trim($line));
+}
+
 function radio_studio_check_token()
 {
     global $_TABLES, $_USER;
 
+    radio_studio_api_trace('Validating CSRF token.');
     $token = isset($_POST[CSRF_TOKEN]) ? trim((string) $_POST[CSRF_TOKEN]) : '';
     if ($token === '') {
         return false;
     }
 
+    radio_studio_api_trace('Querying CSRF token row.');
     $result = DB_query(
         "SELECT token,created,owner_id,ttl FROM {$_TABLES['tokens']} WHERE token='"
         . DB_escapeString($token) . "'"
@@ -131,6 +152,7 @@ function radio_studio_check_token()
         return false;
     }
 
+    radio_studio_api_trace('CSRF token row found.');
     $row = DB_fetchArray($result);
 
     // Studio is an AJAX endpoint: Geeklog's SEC_checkToken() additionally
@@ -139,6 +161,7 @@ function radio_studio_check_token()
     // the browser referrer remains studio.php. Keep Geeklog's one-time token,
     // owner and expiry guarantees, but validate it for this endpoint without
     // the page-URL comparison.
+    radio_studio_api_trace('Consuming CSRF token.');
     DB_delete($_TABLES['tokens'], 'token', $token);
 
     $uid = isset($_USER['uid']) ? (int) $_USER['uid'] : 1;
@@ -152,6 +175,7 @@ function radio_studio_check_token()
         return false;
     }
 
+    radio_studio_api_trace('CSRF token accepted.');
     return true;
 }
 
@@ -253,6 +277,7 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
+    radio_studio_api_trace('POST action received: ' . (string) $_POST['studio_action'] . '.');
     if (!radio_studio_check_token()) {
         radio_studio_json(array(
             'ok' => false,
@@ -265,13 +290,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     $studioUid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
 
     if ($studioAction === 'youtube_live_start') {
+        radio_studio_api_trace('Dispatching youtube_live_start.');
         $youtubeError = '';
+        radio_studio_api_trace('Calling RADIO_studioYoutubeStart().');
         $youtubeLive = RADIO_studioYoutubeStart(
             $programId,
             isset($_POST['mime_type']) ? (string) $_POST['mime_type'] : '',
             $studioUid,
             $youtubeError
         );
+        radio_studio_api_trace('RADIO_studioYoutubeStart() returned.');
         if ($youtubeLive === false) {
             radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
         }
