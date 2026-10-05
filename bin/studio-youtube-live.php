@@ -281,6 +281,42 @@ while (true) {
         }
     }
 
+    /*
+     * The relay file is append-only from short web requests, but keeping every
+     * already-consumed byte for a multi-hour show would make it grow without
+     * bound. When FFmpeg has consumed the whole file and at least 8 MiB have
+     * accumulated, compact it under the same exclusive lock used by appenders.
+     *
+     * Re-check the size after acquiring the lock: if a new chunk arrived in
+     * the meantime, do not truncate it. The next loop will consume it first.
+     */
+    if ($offset >= 8388608 && $size === $offset) {
+        @fclose($input);
+        $compact = @fopen($inputPath, 'c+b');
+
+        if ($compact !== false && @flock($compact, LOCK_EX)) {
+            clearstatcache(true, $inputPath);
+            $lockedSize = @filesize($inputPath);
+            $lockedSize = $lockedSize === false ? -1 : (int) $lockedSize;
+
+            if ($lockedSize === $offset && @ftruncate($compact, 0)) {
+                @fflush($compact);
+                $offset = 0;
+            }
+
+            @flock($compact, LOCK_UN);
+        }
+        if (is_resource($compact)) {
+            @fclose($compact);
+        }
+
+        $input = @fopen($inputPath, 'rb');
+        if ($input === false) {
+            $failure = 'studio_youtube_input_missing';
+            break;
+        }
+    }
+
     $status = RADIO_studioYoutubeStatus();
     if ((string) $status['session_id'] !== $sessionId) {
         $failure = 'studio_youtube_session_replaced';
