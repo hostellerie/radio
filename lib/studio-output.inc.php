@@ -167,7 +167,10 @@ function RADIO_studioRecordingCleanupStale($maxAgeSeconds)
         }
 
         $startedAt = !empty($meta['started_at']) ? strtotime((string) $meta['started_at']) : false;
-        if ($startedAt === false || ($now - $startedAt) <= $maxAgeSeconds) {
+        $lastChunkAt = !empty($meta['last_chunk_at']) ? strtotime((string) $meta['last_chunk_at']) : false;
+        $activityAt = $lastChunkAt !== false ? $lastChunkAt : $startedAt;
+
+        if ($activityAt === false || ($now - $activityAt) <= $maxAgeSeconds) {
             continue;
         }
 
@@ -219,6 +222,7 @@ function RADIO_studioRecordingStart($programId, $mime, $uid, &$error)
         'mime' => $mimeInfo['mime'],
         'extension' => $mimeInfo['extension'],
         'started_at' => date('Y-m-d H:i:s'),
+        'last_chunk_at' => '',
         'ended_at' => '',
         'chunks' => 0,
         'bytes' => 0,
@@ -294,6 +298,7 @@ function RADIO_studioRecordingAppend($sessionId, $tmpPath, $size, $chunkIndex, $
 
     $meta['chunks'] = (int) $meta['chunks'] + 1;
     $meta['bytes'] = (int) $meta['bytes'] + $size;
+    $meta['last_chunk_at'] = date('Y-m-d H:i:s');
     if (!RADIO_studioRecordingWriteMeta($sessionId, $meta)) {
         $error = 'studio_recording_write_failed';
         return false;
