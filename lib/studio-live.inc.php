@@ -3,6 +3,18 @@
 require_once dirname(__FILE__) . '/studio-output.inc.php';
 require_once dirname(__FILE__) . '/youtube.inc.php';
 
+function RADIO_studioYoutubeTrace($message)
+{
+    $path = function_exists('RADIO_youtubeLogPath') ? RADIO_youtubeLogPath() : '';
+    if ($path === '') {
+        return;
+    }
+
+    $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio YouTube] '
+        . trim((string) $message) . "\n";
+    @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+}
+
 function RADIO_studioYoutubeDir()
 {
     $base = RADIO_studioSiteStorageDir();
@@ -221,36 +233,47 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     global $_CONF;
 
     $error = '';
+    RADIO_studioYoutubeTrace(
+        'Start requested for programme ' . (int) $programId
+        . ' by user ' . (int) $uid
+        . ' with MIME ' . (string) $mime . '.'
+    );
     $mimeInfo = RADIO_studioRecordingMimeInfo($mime);
     if ($mimeInfo === false) {
         $error = 'studio_recording_mime_unsupported';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
     $config = RADIO_youtubeConfig();
     if (empty($config['enabled'])) {
         $error = 'youtube_disabled';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
     if (empty($config['stream_key'])) {
         $error = 'youtube_stream_key_missing';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
     $program = RADIO_getProgram((int) $programId, false);
     if ($program === false) {
         $error = 'youtube_program_missing';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
     $current = RADIO_studioYoutubeCleanupStale();
     if (RADIO_studioYoutubeActive($current)) {
         $error = 'studio_youtube_already_live';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
     if (!RADIO_studioYoutubeEnsureStorage()) {
         $error = 'storage_unavailable';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
         return false;
     }
 
@@ -356,6 +379,10 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     }
 
     RADIO_studioYoutubeWriteStatus(array('helper_pid' => $helperPid));
+    RADIO_studioYoutubeTrace(
+        'Detached helper launched with PID ' . (int) $helperPid
+        . ' for session ' . $sessionId . '.'
+    );
     return RADIO_studioYoutubeStatus();
 }
 
