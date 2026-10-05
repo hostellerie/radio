@@ -160,10 +160,14 @@ function radio_studio_api_stage($stage)
 function radio_studio_load_realtime_helpers()
 {
     radio_studio_api_stage('before_studio_output');
-    require_once dirname(__FILE__) . '/../lib/studio-output-v2.inc.php';
+    if (!function_exists('RADIO_studioSiteStorageDir')) {
+        require_once dirname(__FILE__) . '/../lib/studio-output-v2.inc.php';
+    }
     radio_studio_api_stage('after_studio_output');
 
-    require_once dirname(__FILE__) . '/../lib/studio-live-v2.inc.php';
+    if (!function_exists('RADIO_studioYoutubeStart')) {
+        require_once dirname(__FILE__) . '/../lib/studio-live-v2.inc.php';
+    }
     radio_studio_api_stage('after_studio_live');
 }
 
