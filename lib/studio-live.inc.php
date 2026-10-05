@@ -102,7 +102,7 @@ function RADIO_studioYoutubeStatus()
 
 function RADIO_studioYoutubeWriteStatus($data)
 {
-    RADIO_studioYoutubeTrace('Checking Studio YouTube storage.');\n    if (!RADIO_studioYoutubeEnsureStorage()) {
+    if (!RADIO_studioYoutubeEnsureStorage()) {
         return false;
     }
 
