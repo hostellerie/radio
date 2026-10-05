@@ -1,6 +1,8 @@
 <?php
 
-require_once dirname(__FILE__) . '/studio-output.inc.php';
+if (!function_exists('RADIO_studioSiteStorageDir')) {
+    require_once dirname(__FILE__) . '/studio-output-v2.inc.php';
+}
 require_once dirname(__FILE__) . '/youtube.inc.php';
 
 function RADIO_studioYoutubeTrace($message)
