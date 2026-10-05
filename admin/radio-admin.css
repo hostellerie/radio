@@ -1179,3 +1179,31 @@ body.radio-studio-focus-active{
         max-width: 760px;
     }
 }
+
+
+/* Rotation: keep long diagnostic lists compact and collapsed by default. */
+.radio-rotation__fold{
+    padding:.75rem 1rem
+}
+.radio-rotation__fold>summary{
+    cursor:pointer;
+    user-select:none;
+    list-style-position:outside
+}
+.radio-rotation__fold>summary strong{
+    font-size:1.05rem
+}
+.radio-rotation__scroll{
+    max-height:22rem;
+    margin-top:.75rem;
+    overflow:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable
+}
+.radio-rotation__scroll>ol{
+    margin-top:0;
+    margin-bottom:0
+}
+.radio-rotation__scroll .radio-admin__table-wrap{
+    overflow:auto
+}
