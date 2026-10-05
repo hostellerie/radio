@@ -75,10 +75,27 @@ if ($current !== false) {
 }
 
 
+$content .= '<details class="radio-admin__panel radio-rotation__fold">'
+    . '<summary><strong>' . htmlspecialchars($LANG_RADIO['rotation_today'], ENT_QUOTES, 'UTF-8') . '</strong></summary>'
+    . '<div class="radio-rotation__scroll">';
+
+if (count($sequence) === 0) {
+    $content .= '<p>' . htmlspecialchars($LANG_RADIO['rotation_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
+} else {
+    $content .= '<ol>';
+    foreach ($sequence as $item) {
+        $content .= '<li><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
+            . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ' · '
+            . gmdate('H:i:s', (int) $item['duration']) . ')</small></li>';
+    }
+    $content .= '</ol>';
+}
+$content .= '</div></details>';
+
 $eligibility = RADIO_rotationEligibilityDiagnostics();
-$content .= '<section class="radio-admin__panel"><h2>'
-    . htmlspecialchars($LANG_RADIO['rotation_diagnostics_title'], ENT_QUOTES, 'UTF-8')
-    . '</h2>';
+$content .= '<details class="radio-admin__panel radio-rotation__fold">'
+    . '<summary><strong>' . htmlspecialchars($LANG_RADIO['rotation_diagnostics_title'], ENT_QUOTES, 'UTF-8') . '</strong></summary>'
+    . '<div class="radio-rotation__scroll">';
 
 if (count($eligibility) === 0) {
     $content .= '<p>' . htmlspecialchars($LANG_RADIO['rotation_diagnostics_none'], ENT_QUOTES, 'UTF-8') . '</p>';
@@ -111,20 +128,7 @@ if (count($eligibility) === 0) {
 
     $content .= '</tbody></table></div>';
 }
-$content .= '</section>';
-
-$content .= '<h2>' . htmlspecialchars($LANG_RADIO['rotation_today'], ENT_QUOTES, 'UTF-8') . '</h2>';
-if (count($sequence) === 0) {
-    $content .= '<p>' . htmlspecialchars($LANG_RADIO['rotation_empty'], ENT_QUOTES, 'UTF-8') . '</p>';
-} else {
-    $content .= '<ol>';
-    foreach ($sequence as $item) {
-        $content .= '<li><strong>' . htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') . '</strong> '
-            . '<small>(' . htmlspecialchars(RADIO_adminMediaTypeLabel($item['media_type']), ENT_QUOTES, 'UTF-8') . ' · '
-            . gmdate('H:i:s', (int) $item['duration']) . ')</small></li>';
-    }
-    $content .= '</ol>';
-}
+$content .= '</div></details>';
 
 $content = RADIO_adminRenderPage(
     'rotation',
