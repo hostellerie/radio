@@ -89,7 +89,9 @@ register_shutdown_function(function () {
  * Radio's Studio helpers and request routing, where it is actually needed.
  */
 require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
+radio_studio_api_stage('after_studio_output');
 require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
+radio_studio_api_stage('after_studio_live');
 
 function radio_studio_json($data, $status)
 {
@@ -313,16 +315,20 @@ function radio_studio_state($programId)
     );
 }
 
+radio_studio_api_stage('before_rights');
 if (!SEC_hasRights('radio.schedule')) {
     radio_studio_json(array('ok' => false, 'error' => 'access_denied'), 403);
 }
 
+radio_studio_api_stage('rights_ok');
 $programId = isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0;
 $program = $programId > 0 ? RADIO_getProgram($programId, false) : false;
+radio_studio_api_stage('program_loaded');
 if ($program === false || !RADIO_hasEditAccess($program)) {
     radio_studio_json(array('ok' => false, 'error' => 'access_denied'), 403);
 }
 
+radio_studio_api_stage('program_access_ok');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     radio_studio_api_stage('post_received');
     radio_studio_api_trace('POST action received: ' . (string) $_POST['studio_action'] . '.');
