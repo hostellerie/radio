@@ -83,15 +83,9 @@ register_shutdown_function(function () {
 
 /*
  * Geeklog must bootstrap before Studio installs its temporary JSON error
- * boundary. Installing a custom PHP error handler before lib-common.php can
- * interfere with Geeklog's own bootstrap/error handling and make every Studio
- * API action fail with a themed HTTP 500 response. Keep the boundary around
- * Radio's Studio helpers and request routing, where it is actually needed.
+ * boundary. Studio recording/YouTube helpers are loaded lazily below so simple
+ * catalogue searches do not depend on the realtime output stack.
  */
-require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
-radio_studio_api_stage('after_studio_output');
-require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
-radio_studio_api_stage('after_studio_live');
 
 function radio_studio_json($data, $status)
 {
@@ -161,6 +155,16 @@ function radio_studio_api_stage($stage)
     if (!headers_sent()) {
         header('X-Radio-Studio-Stage: ' . preg_replace('/[^A-Za-z0-9_.-]+/', '_', (string) $stage));
     }
+}
+
+function radio_studio_load_realtime_helpers()
+{
+    radio_studio_api_stage('before_studio_output');
+    require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
+    radio_studio_api_stage('after_studio_output');
+
+    require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
+    radio_studio_api_stage('after_studio_live');
 }
 
 function radio_studio_api_trace($message)
@@ -344,6 +348,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     $studioAction = trim((string) $_POST['studio_action']);
     $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
     $studioUid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
+
+    if (strpos($studioAction, 'youtube_live_') === 0 || strpos($studioAction, 'recording_') === 0) {
+        radio_studio_load_realtime_helpers();
+    }
 
     if ($studioAction === 'youtube_live_start') {
         radio_studio_api_stage('youtube_start_dispatch');
@@ -571,10 +579,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
 $action = isset($_REQUEST['action']) ? trim((string) $_REQUEST['action']) : 'state';
 
 if ($action === 'state') {
+    radio_studio_load_realtime_helpers();
     radio_studio_json(radio_studio_state($programId), 200);
 }
 
 if ($action === 'live_status') {
+    radio_studio_load_realtime_helpers();
     radio_studio_json(array(
         'ok' => true,
         'youtube_live' => RADIO_studioYoutubePublicStatus(),
