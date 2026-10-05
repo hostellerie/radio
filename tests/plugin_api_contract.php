@@ -273,6 +273,14 @@ $youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $legacyPreview = file_get_contents($root . '/admin/preview.php');
 
 radio_contract_require(
+    strpos($studioApi, "set_error_handler(function") !== false
+        && strpos($studioApi, "register_shutdown_function(function") !== false
+        && strpos($studioApi, "Load Geeklog and Radio dependencies only after the JSON error boundary is active") !== false
+        && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") !== false,
+    'Radio Studio API must install its JSON fatal-error boundary before loading Studio Live dependencies.'
+);
+
+radio_contract_require(
     strpos($programAdmin, 'RADIO_adminRenderProgramMediaPicker') === false
         && strpos($programAdmin, 'RADIO_addProgramItem') === false
         && strpos($programAdmin, 'RADIO_removeProgramItem') === false
