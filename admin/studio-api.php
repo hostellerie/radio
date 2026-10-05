@@ -2,6 +2,10 @@
 define('RADIO_STUDIO_API', true);
 ob_start();
 
+require_once dirname(__FILE__) . '/../../../lib-common.php';
+require_once dirname(__FILE__) . '/../../auth.inc.php';
+require_once __DIR__ . '/admin-ui.inc.php';
+
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
@@ -60,14 +64,12 @@ register_shutdown_function(function () {
 });
 
 /*
- * Load Geeklog and Radio dependencies only after the JSON error boundary is
- * active. A parse/compile/fatal error in a newly added Studio helper must be
- * returned to the browser as structured JSON instead of a themed HTML error
- * page, otherwise Studio can only report the opaque "html_response" error.
+ * Geeklog must bootstrap before Studio installs its temporary JSON error
+ * boundary. Installing a custom PHP error handler before lib-common.php can
+ * interfere with Geeklog's own bootstrap/error handling and make every Studio
+ * API action fail with a themed HTTP 500 response. Keep the boundary around
+ * Radio's Studio helpers and request routing, where it is actually needed.
  */
-require_once dirname(__FILE__) . '/../../../lib-common.php';
-require_once dirname(__FILE__) . '/../../auth.inc.php';
-require_once __DIR__ . '/admin-ui.inc.php';
 require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
 require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
 
