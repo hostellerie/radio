@@ -552,7 +552,26 @@
                     try {
                         data = JSON.parse(text);
                     } catch (error) {
-                        throw new Error(/^\s*</.test(text) ? 'html_response' : 'invalid_json');
+                        var responseType = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
+                        var detail = 'http_' + response.status;
+                        if (response.redirected) {
+                            detail += '_redirected';
+                        }
+
+                        if (responseType === 'html_response') {
+                            var titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                            if (titleMatch && titleMatch[1]) {
+                                var title = titleMatch[1]
+                                    .replace(/<[^>]+>/g, ' ')
+                                    .replace(/\s+/g, ' ')
+                                    .trim();
+                                if (title) {
+                                    detail += '_' + title.substring(0, 120);
+                                }
+                            }
+                        }
+
+                        throw new Error(responseType + ':' + detail);
                     }
                     updateToken(data);
                     if (!response.ok || !data.ok) {
