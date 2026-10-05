@@ -41,38 +41,48 @@ $message = '';
  * one server-rendered state.
  */
 if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
-    if (!SEC_checkToken()) {
-        exit;
-    }
-
     $action = trim((string) $_POST['studio_action']);
-    $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
-    $ok = false;
+    $htmlActions = array('add', 'remove', 'move_up', 'move_down');
 
-    if ($action === 'remove' && $itemId > 0) {
-        $ok = RADIO_removeProgramItem($itemId, $programId);
-    } elseif (($action === 'move_up' || $action === 'move_down') && $itemId > 0) {
-        $ok = RADIO_moveProgramItem(
-            $itemId,
-            $programId,
-            $action === 'move_up' ? 'up' : 'down'
-        );
-    } elseif ($action === 'add') {
-        $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
-        $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
-        $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
-        $afterItemId = $position === 'next' ? $currentItemId : 0;
-        $ok = $mediaId > 0 && RADIO_addProgramItem($programId, $mediaId, $afterItemId);
+    /*
+     * Only playlist-edit fallback forms belong to studio.php.
+     * Realtime Studio actions (broadcast, recording and YouTube Live) are
+     * handled exclusively by studio-api.php and must never make the rendered
+     * Studio page display the generic fallback error message.
+     */
+    if (in_array($action, $htmlActions, true)) {
+        if (!SEC_checkToken()) {
+            exit;
+        }
+
+        $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
+        $ok = false;
+
+        if ($action === 'remove' && $itemId > 0) {
+            $ok = RADIO_removeProgramItem($itemId, $programId);
+        } elseif (($action === 'move_up' || $action === 'move_down') && $itemId > 0) {
+            $ok = RADIO_moveProgramItem(
+                $itemId,
+                $programId,
+                $action === 'move_up' ? 'up' : 'down'
+            );
+        } elseif ($action === 'add') {
+            $mediaId = isset($_POST['media_id']) ? (int) $_POST['media_id'] : 0;
+            $position = isset($_POST['position']) ? trim((string) $_POST['position']) : 'end';
+            $currentItemId = isset($_POST['current_item_id']) ? (int) $_POST['current_item_id'] : 0;
+            $afterItemId = $position === 'next' ? $currentItemId : 0;
+            $ok = $mediaId > 0 && RADIO_addProgramItem($programId, $mediaId, $afterItemId);
+        }
+
+        if ($ok) {
+            COM_redirect(
+                $_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id='
+                . $programId . '&updated=1'
+            );
+        }
+
+        $message = COM_showMessageText($LANG_RADIO['studio_error'], $LANG_RADIO['studio_title']);
     }
-
-    if ($ok) {
-        COM_redirect(
-            $_CONF['site_admin_url'] . '/plugins/radio/studio.php?program_id='
-            . $programId . '&updated=1'
-        );
-    }
-
-    $message = COM_showMessageText($LANG_RADIO['studio_error'], $LANG_RADIO['studio_title']);
 }
 
 if (isset($_GET['updated']) && (int) $_GET['updated'] === 1) {
