@@ -850,7 +850,10 @@
             || 'Unable to start YouTube Live.';
         var detail = '';
 
-        if (errorCode.indexOf('invalid_json:http_200') === 0
+        if (errorCode === 'json_encode_failed'
+            || errorCode.indexOf('json_encode_failed') === 0) {
+            detail = 'The Studio server could not encode its response as JSON.';
+        } else if (errorCode.indexOf('invalid_json:http_200') === 0
             && errorCode.indexOf('empty_response') !== -1) {
             detail = studio.getAttribute('data-youtube-live-empty-response-label')
                 || 'The Studio server returned an empty response. Reload the Studio and try again.';
