@@ -571,6 +571,11 @@
                             }
                         }
 
+                        var serverStage = response.headers.get('X-Radio-Studio-Stage');
+                        if (serverStage) {
+                            detail += '_stage_' + serverStage;
+                        }
+
                         if (!text || !text.trim()) {
                             detail += '_empty_response';
                         } else if (responseType === 'invalid_json') {
