@@ -1457,19 +1457,41 @@
             cache: 'no-store'
         })
             .then(function (response) {
-                return response.json();
+                return response.text().then(function (text) {
+                    var data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
+                        var kind = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
+                        var detail = 'http_' + response.status;
+                        if (!text || !text.trim()) {
+                            detail += '_empty_response';
+                        }
+                        throw new Error(kind + ':' + detail);
+                    }
+
+                    updateToken(data);
+                    updateBroadcast(data);
+
+                    if (!response.ok || !data.ok) {
+                        var apiError = data.error || ('http_' + response.status);
+                        if (data.message) {
+                            apiError += ': ' + data.message;
+                        }
+                        throw new Error(apiError);
+                    }
+
+                    return data;
+                });
             })
             .then(function (data) {
-                updateToken(data);
-                updateBroadcast(data);
-                if (!data.ok) {
-                    throw new Error(data.error || 'search_failed');
-                }
                 renderResults(data.results || []);
                 setStatus('');
             })
-            .catch(function () {
-                setStatus(studio.getAttribute('data-error-label') || 'Error');
+            .catch(function (error) {
+                var label = studio.getAttribute('data-error-label') || 'The Studio action failed.';
+                var detail = error && error.message ? String(error.message) : 'search_failed';
+                setStatus(label + ' (' + detail + ')');
             });
     }
 
