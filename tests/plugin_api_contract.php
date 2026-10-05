@@ -331,6 +331,7 @@ radio_contract_require(
         && strpos($studioYoutubeWorker, 'RADIO_youtubeStudioFfmpegCommand') !== false
         && strpos($studioYoutubeWorker, "if (is_file(\$inputPath))") !== false
         && strpos($studioYoutubeWorker, "@unlink(\$inputPath)") !== false
+        && strpos($studioYoutubeWorker, "Unable to build FFmpeg command") !== false
         && strpos($studioYoutubeWorker, "\$offset >= 8388608") !== false
         && strpos($studioYoutubeWorker, "@flock(\$compact, LOCK_EX)") !== false
         && strpos($studioYoutubeWorker, "@ftruncate(\$compact, 0)") !== false
