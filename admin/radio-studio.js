@@ -844,6 +844,30 @@
         return parts.join(' · ');
     }
 
+    function youtubeLiveErrorText(errorCode) {
+        errorCode = String(errorCode || '');
+        var base = studio.getAttribute('data-youtube-live-failed-label')
+            || 'Unable to start YouTube Live.';
+        var detail = '';
+
+        if (errorCode.indexOf('invalid_json:http_200') === 0
+            && errorCode.indexOf('empty_response') !== -1) {
+            detail = studio.getAttribute('data-youtube-live-empty-response-label')
+                || 'The Studio server returned an empty response. Reload the Studio and try again.';
+        } else if (errorCode.indexOf('invalid_json:') === 0
+            || errorCode.indexOf('html_response:') === 0) {
+            detail = studio.getAttribute('data-youtube-live-invalid-response-label')
+                || 'The Studio server returned an invalid response.';
+        }
+
+        if (!detail) {
+            return errorCode ? base + ' (' + errorCode + ')' : base;
+        }
+
+        var diagnostic = studio.getAttribute('data-youtube-live-diagnostic-label') || 'Diagnostic';
+        return base + ' ' + detail + (errorCode ? ' ' + diagnostic + ': ' + errorCode : '');
+    }
+
     function setYoutubeLiveUi(live) {
         live = live || {state: 'idle'};
         var state = live.state || 'idle';
@@ -875,10 +899,7 @@
             } else if (state === 'stopping') {
                 label = studio.getAttribute('data-youtube-live-stopping-label') || 'Stopping YouTube Live…';
             } else if (state === 'error') {
-                label = studio.getAttribute('data-youtube-live-failed-label') || 'Studio YouTube Live failed.';
-                if (live.last_error) {
-                    label += ' (' + live.last_error + ')';
-                }
+                label = youtubeLiveErrorText(live.last_error || '');
             }
 
             var metrics = youtubeMetricText(live);
