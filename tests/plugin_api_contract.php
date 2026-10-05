@@ -309,6 +309,9 @@ radio_contract_require(
         && strpos($studioOutput, 'function RADIO_studioRecordingAppend') !== false
         && strpos($studioOutput, 'function RADIO_studioRecordingCleanupStale') !== false
         && strpos($studioOutput, 'RADIO_studioRecordingCleanupStale(21600)') !== false
+        && strpos($studioOutput, "'last_chunk_at' => ''") !== false
+        && strpos($studioOutput, "\$meta['last_chunk_at'] = date('Y-m-d H:i:s')") !== false
+        && strpos($studioOutput, "\$activityAt = \$lastChunkAt !== false ? \$lastChunkAt : \$startedAt") !== false
         && strpos($studioOutput, "'abort_reason'] = 'stale_session_timeout'") !== false
         && strpos($studioOutput, "RADIO_studioSiteStorageDir") !== false,
     'Radio Studio recording must capture the master mix through bounded authenticated chunks into site-specific persistent storage.'
