@@ -114,6 +114,13 @@ function radio_studio_json($data, $status)
     exit;
 }
 
+function radio_studio_api_stage($stage)
+{
+    if (!headers_sent()) {
+        header('X-Radio-Studio-Stage: ' . preg_replace('/[^A-Za-z0-9_.-]+/', '_', (string) $stage));
+    }
+}
+
 function radio_studio_api_trace($message)
 {
     global $_CONF;
@@ -277,7 +284,9 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
+    radio_studio_api_stage('post_received');
     radio_studio_api_trace('POST action received: ' . (string) $_POST['studio_action'] . '.');
+    radio_studio_api_stage('before_csrf');
     if (!radio_studio_check_token()) {
         radio_studio_json(array(
             'ok' => false,
@@ -285,13 +294,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
         ), 403);
     }
 
+    radio_studio_api_stage('csrf_ok');
     $studioAction = trim((string) $_POST['studio_action']);
     $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
     $studioUid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
 
     if ($studioAction === 'youtube_live_start') {
+        radio_studio_api_stage('youtube_start_dispatch');
         radio_studio_api_trace('Dispatching youtube_live_start.');
         $youtubeError = '';
+        radio_studio_api_stage('youtube_start_call');
         radio_studio_api_trace('Calling RADIO_studioYoutubeStart().');
         $youtubeLive = RADIO_studioYoutubeStart(
             $programId,
@@ -299,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
             $studioUid,
             $youtubeError
         );
+        radio_studio_api_stage('youtube_start_returned');
         radio_studio_api_trace('RADIO_studioYoutubeStart() returned.');
         if ($youtubeLive === false) {
             radio_studio_json(array('ok' => false, 'error' => $youtubeError), 400);
