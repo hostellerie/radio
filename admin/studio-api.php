@@ -2,9 +2,27 @@
 define('RADIO_STUDIO_API', true);
 ob_start();
 
+if (!headers_sent()) {
+    header('X-Radio-Studio-Stage: api_entry');
+}
+
 require_once dirname(__FILE__) . '/../../../lib-common.php';
+
+if (!headers_sent()) {
+    header('X-Radio-Studio-Stage: after_lib_common');
+}
+
 require_once dirname(__FILE__) . '/../../auth.inc.php';
+
+if (!headers_sent()) {
+    header('X-Radio-Studio-Stage: after_auth');
+}
+
 require_once __DIR__ . '/admin-ui.inc.php';
+
+if (!headers_sent()) {
+    header('X-Radio-Studio-Stage: after_admin_ui');
+}
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
