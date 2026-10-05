@@ -105,12 +105,34 @@ function radio_studio_json($data, $status)
         $data['php_warnings'] = $GLOBALS['_RADIO_STUDIO_WARNINGS'];
     }
 
+    $json = json_encode($data);
+    if ($json === false) {
+        $jsonError = function_exists('json_last_error_msg')
+            ? json_last_error_msg()
+            : 'JSON encoding failed';
+
+        error_log('Radio Studio API JSON encoding failed: ' . $jsonError);
+
+        $status = 500;
+        $json = json_encode(array(
+            'ok' => false,
+            'error' => 'json_encode_failed',
+            'message' => $jsonError,
+            'csrf_name' => CSRF_TOKEN,
+            'csrf_token' => SEC_createToken()
+        ));
+
+        if ($json === false) {
+            $json = '{"ok":false,"error":"json_encode_failed"}';
+        }
+    }
+
     if (function_exists('http_response_code')) {
         http_response_code((int) $status);
     }
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
-    echo json_encode($data);
+    echo $json;
     exit;
 }
 
