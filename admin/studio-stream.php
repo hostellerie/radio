@@ -221,18 +221,13 @@ if ($action === 'recording_stop') {
 }
 
 if ($action === 'recording_abort') {
-    $error = '';
-    $recording = RADIO_studioRecordingAbort(
+    $ok = RADIO_studioRecordingAbort(
         isset($_POST['session_id']) ? (string) $_POST['session_id'] : '',
-        $uid,
-        $error
+        $uid
     );
-    radio_studio_stream_json(
-        $recording === false
-            ? array('ok' => false, 'error' => $error)
-            : array('ok' => true, 'recording' => $recording),
-        $recording === false ? 400 : 200
-    );
+    radio_studio_stream_json(array(
+        'ok' => (bool) $ok
+    ), $ok ? 200 : 400);
 }
 
 if ($action === 'youtube_live_start') {
