@@ -1,6 +1,12 @@
 <?php
 
+if (function_exists('radio_studio_api_stage')) {
+    radio_studio_api_stage('before_youtube_core');
+}
 require_once dirname(__FILE__) . '/youtube.inc.php';
+if (function_exists('radio_studio_api_stage')) {
+    radio_studio_api_stage('after_youtube_core');
+}
 
 function RADIO_studioYoutubeSiteStorageDir()
 {
