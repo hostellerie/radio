@@ -198,9 +198,7 @@ function RADIO_studioYoutubeCleanupStale()
     }
 
     $helperPid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
-    if ($helperPid > 1 && RADIO_youtubePidRunning($helperPid)) {
-        return $status;
-    }
+    $helperRunning = $helperPid > 1 && RADIO_youtubePidRunning($helperPid);
 
     $now = time();
     $startedAt = !empty($status['started_at']) ? strtotime((string) $status['started_at']) : false;
@@ -215,12 +213,21 @@ function RADIO_studioYoutubeCleanupStale()
         $fresh = true;
     }
 
-    if ($fresh) {
+    if ($fresh && $helperRunning) {
         return $status;
     }
 
+    /*
+     * A fresh session whose encoder already disappeared is an immediate error.
+     * An old session is stale even when its detached process group is still
+     * running; this is how browser/network loss is bounded without a PHP worker.
+     */
+    if ($helperRunning) {
+        RADIO_studioYoutubeStopEncoder($helperPid);
+    }
+
     $ffmpegPid = isset($status['ffmpeg_pid']) ? (int) $status['ffmpeg_pid'] : 0;
-    if ($ffmpegPid > 1 && RADIO_youtubePidRunning($ffmpegPid)) {
+    if ($ffmpegPid > 1 && $ffmpegPid !== $helperPid && RADIO_youtubePidRunning($ffmpegPid)) {
         RADIO_youtubeStopPid($ffmpegPid);
     }
 
