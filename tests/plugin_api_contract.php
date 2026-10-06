@@ -337,10 +337,10 @@ radio_contract_require(
         && strpos($studioJs, "studio_action', 'youtube_live_chunk'") !== false
         && strpos($studioJs, "studio_action', 'youtube_live_stop'") !== false
         && strpos($studioJs, "studioUrl('live_status', {}, streamEndpoint)") !== false
-        && strpos($studioStream, "if ($action === 'youtube_live_start')") !== false
-        && strpos($studioStream, "if ($action === 'youtube_live_chunk')") !== false
-        && strpos($studioStream, "if ($action === 'youtube_live_stop')") !== false
-        && strpos($studioStream, "if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'live_status')") !== false
+        && strpos($studioStream, "if (\$action === 'youtube_live_start')") !== false
+        && strpos($studioStream, "if (\$action === 'youtube_live_chunk')") !== false
+        && strpos($studioStream, "if (\$action === 'youtube_live_stop')") !== false
+        && strpos($studioStream, "if (\$_SERVER['REQUEST_METHOD'] === 'GET' && \$action === 'live_status')") !== false
         && strpos($studioApi, "realtime_endpoint_moved") !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeStart') !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeAppend') !== false
