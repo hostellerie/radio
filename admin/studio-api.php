@@ -328,6 +328,15 @@ if ($program === false || !RADIO_hasEditAccess($program)) {
     radio_studio_json(array('ok' => false, 'error' => 'access_denied'), 403);
 }
 
+/*
+ * The authenticated user and programme ACL are now resolved. Release Geeklog's
+ * PHP session lock before search/state/mutation work so browser media requests
+ * cannot serialize or stall Studio JSON calls.
+ */
+if (function_exists('session_status') && session_status() === PHP_SESSION_ACTIVE) {
+    @session_write_close();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     radio_studio_api_stage('post_received');
     radio_studio_api_trace('POST action received: ' . (string) $_POST['studio_action'] . '.');
