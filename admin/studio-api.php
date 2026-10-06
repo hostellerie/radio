@@ -1,125 +1,26 @@
 <?php
+/**
+ * Radio Studio editorial JSON API.
+ *
+ * This endpoint intentionally bypasses Geeklog admin/auth.inc.php. Geeklog is
+ * fully bootstrapped by lib-common.php, then Radio performs explicit feature
+ * rights and programme ACL checks. Search/state/playlist mutations must never
+ * fall back to a themed Geeklog HTML error page.
+ */
+
 define('RADIO_STUDIO_API', true);
 ob_start();
 
-if (!headers_sent()) {
-    header('X-Radio-Studio-Stage: api_entry');
-}
-
 require_once dirname(__FILE__) . '/../../../lib-common.php';
-
-if (!headers_sent()) {
-    header('X-Radio-Studio-Stage: after_lib_common');
-}
-
-require_once dirname(__FILE__) . '/../../auth.inc.php';
-
-if (!headers_sent()) {
-    header('X-Radio-Studio-Stage: after_auth');
-}
-
-/*
- * Minimal dependency-free bootstrap diagnostics.
- * This is intentionally defined before any Radio helper include so failures
- * while loading the Studio logger itself are still visible in radio.log.
- */
-$radioStudioBootstrapLog = '';
-if (isset($_CONF['path_log'])) {
-    $radioStudioBootstrapLog = rtrim((string) $_CONF['path_log'], '/\\')
-        . DIRECTORY_SEPARATOR . 'radio.log';
-}
-
-$radioStudioBootstrapWrite = function ($message) use ($radioStudioBootstrapLog) {
-    $line = '[' . date('Y-m-d H:i:s') . '] [Studio Bootstrap] '
-        . trim((string) $message) . PHP_EOL;
-
-    if ($radioStudioBootstrapLog !== '') {
-        @file_put_contents($radioStudioBootstrapLog, $line, FILE_APPEND | LOCK_EX);
-    } else {
-        error_log(trim($line));
-    }
-};
-
-$radioStudioBootstrapWrite('after_auth');
-
-register_shutdown_function(function () use ($radioStudioBootstrapWrite) {
-    $error = error_get_last();
-    if (!is_array($error)
-        || !in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR), true)) {
-        return;
-    }
-
-    $radioStudioBootstrapWrite(
-        'fatal type=' . (int) $error['type']
-        . ' file=' . (isset($error['file']) ? $error['file'] : '')
-        . ' line=' . (isset($error['line']) ? (int) $error['line'] : 0)
-        . ' message=' . (isset($error['message']) ? $error['message'] : '')
-    );
-});
-
-$studioLoggerPath = dirname(__FILE__) . '/../lib/studio-log.inc.php';
-$radioStudioBootstrapWrite(
-    'studio_logger path=' . $studioLoggerPath
-    . ' exists=' . (is_file($studioLoggerPath) ? 'yes' : 'no')
-    . ' readable=' . (is_readable($studioLoggerPath) ? 'yes' : 'no')
-);
-
-if (!is_file($studioLoggerPath) || !is_readable($studioLoggerPath)) {
-    if (function_exists('http_response_code')) {
-        http_response_code(500);
-    }
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(array(
-        'ok' => false,
-        'error' => 'studio_logger_unavailable'
-    ));
-    exit;
-}
-
-require_once $studioLoggerPath;
-$radioStudioBootstrapWrite('studio_logger_loaded');
-
-RADIO_studioInstallFatalLogger();
-RADIO_studioLog('api.request', array(
-    'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '',
-    'action' => isset($_POST['studio_action']) ? $_POST['studio_action'] : (isset($_GET['action']) ? $_GET['action'] : ''),
-    'program_id' => isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0
-));
-
-if (!headers_sent()) {
-    header('X-Radio-Studio-Stage: after_bootstrap');
-}
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
 }
 
-$GLOBALS['_RADIO_STUDIO_WARNINGS'] = array();
+require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
 
-set_error_handler(function ($severity, $message, $file, $line) {
-    if (!(error_reporting() & $severity)) {
-        return false;
-    }
-
-    if (in_array($severity, array(E_WARNING, E_NOTICE, E_USER_WARNING, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED), true)) {
-        $GLOBALS['_RADIO_STUDIO_WARNINGS'][] = array(
-            'severity' => (int) $severity,
-            'message' => (string) $message,
-            'file' => basename((string) $file),
-            'line' => (int) $line
-        );
-        RADIO_studioLog('php.warning', array(
-            'message' => $message,
-            'file' => $file,
-            'line' => (int) $line,
-            'severity' => (int) $severity
-        ), 'WARNING');
-        return true;
-    }
-
-    return false;
-});
+RADIO_studioInstallFatalLogger();
 
 register_shutdown_function(function () {
     $error = error_get_last();
@@ -150,18 +51,51 @@ register_shutdown_function(function () {
         'ok' => false,
         'error' => 'php_fatal',
         'message' => isset($error['message']) ? $error['message'] : '',
-        'file' => isset($error['file']) ? basename($error['file']) : '',
+        'file' => isset($error['file']) ? basename((string) $error['file']) : '',
         'line' => isset($error['line']) ? (int) $error['line'] : 0
     ));
 });
 
-/*
- * Geeklog must bootstrap before Studio installs its temporary JSON error
- * boundary. Installing a custom PHP error handler before lib-common.php can
- * interfere with Geeklog's own bootstrap/error handling and make every Studio
- * API action fail with a themed HTTP 500 response. Keep the boundary around
- * Radio's Studio helpers and request routing, where it is actually needed.
- */
+$GLOBALS['_RADIO_STUDIO_WARNINGS'] = array();
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    if (in_array($severity, array(
+        E_WARNING,
+        E_NOTICE,
+        E_USER_WARNING,
+        E_USER_NOTICE,
+        E_DEPRECATED,
+        E_USER_DEPRECATED
+    ), true)) {
+        $GLOBALS['_RADIO_STUDIO_WARNINGS'][] = array(
+            'severity' => (int) $severity,
+            'message' => (string) $message,
+            'file' => basename((string) $file),
+            'line' => (int) $line
+        );
+        RADIO_studioLog('api.warning', array(
+            'message' => $message,
+            'file' => $file,
+            'line' => (int) $line,
+            'severity' => (int) $severity
+        ), 'WARNING');
+        return true;
+    }
+
+    return false;
+});
+
+RADIO_studioLog('api.request', array(
+    'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '',
+    'action' => isset($_POST['studio_action'])
+        ? $_POST['studio_action']
+        : (isset($_GET['action']) ? $_GET['action'] : ''),
+    'program_id' => isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0
+));
 
 function radio_studio_json($data, $status)
 {
