@@ -277,9 +277,11 @@ radio_contract_require(
         && strpos($studioStream, "require_once dirname(__FILE__) . '/../../auth.inc.php';") === false
         && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';") !== false
         && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") !== false
+        && strpos($studioApi, "require_once dirname(__FILE__) . '/../../../lib-common.php';") !== false
+        && strpos($studioApi, "require_once dirname(__FILE__) . '/../../auth.inc.php';") === false
         && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") === false
         && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';") === false,
-    'Radio Studio realtime output must use a dedicated JSON endpoint without Geeklog admin/auth.inc.php or realtime dependencies in the editorial API.'
+    'Radio Studio editorial and realtime JSON endpoints must bypass Geeklog admin/auth.inc.php; only the realtime endpoint loads output/live helpers.'
 );
 
 radio_contract_require(
