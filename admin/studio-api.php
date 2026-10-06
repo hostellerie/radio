@@ -18,7 +18,6 @@ if (!headers_sent()) {
     header('X-Radio-Studio-Stage: after_auth');
 }
 
-require_once __DIR__ . '/admin-ui.inc.php';
 require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
 RADIO_studioInstallFatalLogger();
 RADIO_studioLog('api.request', array(
@@ -28,7 +27,7 @@ RADIO_studioLog('api.request', array(
 ));
 
 if (!headers_sent()) {
-    header('X-Radio-Studio-Stage: after_admin_ui');
+    header('X-Radio-Studio-Stage: after_bootstrap');
 }
 
 if (!headers_sent()) {
@@ -235,6 +234,14 @@ function radio_studio_check_token()
     return true;
 }
 
+function radio_studio_media_type_label($type)
+{
+    global $LANG_RADIO;
+
+    $key = 'type_' . (string) $type;
+    return isset($LANG_RADIO[$key]) ? $LANG_RADIO[$key] : (string) $type;
+}
+
 function radio_studio_items($programId)
 {
     $rows = RADIO_getProgramItems((int) $programId);
@@ -255,7 +262,7 @@ function radio_studio_items($programId)
             'author' => isset($item['author']) ? $item['author'] : '',
             'media_type' => isset($item['media_type']) ? $item['media_type'] : '',
         'source_kind' => RADIO_sourceKind($item),
-            'media_type_label' => RADIO_adminMediaTypeLabel(isset($item['media_type']) ? $item['media_type'] : ''),
+            'media_type_label' => radio_studio_media_type_label(isset($item['media_type']) ? $item['media_type'] : ''),
             'category' => isset($item['category']) ? $item['category'] : '',
             'collection' => isset($item['collection_name']) ? $item['collection_name'] : '',
             'tags' => isset($item['tags']) ? $item['tags'] : '',
@@ -609,7 +616,7 @@ if ($action === 'search') {
             'title' => $row['title'],
             'author' => isset($row['author']) ? $row['author'] : '',
             'media_type' => isset($row['media_type']) ? $row['media_type'] : '',
-            'media_type_label' => RADIO_adminMediaTypeLabel(isset($row['media_type']) ? $row['media_type'] : ''),
+            'media_type_label' => radio_studio_media_type_label(isset($row['media_type']) ? $row['media_type'] : ''),
             'category' => isset($row['category']) ? $row['category'] : '',
             'collection' => isset($row['collection_name']) ? $row['collection_name'] : '',
             'tags' => isset($row['tags']) ? $row['tags'] : '',
