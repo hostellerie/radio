@@ -57,7 +57,7 @@ Current state:
 - **Security / multisite / compatibility:** pre-release hardening is in progress. Shared media now supports independent per-site databases with one common audio directory, MP3 ID3 metadata synchronization and conflict-safe tag writes. CSRF on remote fetches, RSS/Atom SSRF DNS pinning, upload signatures, media/download ACLs and PHP 5.6/8.1/8.3 syntax are CI/audit covered. Geeklog 2.1.1/2.2.2 runtime tests and two-site isolation still remain open.
 - **Studio / browser DJ:** the administration Studio is now operational as a live mixing surface around the programme queue. It supports current/next/reserve buffering, transitions/crossfade, EQ, filter, pan, headroom, echo, visual monitoring and assignable jingle pads. The existing `Broadcast` session remains editorial and is independent from YouTube output.
 - **YouTube Live:** server-side FFmpeg/RTMPS output is implemented with manual and scheduled modes, Station Card / Full Background / Minimal / Visualizer templates, white/green visual styles, selectable `line` / `cline` / `p2p` waveforms, artwork/programme/track overlays and live FPS/bitrate/encoding-speed diagnostics. Current automatic YouTube output still renders programme media server-side; it does not yet receive the browser Studio's post-FX master mix.
-- **Next active step — Studio master output:** keep one explicit post-FX/post-limiter master audio bus that feeds local monitoring, recording and Studio-driven YouTube Live. The server architecture is intentionally canonical and small: one Studio AJAX endpoint (`admin/studio-api.php`), one recording helper (`lib/studio-output.inc.php`), one live helper (`lib/studio-live.inc.php`) and one central diagnostic logger (`lib/studio-log.inc.php`). All server-side Studio/YouTube diagnostics must be written to Geeklog `radio.log`; temporary versioned diagnostic endpoints/helpers are not part of the target architecture.
+- **Next active step — Studio master output refactor:** keep one explicit post-FX/post-limiter master audio bus that feeds local monitoring, recording and Studio-driven YouTube Live, but separate editorial Studio actions from realtime output transport. `admin/studio-api.php` remains the short-lived playlist/search/broadcast API. `admin/studio-stream.php` is now the dedicated authenticated JSON control/ingest boundary for Record and Studio YouTube Live and intentionally does not include Geeklog `admin/auth.inc.php`. This removes themed HTML error handling from the realtime path and prevents an unrelated admin bootstrap failure from breaking live output. Recording remains in `lib/studio-output.inc.php`, live state in `lib/studio-live.inc.php`, and diagnostics in `lib/studio-log.inc.php`. The next simplification is to remove the detached PHP CLI relay and let the live transport own FFmpeg directly without bootstrapping Geeklog a second time.
 
 # Phase 0 — Architecture and plugin skeleton
 
@@ -734,10 +734,14 @@ Implementation rules:
 Current implementation notes:
 
 - recording and Studio Live use independent `MediaRecorder` consumers of the same master stream, so either output can be enabled alone or both can run together;
-- browser audio is uploaded in short authenticated chunks; a detached CLI helper owns the continuous pipe into FFmpeg;
+- **refactor step 1 complete:** Record and Studio YouTube Live control/chunk/status traffic is routed through the dedicated `admin/studio-stream.php` endpoint; playlist/search/editorial mutations remain on `admin/studio-api.php`;
+- the realtime endpoint performs explicit Radio rights + programme ACL checks and returns JSON directly instead of loading Geeklog `admin/auth.inc.php`; this specifically removes the former `html_response:http_500_..._stage_after_auth` failure path from Record/YouTube Live;
+- browser audio is still uploaded in short authenticated chunks during this compatibility stage;
+- **refactor step 2 pending:** replace the detached `bin/studio-youtube-live.php` PHP CLI relay with one transport/encoder owner so FFmpeg is not hidden behind a second Geeklog bootstrap;
+- **refactor step 3 pending:** collapse exposed live state to the canonical `idle → starting → live → stopping → error` machine and keep helper/transport implementation details private;
+- **refactor step 4 pending:** once the new path is runtime-validated, remove Record/YouTube dispatch code from `studio-api.php` and delete obsolete compatibility code rather than preserving parallel implementations;
 - the automatic YouTube worker explicitly stands down while a Studio Live session owns the ingest;
-- abandoned Studio Live input is terminated by the helper after a bounded input timeout rather than leaving an encoder connected indefinitely;
-- recordings and Studio Live runtime state are site-specific even when Radio media storage is shared across a multisite installation;
+- recordings and Studio Live runtime state remain site-specific even when Radio media storage is shared across a multisite installation;
 - end-to-end browser/server/YouTube runtime testing, long-session drift testing and failure/reconnect testing remain release gates.
 
 ### Streaming/encoding constraints
