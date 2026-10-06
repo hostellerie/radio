@@ -61,24 +61,53 @@ function RADIO_studioYoutubeTrace($message)
 {
     global $_CONF;
 
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_trace_entry');
+    }
+
     $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio YouTube] '
         . trim((string) $message) . "\n";
 
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_trace_before_log_path');
+    }
     $youtubePath = function_exists('RADIO_youtubeLogPath') ? RADIO_youtubeLogPath() : '';
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_trace_after_log_path');
+    }
+
     if ($youtubePath !== '') {
+        if (function_exists('radio_studio_api_stage')) {
+            radio_studio_api_stage('yt_trace_before_youtube_log_write');
+        }
         @file_put_contents($youtubePath, $line, FILE_APPEND | LOCK_EX);
+        if (function_exists('radio_studio_api_stage')) {
+            radio_studio_api_stage('yt_trace_after_youtube_log_write');
+        }
     }
 
     $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
     if ($logDir !== '') {
+        if (function_exists('radio_studio_api_stage')) {
+            radio_studio_api_stage('yt_trace_before_radio_log_write');
+        }
         @file_put_contents(
             $logDir . DIRECTORY_SEPARATOR . 'radio.log',
             $line,
             FILE_APPEND | LOCK_EX
         );
+        if (function_exists('radio_studio_api_stage')) {
+            radio_studio_api_stage('yt_trace_after_radio_log_write');
+        }
     }
 
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_trace_before_error_log');
+    }
     error_log(trim($line));
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_trace_done');
+    }
 }
 
 function RADIO_studioYoutubeDir()
