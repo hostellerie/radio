@@ -169,9 +169,48 @@ function radio_studio_load_recording_helpers()
 function radio_studio_load_youtube_helpers()
 {
     radio_studio_api_stage('before_studio_live');
-    if (!function_exists('RADIO_studioYoutubeStart')) {
-        require_once dirname(__FILE__) . '/../lib/studio-live-v3.inc.php';
+
+    $livePath = dirname(__FILE__) . '/../lib/studio-live-v3.inc.php';
+    if (!is_file($livePath)) {
+        radio_studio_api_stage('studio_live_file_missing');
+        return;
     }
+    if (!is_readable($livePath)) {
+        radio_studio_api_stage('studio_live_file_unreadable');
+        return;
+    }
+
+    $studioLiveFunctions = array(
+        'RADIO_studioYoutubeSiteStorageDir',
+        'RADIO_studioYoutubeEnsureSiteStorage',
+        'RADIO_studioYoutubeMimeInfo',
+        'RADIO_studioYoutubeSessionId',
+        'RADIO_studioYoutubeTrace',
+        'RADIO_studioYoutubeDir',
+        'RADIO_studioYoutubeEnsureStorage',
+        'RADIO_studioYoutubeStatePath',
+        'RADIO_studioYoutubeInputPath',
+        'RADIO_studioYoutubeStatus',
+        'RADIO_studioYoutubeWriteStatus',
+        'RADIO_studioYoutubeActive',
+        'RADIO_studioYoutubeCleanupStale',
+        'RADIO_studioYoutubeFindPhpCli',
+        'RADIO_studioYoutubeStart',
+        'RADIO_studioYoutubeAppend',
+        'RADIO_studioYoutubeUpdateMetadata',
+        'RADIO_studioYoutubeRequestStop',
+        'RADIO_studioYoutubePublicStatus'
+    );
+
+    foreach ($studioLiveFunctions as $studioLiveFunction) {
+        if (function_exists($studioLiveFunction)) {
+            radio_studio_api_stage('collision_' . $studioLiveFunction);
+            return;
+        }
+    }
+
+    radio_studio_api_stage('before_studio_live_include');
+    require_once $livePath;
     radio_studio_api_stage('after_studio_live');
 }
 
