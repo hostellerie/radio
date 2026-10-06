@@ -18,7 +18,67 @@ if (!headers_sent()) {
     header('X-Radio-Studio-Stage: after_auth');
 }
 
-require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
+/*
+ * Minimal dependency-free bootstrap diagnostics.
+ * This is intentionally defined before any Radio helper include so failures
+ * while loading the Studio logger itself are still visible in radio.log.
+ */
+$radioStudioBootstrapLog = '';
+if (isset($_CONF['path_log'])) {
+    $radioStudioBootstrapLog = rtrim((string) $_CONF['path_log'], '/\\')
+        . DIRECTORY_SEPARATOR . 'radio.log';
+}
+
+$radioStudioBootstrapWrite = function ($message) use ($radioStudioBootstrapLog) {
+    $line = '[' . date('Y-m-d H:i:s') . '] [Studio Bootstrap] '
+        . trim((string) $message) . PHP_EOL;
+
+    if ($radioStudioBootstrapLog !== '') {
+        @file_put_contents($radioStudioBootstrapLog, $line, FILE_APPEND | LOCK_EX);
+    } else {
+        error_log(trim($line));
+    }
+};
+
+$radioStudioBootstrapWrite('after_auth');
+
+register_shutdown_function(function () use ($radioStudioBootstrapWrite) {
+    $error = error_get_last();
+    if (!is_array($error)
+        || !in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR), true)) {
+        return;
+    }
+
+    $radioStudioBootstrapWrite(
+        'fatal type=' . (int) $error['type']
+        . ' file=' . (isset($error['file']) ? $error['file'] : '')
+        . ' line=' . (isset($error['line']) ? (int) $error['line'] : 0)
+        . ' message=' . (isset($error['message']) ? $error['message'] : '')
+    );
+});
+
+$studioLoggerPath = dirname(__FILE__) . '/../lib/studio-log.inc.php';
+$radioStudioBootstrapWrite(
+    'studio_logger path=' . $studioLoggerPath
+    . ' exists=' . (is_file($studioLoggerPath) ? 'yes' : 'no')
+    . ' readable=' . (is_readable($studioLoggerPath) ? 'yes' : 'no')
+);
+
+if (!is_file($studioLoggerPath) || !is_readable($studioLoggerPath)) {
+    if (function_exists('http_response_code')) {
+        http_response_code(500);
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array(
+        'ok' => false,
+        'error' => 'studio_logger_unavailable'
+    ));
+    exit;
+}
+
+require_once $studioLoggerPath;
+$radioStudioBootstrapWrite('studio_logger_loaded');
+
 RADIO_studioInstallFatalLogger();
 RADIO_studioLog('api.request', array(
     'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '',
