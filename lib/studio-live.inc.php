@@ -246,29 +246,56 @@ function RADIO_studioYoutubeCleanupStale()
     return RADIO_studioYoutubeStatus();
 }
 
-function RADIO_studioYoutubeFindPhpCli()
+function RADIO_studioYoutubeFindFfmpeg()
 {
+    $homeDir = rtrim((string) getenv('HOME'), '/\\');
     $candidates = array(
-        '/usr/bin/php',
-        '/usr/local/bin/php',
-        '/usr/bin/php8.1',
-        '/usr/local/bin/php8.1',
-        '/usr/bin/php81',
-        '/usr/local/bin/php81',
-        'php-cli',
-        'php'
+        getenv('FFMPEG_BIN'),
+        $homeDir !== '' ? $homeDir . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'ffmpeg' : '',
+        '/usr/bin/ffmpeg',
+        '/usr/local/bin/ffmpeg',
+        '/opt/local/bin/ffmpeg',
+        '/opt/homebrew/bin/ffmpeg'
     );
 
+    $output = array();
+    $code = 1;
+    @exec('command -v ffmpeg 2>/dev/null', $output, $code);
+    if ($code === 0 && isset($output[0])) {
+        array_unshift($candidates, trim((string) $output[0]));
+    }
+
     foreach ($candidates as $candidate) {
-        $output = array();
-        $code = 1;
-        @exec(escapeshellcmd($candidate) . ' -r ' . escapeshellarg('echo PHP_SAPI;') . ' 2>/dev/null', $output, $code);
-        if ($code === 0 && isset($output[0]) && trim((string) $output[0]) === 'cli') {
+        $candidate = trim((string) $candidate);
+        if ($candidate !== '' && is_file($candidate) && is_executable($candidate)) {
             return $candidate;
         }
     }
 
     return '';
+}
+
+function RADIO_studioYoutubeStopEncoder($pid)
+{
+    $pid = (int) $pid;
+    if ($pid < 2) {
+        return true;
+    }
+
+    /*
+     * Studio Live is launched with setsid, so the returned PID is also the
+     * process-group id. Stop the whole tail -> FFmpeg pipeline in one action.
+     */
+    @exec('kill -TERM -' . $pid . ' 2>/dev/null');
+    for ($i = 0; $i < 15; $i++) {
+        usleep(100000);
+        if (!RADIO_youtubePidRunning($pid)) {
+            return true;
+        }
+    }
+
+    @exec('kill -KILL -' . $pid . ' 2>/dev/null');
+    return !RADIO_youtubePidRunning($pid);
 }
 
 function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
@@ -358,30 +385,37 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         return false;
     }
 
-    RADIO_studioYoutubeTrace('Detecting PHP CLI.');
-    $phpCli = RADIO_studioYoutubeFindPhpCli();
-    if ($phpCli === '') {
+    RADIO_studioYoutubeTrace('Detecting FFmpeg.');
+    $ffmpegPath = RADIO_studioYoutubeFindFfmpeg();
+    if ($ffmpegPath === '') {
         @unlink($inputPath);
-        $error = 'youtube_cli_not_detected';
+        $error = 'youtube_ffmpeg_missing';
         return false;
     }
 
-    $worker = isset($_CONF['path']) ? rtrim((string) $_CONF['path'], '/\\')
-        . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'radio'
-        . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'studio-youtube-live.php' : '';
-    $root = isset($_CONF['path_html']) ? rtrim((string) $_CONF['path_html'], '/\\') : '';
-    if ($worker === '' || !is_file($worker) || $root === '' || !is_file($root . DIRECTORY_SEPARATOR . 'lib-common.php')) {
-        @unlink($inputPath);
-        $error = 'studio_youtube_worker_missing';
-        return false;
+    $videoMode = 'color';
+    if (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')
+        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay')
+        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+        $videoMode = 'stationcard';
+    } elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+        $videoMode = 'drawtext';
+    } elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')
+        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay')) {
+        $videoMode = 'showwaves';
     }
 
-    $siteHost = '';
-    if (!empty($_CONF['site_url'])) {
-        $parsedHost = parse_url((string) $_CONF['site_url'], PHP_URL_HOST);
-        if (is_string($parsedHost)) {
-            $siteHost = trim($parsedHost);
-        }
+    $ffmpegError = '';
+    $ffmpegCommand = RADIO_youtubeStudioFfmpegCommand(
+        (int) $programId,
+        $ffmpegError,
+        $ffmpegPath,
+        $videoMode
+    );
+    if ($ffmpegCommand === false) {
+        @unlink($inputPath);
+        $error = $ffmpegError !== '' ? $ffmpegError : 'youtube_ffmpeg_start_failed';
+        return false;
     }
 
     $status = array(
@@ -408,34 +442,47 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         return false;
     }
 
-    $command = escapeshellcmd($phpCli) . ' ' . escapeshellarg($worker)
-        . ' --geeklog-root=' . escapeshellarg($root)
-        . ($siteHost !== '' ? ' --host=' . escapeshellarg($siteHost) : '')
-        . ' --session=' . escapeshellarg($sessionId);
+    $logPath = RADIO_youtubeLogPath();
+    @file_put_contents($logPath, '', LOCK_EX);
 
-    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
-    $logPath = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : '/dev/null';
+    /*
+     * Keep the web request short: a detached process group owns the append-only
+     * relay file and FFmpeg. There is no second PHP process and no second
+     * Geeklog bootstrap. tail follows bytes appended by bounded upload requests
+     * and feeds the one persistent FFmpeg/RTMPS session through stdin.
+     */
+    $pipeline = 'tail -c +1 -F ' . escapeshellarg($inputPath)
+        . ' | ' . $ffmpegCommand;
 
     $output = array();
     $code = 1;
-    RADIO_studioYoutubeTrace('Launching detached Studio YouTube helper.');
-    @exec('nohup ' . $command . ' >> ' . escapeshellarg($logPath) . ' 2>&1 < /dev/null & echo $!', $output, $code);
-    $helperPid = $code === 0 && isset($output[0]) ? (int) trim((string) $output[0]) : 0;
+    RADIO_studioYoutubeTrace('Launching detached Studio YouTube encoder pipeline.');
+    @exec(
+        'nohup setsid sh -c ' . escapeshellarg($pipeline)
+        . ' >> ' . escapeshellarg($logPath)
+        . ' 2>&1 < /dev/null & echo $!',
+        $output,
+        $code
+    );
+    $encoderPid = $code === 0 && isset($output[0]) ? (int) trim((string) $output[0]) : 0;
 
-    if ($helperPid < 2) {
+    if ($encoderPid < 2) {
         @unlink($inputPath);
         RADIO_studioYoutubeWriteStatus(array(
             'state' => 'error',
-            'last_error' => 'studio_youtube_start_failed'
+            'last_error' => 'youtube_ffmpeg_start_failed'
         ));
-        $error = 'studio_youtube_start_failed';
+        $error = 'youtube_ffmpeg_start_failed';
         return false;
     }
 
-    RADIO_studioYoutubeWriteStatus(array('helper_pid' => $helperPid));
+    RADIO_studioYoutubeWriteStatus(array(
+        'helper_pid' => $encoderPid,
+        'ffmpeg_pid' => 0
+    ));
     RADIO_studioYoutubeTrace(
-        'Detached helper launched with PID ' . (int) $helperPid
-        . ' for session ' . $sessionId . '.'
+        'Detached Studio encoder pipeline launched with process-group PID '
+        . (int) $encoderPid . ' for session ' . $sessionId . '.'
     );
     return RADIO_studioYoutubeStatus();
 }
@@ -496,10 +543,13 @@ function RADIO_studioYoutubeAppend($sessionId, $tmpPath, $size, $chunkIndex, $ui
         return false;
     }
 
+    $nextState = $status['state'] === 'starting' ? 'live' : $status['state'];
     RADIO_studioYoutubeWriteStatus(array(
+        'state' => $nextState,
         'last_chunk_at' => date('Y-m-d H:i:s'),
         'chunks' => (int) $status['chunks'] + 1,
-        'bytes' => (int) $status['bytes'] + $size
+        'bytes' => (int) $status['bytes'] + $size,
+        'last_error' => ''
     ));
 
     return RADIO_studioYoutubeStatus();
@@ -548,6 +598,27 @@ function RADIO_studioYoutubeRequestStop($sessionId, $uid, &$error)
         $error = 'studio_youtube_stop_failed';
         return false;
     }
+
+    /*
+     * The browser serializes chunk uploads before the stop request. Give tail a
+     * short bounded drain window, then stop the complete detached process group.
+     */
+    usleep(500000);
+    $encoderPid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
+    RADIO_studioYoutubeStopEncoder($encoderPid);
+
+    $inputPath = RADIO_studioYoutubeInputPath($sessionId);
+    if ($inputPath !== '' && is_file($inputPath)) {
+        @unlink($inputPath);
+    }
+
+    RADIO_studioYoutubeWriteStatus(array(
+        'state' => 'idle',
+        'helper_pid' => 0,
+        'ffmpeg_pid' => 0,
+        'stop_requested' => false,
+        'last_error' => ''
+    ));
 
     return RADIO_studioYoutubeStatus();
 }
