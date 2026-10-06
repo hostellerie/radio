@@ -19,8 +19,6 @@ if (!headers_sent()) {
 }
 
 require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
-require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
-require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
 
 RADIO_studioInstallFatalLogger();
 
@@ -57,6 +55,13 @@ register_shutdown_function(function () {
         'line' => isset($error['line']) ? (int) $error['line'] : 0
     ));
 });
+
+/*
+ * Install the JSON fatal boundary before loading the realtime helpers. A fatal
+ * error in either helper must never fall back to Geeklog's themed HTML page.
+ */
+require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';
+require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';
 
 function radio_studio_stream_json($data, $status)
 {
