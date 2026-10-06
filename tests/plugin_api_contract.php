@@ -361,6 +361,9 @@ radio_contract_require(
         && strpos($studioLive, 'function RADIO_studioYoutubeAppend') !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeCleanupStale') !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeFindFfmpeg') !== false
+        && strpos($studioLive, "RADIO_youtubeStatus()") !== false
+        && strpos($studioLive, "['ffmpeg_path']") !== false
+        && strpos($studioLive, "Known CLI path=") !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeStopEncoder') !== false
         && strpos($studioLive, "'tail -c +1 -F '") !== false
         && strpos($studioLive, "'nohup setsid sh -c '") !== false
