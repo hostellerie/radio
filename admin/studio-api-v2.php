@@ -415,12 +415,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
 
         if (function_exists('RADIO_studioYoutubeStart')) {
             $youtubeStartReflection = new ReflectionFunction('RADIO_studioYoutubeStart');
-            radio_studio_api_stage(
-                'youtube_start_impl_'
-                . basename((string) $youtubeStartReflection->getFileName())
-                . '_'
-                . (int) $youtubeStartReflection->getStartLine()
-            );
+            if (!headers_sent()) {
+                header(
+                    'X-Radio-Studio-Impl: '
+                    . basename((string) $youtubeStartReflection->getFileName())
+                    . ':'
+                    . (int) $youtubeStartReflection->getStartLine()
+                );
+            }
         }
 
         radio_studio_api_stage('youtube_start_call');
