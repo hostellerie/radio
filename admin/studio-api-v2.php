@@ -204,8 +204,14 @@ function radio_studio_load_youtube_helpers()
 
     foreach ($studioLiveFunctions as $studioLiveFunction) {
         if (function_exists($studioLiveFunction)) {
-            radio_studio_api_stage('collision_' . $studioLiveFunction);
-            return;
+            $reflection = new ReflectionFunction($studioLiveFunction);
+            radio_studio_json(array(
+                'ok' => false,
+                'error' => 'studio_live_function_collision',
+                'function' => $studioLiveFunction,
+                'file' => basename((string) $reflection->getFileName()),
+                'line' => (int) $reflection->getStartLine()
+            ), 500);
         }
     }
 
@@ -406,6 +412,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
         radio_studio_api_stage('youtube_start_dispatch');
         radio_studio_api_trace('Dispatching youtube_live_start.');
         $youtubeError = '';
+
+        if (function_exists('RADIO_studioYoutubeStart')) {
+            $youtubeStartReflection = new ReflectionFunction('RADIO_studioYoutubeStart');
+            radio_studio_api_stage(
+                'youtube_start_impl_'
+                . basename((string) $youtubeStartReflection->getFileName())
+                . '_'
+                . (int) $youtubeStartReflection->getStartLine()
+            );
+        }
+
         radio_studio_api_stage('youtube_start_call');
         radio_studio_api_trace('Calling RADIO_studioYoutubeStart().');
         $youtubeLive = RADIO_studioYoutubeStart(
