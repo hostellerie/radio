@@ -274,7 +274,7 @@ $legacyPreview = file_get_contents($root . '/admin/preview.php');
 
 radio_contract_require(
     strpos($studioStream, "require_once dirname(__FILE__) . '/../../../lib-common.php';") !== false
-        && strpos($studioStream, "auth.inc.php") === false
+        && strpos($studioStream, "require_once dirname(__FILE__) . '/../../auth.inc.php';") === false
         && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';") !== false
         && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") !== false
         && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") === false
@@ -315,7 +315,8 @@ radio_contract_require(
     strpos($studioPage, 'data-radio-studio-record') !== false
         && strpos($studioJs, "studio_action', 'recording_start'") !== false
         && strpos($studioJs, "recordingRecorder.start(2000)") !== false
-        && strpos($studioApi, "if (\$studioAction === 'recording_chunk')") !== false
+        && strpos($studioStream, "if (\$action === 'recording_chunk')") !== false
+        && strpos($studioApi, "realtime_endpoint_moved") !== false
         && strpos($studioOutput, 'function RADIO_studioRecordingAppend') !== false
         && strpos($studioOutput, 'function RADIO_studioRecordingCleanupStale') !== false
         && strpos($studioOutput, 'RADIO_studioRecordingCleanupStale(21600)') !== false
