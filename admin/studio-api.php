@@ -18,7 +18,7 @@ if (!headers_sent()) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 }
 
-require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
+require_once $_CONF['path'] . 'plugins/radio/lib/studio-log.inc.php';
 
 RADIO_studioInstallFatalLogger();
 
