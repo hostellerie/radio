@@ -74,17 +74,14 @@ require_once $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
 
 function radio_studio_youtube_log($message)
 {
-    global $_CONF;
-
-    $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio YouTube] ' . (string) $message . PHP_EOL;
-    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
-    $path = $logDir !== '' ? $logDir . DIRECTORY_SEPARATOR . 'radio.log' : '';
-    if ($path !== '' && @file_put_contents($path, $line, FILE_APPEND | LOCK_EX) !== false) {
+    if (function_exists('RADIO_studioLog')) {
+        RADIO_studioLog('youtube.worker', array(
+            'message' => trim((string) $message)
+        ));
         return;
     }
-    if (function_exists('COM_errorLog')) {
-        COM_errorLog('[Radio Studio YouTube] ' . (string) $message, 1);
-    }
+
+    error_log('[Radio Studio YouTube] ' . (string) $message);
 }
 
 $status = RADIO_studioYoutubeStatus();
