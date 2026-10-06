@@ -959,6 +959,8 @@
                 var programId = intAttr(root, 'data-radio-program-id');
                 var trackingEnabled = root.getAttribute('data-radio-replay-track') !== '0';
                 var trackingSource = root.getAttribute('data-radio-replay-source') || 'replay';
+                var lazyStudio = trackingSource === 'studio';
+                var studioActivated = !lazyStudio;
                 var dynamicPlaylist = root.getAttribute('data-radio-replay-dynamic') === '1';
                 var transitionMode = root.getAttribute('data-radio-transition-mode') || 'hard';
                 var configuredCrossfade = parseInt(root.getAttribute('data-radio-crossfade-seconds') || '0', 10) || 0;
@@ -1650,6 +1652,19 @@
                 }
 
                 function refreshQueuePreload() {
+                    if (lazyStudio && !studioActivated) {
+                        if (queuePreloadUrl !== '') {
+                            clearQueueAudio(queuePreload);
+                            queuePreloadUrl = '';
+                        }
+                        if (queueReserveUrl !== '') {
+                            clearQueueAudio(queueReserve);
+                            queueReserveUrl = '';
+                        }
+                        emitQueueBufferStatus();
+                        return;
+                    }
+
                     var next = index + 1 < items.length ? items[index + 1] : null;
                     if (!next || !next.stream_url) {
                         if (queuePreloadUrl !== '') {
@@ -2136,8 +2151,10 @@
                         root.setAttribute('data-radio-replay-items', JSON.stringify(items));
                         renderDynamicChapters();
                         updateProgressBounds();
-                        audio.src = items[0].stream_url || '';
-                        audio.load();
+                        if (!lazyStudio || studioActivated) {
+                            audio.src = items[0].stream_url || '';
+                            audio.load();
+                        }
                         refreshQueuePreload();
                         updateUi();
                         return;
@@ -2179,6 +2196,14 @@
                          * audible element and cause a one-off startup dropout.
                          */
                         studioFx.prepare();
+
+                        if (lazyStudio && !studioActivated) {
+                            studioActivated = true;
+                            if (itemPlayable(index)) {
+                                setItem(index, 0, true);
+                            }
+                            return;
+                        }
 
                         if (audio.ended || !itemPlayable(index)) {
                             var startIndex = audio.ended ? 0 : index;
