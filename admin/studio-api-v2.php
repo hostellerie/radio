@@ -157,16 +157,20 @@ function radio_studio_api_stage($stage)
     }
 }
 
-function radio_studio_load_realtime_helpers()
+function radio_studio_load_recording_helpers()
 {
     radio_studio_api_stage('before_studio_output');
-    if (!function_exists('RADIO_studioSiteStorageDir')) {
+    if (!function_exists('RADIO_studioRecordingStart')) {
         require_once dirname(__FILE__) . '/../lib/studio-output-v2.inc.php';
     }
     radio_studio_api_stage('after_studio_output');
+}
 
+function radio_studio_load_youtube_helpers()
+{
+    radio_studio_api_stage('before_studio_live');
     if (!function_exists('RADIO_studioYoutubeStart')) {
-        require_once dirname(__FILE__) . '/../lib/studio-live-v2.inc.php';
+        require_once dirname(__FILE__) . '/../lib/studio-live-v3.inc.php';
     }
     radio_studio_api_stage('after_studio_live');
 }
@@ -353,8 +357,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
     $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
     $studioUid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
 
-    if (strpos($studioAction, 'youtube_live_') === 0 || strpos($studioAction, 'recording_') === 0) {
-        radio_studio_load_realtime_helpers();
+    if (strpos($studioAction, 'youtube_live_') === 0) {
+        radio_studio_load_youtube_helpers();
+    } elseif (strpos($studioAction, 'recording_') === 0) {
+        radio_studio_load_recording_helpers();
     }
 
     if ($studioAction === 'youtube_live_start') {
@@ -583,12 +589,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_action'])) {
 $action = isset($_REQUEST['action']) ? trim((string) $_REQUEST['action']) : 'state';
 
 if ($action === 'state') {
-    radio_studio_load_realtime_helpers();
+    radio_studio_load_youtube_helpers();
     radio_studio_json(radio_studio_state($programId), 200);
 }
 
 if ($action === 'live_status') {
-    radio_studio_load_realtime_helpers();
+    radio_studio_load_youtube_helpers();
     radio_studio_json(array(
         'ok' => true,
         'youtube_live' => RADIO_studioYoutubePublicStatus(),
