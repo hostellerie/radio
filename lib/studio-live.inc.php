@@ -255,8 +255,21 @@ function RADIO_studioYoutubeCleanupStale()
 
 function RADIO_studioYoutubeFindFfmpeg()
 {
+    /*
+     * The automatic YouTube worker runs from CLI and may see a broader PATH
+     * than the web PHP process. Reuse its last proven FFmpeg path first instead
+     * of assuming both environments are identical.
+     */
+    $youtubeStatus = function_exists('RADIO_youtubeStatus')
+        ? RADIO_youtubeStatus()
+        : array();
+    $knownPath = isset($youtubeStatus['ffmpeg_path'])
+        ? trim((string) $youtubeStatus['ffmpeg_path'])
+        : '';
+
     $homeDir = rtrim((string) getenv('HOME'), '/\\');
     $candidates = array(
+        $knownPath,
         getenv('FFMPEG_BIN'),
         $homeDir !== '' ? $homeDir . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'ffmpeg' : '',
         '/usr/bin/ffmpeg',
@@ -265,19 +278,36 @@ function RADIO_studioYoutubeFindFfmpeg()
         '/opt/homebrew/bin/ffmpeg'
     );
 
-    $output = array();
-    $code = 1;
-    @exec('command -v ffmpeg 2>/dev/null', $output, $code);
-    if ($code === 0 && isset($output[0])) {
-        array_unshift($candidates, trim((string) $output[0]));
+    if (function_exists('exec')) {
+        $output = array();
+        $code = 1;
+        @exec('command -v ffmpeg 2>/dev/null', $output, $code);
+        if ($code === 0 && isset($output[0])) {
+            array_unshift($candidates, trim((string) $output[0]));
+        }
     }
 
+    $checked = array();
     foreach ($candidates as $candidate) {
         $candidate = trim((string) $candidate);
-        if ($candidate !== '' && is_file($candidate) && is_executable($candidate)) {
+        if ($candidate === '' || isset($checked[$candidate])) {
+            continue;
+        }
+        $checked[$candidate] = true;
+
+        if (@is_file($candidate) && @is_executable($candidate)) {
+            RADIO_studioYoutubeTrace('FFmpeg resolved to ' . $candidate . '.');
             return $candidate;
         }
     }
+
+    RADIO_studioYoutubeTrace(
+        'FFmpeg not found. Known CLI path='
+        . ($knownPath !== '' ? $knownPath : '[none]')
+        . '; web PATH=' . (string) getenv('PATH')
+        . '; HOME=' . (string) getenv('HOME')
+        . '; candidates=' . implode(',', array_keys($checked))
+    );
 
     return '';
 }
