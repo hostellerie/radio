@@ -316,6 +316,16 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($studioPage, '<audio data-radio-replay-audio preload="none"></audio>') !== false
+        && strpos($publicJs, "var lazyStudio = trackingSource === 'studio';") !== false
+        && strpos($publicJs, 'var studioActivated = !lazyStudio;') !== false
+        && strpos($publicJs, 'if (lazyStudio && !studioActivated)') !== false
+        && strpos($studioApi, '@session_write_close();') !== false
+        && strpos($studioStream, '@session_write_close();') !== false,
+    'Radio Studio must lazy-load media until first Play and release Geeklog session locks before JSON work.'
+);
+
+radio_contract_require(
     strpos($studioPage, 'data-radio-studio-record') !== false
         && strpos($studioJs, "studio_action', 'recording_start'") !== false
         && strpos($studioJs, "recordingRecorder.start(2000)") !== false
