@@ -9,6 +9,7 @@
 
     var endpoint = studio.getAttribute('data-radio-studio-endpoint') || '';
     var mutationEndpoint = studio.getAttribute('data-radio-studio-mutation-endpoint') || '';
+    var streamEndpoint = studio.getAttribute('data-radio-studio-stream-endpoint') || mutationEndpoint || endpoint;
     var programId = parseInt(studio.getAttribute('data-radio-program-id') || '0', 10) || 0;
     var tokenName = studio.getAttribute('data-radio-csrf-name') || '';
     var tokenValue = studio.getAttribute('data-radio-csrf-token') || '';
@@ -541,7 +542,16 @@
                 formData.append('program_id', String(programId));
             }
 
-            return fetch(mutationEndpoint || endpoint, {
+            var targetEndpoint = mutationEndpoint || endpoint;
+            var studioAction = typeof formData.get === 'function'
+                ? String(formData.get('studio_action') || '')
+                : '';
+            if (studioAction.indexOf('recording_') === 0
+                || studioAction.indexOf('youtube_live_') === 0) {
+                targetEndpoint = streamEndpoint;
+            }
+
+            return fetch(targetEndpoint, {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin',
@@ -924,7 +934,7 @@
             return;
         }
 
-        fetch(studioUrl('live_status'), {
+        fetch(studioUrl('live_status', {}, streamEndpoint), {
             credentials: 'same-origin',
             cache: 'no-store'
         }).then(function (response) {
@@ -1198,11 +1208,12 @@
         return search.toString();
     }
 
-    function studioUrl(action, extra) {
+    function studioUrl(action, extra, baseEndpoint) {
         var params = extra || {};
         params.action = action;
         params.program_id = programId;
-        return endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + queryString(params);
+        baseEndpoint = baseEndpoint || endpoint;
+        return baseEndpoint + (baseEndpoint.indexOf('?') === -1 ? '?' : '&') + queryString(params);
     }
 
     function resultMeta(item) {
