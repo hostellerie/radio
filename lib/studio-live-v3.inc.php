@@ -327,6 +327,10 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
 {
     global $_CONF;
 
+    if (function_exists('radio_studio_api_stage')) {
+        radio_studio_api_stage('yt_start_entry');
+    }
+
     $error = '';
     RADIO_studioYoutubeTrace(
         'Start requested for programme ' . (int) $programId
