@@ -19,6 +19,13 @@ if (!headers_sent()) {
 }
 
 require_once __DIR__ . '/admin-ui.inc.php';
+require_once dirname(__FILE__) . '/../lib/studio-log.inc.php';
+RADIO_studioInstallFatalLogger();
+RADIO_studioLog('api.request', array(
+    'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '',
+    'action' => isset($_POST['studio_action']) ? $_POST['studio_action'] : (isset($_GET['action']) ? $_GET['action'] : ''),
+    'program_id' => isset($_REQUEST['program_id']) ? (int) $_REQUEST['program_id'] : 0
+));
 
 if (!headers_sent()) {
     header('X-Radio-Studio-Stage: after_admin_ui');
@@ -43,10 +50,12 @@ set_error_handler(function ($severity, $message, $file, $line) {
             'file' => basename((string) $file),
             'line' => (int) $line
         );
-        error_log(
-            'Radio Studio API PHP warning: ' . $message
-            . ' @ ' . $file . ':' . (int) $line
-        );
+        RADIO_studioLog('php.warning', array(
+            'message' => $message,
+            'file' => $file,
+            'line' => (int) $line,
+            'severity' => (int) $severity
+        ), 'WARNING');
         return true;
     }
 
@@ -59,6 +68,12 @@ register_shutdown_function(function () {
         || !in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR), true)) {
         return;
     }
+
+    RADIO_studioLog('api.fatal_response', array(
+        'message' => isset($error['message']) ? $error['message'] : '',
+        'file' => isset($error['file']) ? $error['file'] : '',
+        'line' => isset($error['line']) ? (int) $error['line'] : 0
+    ), 'ERROR');
 
     while (ob_get_level() > 0) {
         @ob_end_clean();
@@ -145,6 +160,12 @@ function radio_studio_json($data, $status)
         }
     }
 
+    RADIO_studioLog('api.response', array(
+        'status' => (int) $status,
+        'ok' => !empty($data['ok']),
+        'error' => isset($data['error']) ? $data['error'] : ''
+    ));
+
     if (function_exists('http_response_code')) {
         http_response_code((int) $status);
     }
@@ -163,21 +184,9 @@ function radio_studio_api_stage($stage)
 
 function radio_studio_api_trace($message)
 {
-    global $_CONF;
-
-    $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio API] '
-        . trim((string) $message) . "\n";
-
-    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
-    if ($logDir !== '') {
-        @file_put_contents(
-            $logDir . DIRECTORY_SEPARATOR . 'radio.log',
-            $line,
-            FILE_APPEND | LOCK_EX
-        );
-    }
-
-    error_log(trim($line));
+    RADIO_studioLog('api.trace', array(
+        'message' => trim((string) $message)
+    ));
 }
 
 function radio_studio_check_token()
