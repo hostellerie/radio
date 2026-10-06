@@ -1,41 +1,72 @@
 <?php
 
-require_once dirname(__FILE__) . '/studio-output.inc.php';
 require_once dirname(__FILE__) . '/youtube.inc.php';
-
-function RADIO_studioYoutubeTrace($message)
+require_once dirname(__FILE__) . '/studio-log.inc.php';
+function RADIO_studioYoutubeSiteStorageDir()
 {
     global $_CONF;
 
-    $line = '[' . date('Y-m-d H:i:s') . '] [Radio Studio YouTube] '
-        . trim((string) $message) . "\n";
-
-    $youtubePath = function_exists('RADIO_youtubeLogPath') ? RADIO_youtubeLogPath() : '';
-    if ($youtubePath !== '') {
-        @file_put_contents($youtubePath, $line, FILE_APPEND | LOCK_EX);
+    $base = isset($_CONF['path_data']) ? rtrim((string) $_CONF['path_data'], "/\\") : '';
+    if ($base === '') {
+        return '';
     }
 
-    $logDir = isset($_CONF['path_log']) ? rtrim((string) $_CONF['path_log'], '/\\') : '';
-    if ($logDir !== '') {
-        @file_put_contents(
-            $logDir . DIRECTORY_SEPARATOR . 'radio.log',
-            $line,
-            FILE_APPEND | LOCK_EX
-        );
+    return dirname($base) . DIRECTORY_SEPARATOR . basename($base) . '-radio' . DIRECTORY_SEPARATOR;
+}
+
+function RADIO_studioYoutubeEnsureSiteStorage()
+{
+    $dir = RADIO_studioYoutubeSiteStorageDir();
+    if ($dir === '') {
+        return false;
+    }
+    if (is_dir($dir)) {
+        return is_writable($dir);
+    }
+    if (!@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        COM_errorLog('Radio: cannot create site-specific Studio storage directory ' . $dir, 1);
+        return false;
     }
 
-    error_log(trim($line));
+    return is_writable($dir);
+}
+
+function RADIO_studioYoutubeMimeInfo($mime)
+{
+    $mime = strtolower(trim((string) $mime));
+    $base = trim(strtok($mime, ';'));
+
+    $map = array(
+        'audio/webm' => array('extension' => 'webm', 'mime' => 'audio/webm'),
+        'video/webm' => array('extension' => 'webm', 'mime' => 'audio/webm'),
+        'audio/ogg' => array('extension' => 'ogg', 'mime' => 'audio/ogg'),
+        'audio/mp4' => array('extension' => 'm4a', 'mime' => 'audio/mp4')
+    );
+
+    return isset($map[$base]) ? $map[$base] : false;
+}
+
+function RADIO_studioYoutubeSessionId()
+{
+    return sha1(uniqid('radio-studio-youtube-', true) . mt_rand() . microtime(true));
+}
+
+function RADIO_studioYoutubeTrace($message)
+{
+    RADIO_studioLog('youtube.trace', array(
+        'message' => trim((string) $message)
+    ));
 }
 
 function RADIO_studioYoutubeDir()
 {
-    $base = RADIO_studioSiteStorageDir();
+    $base = RADIO_studioYoutubeSiteStorageDir();
     return $base === '' ? '' : $base . 'studio-youtube' . DIRECTORY_SEPARATOR;
 }
 
 function RADIO_studioYoutubeEnsureStorage()
 {
-    if (!RADIO_studioEnsureSiteStorage()) {
+    if (!RADIO_studioYoutubeEnsureSiteStorage()) {
         return false;
     }
 
@@ -251,7 +282,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
         . ' with MIME ' . (string) $mime . '.'
     );
     RADIO_studioYoutubeTrace('Resolving Studio MIME.');
-    $mimeInfo = RADIO_studioRecordingMimeInfo($mime);
+    $mimeInfo = RADIO_studioYoutubeMimeInfo($mime);
     if ($mimeInfo === false) {
         $error = 'studio_recording_mime_unsupported';
         RADIO_studioYoutubeTrace('Start rejected: ' . $error . '.');
@@ -312,7 +343,7 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     }
 
     RADIO_studioYoutubeTrace('Creating Studio YouTube session.');
-    $sessionId = RADIO_studioRecordingSessionId();
+    $sessionId = RADIO_studioYoutubeSessionId();
     $inputPath = RADIO_studioYoutubeInputPath($sessionId);
     if ($inputPath === '' || @file_put_contents($inputPath, '') === false) {
         $error = 'studio_youtube_start_failed';
