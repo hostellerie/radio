@@ -209,6 +209,8 @@ if ($canEdit) {
         . radio_studio_h($_CONF['site_admin_url'] . '/plugins/radio/studio-api.php') . '"'
         . ' data-radio-studio-mutation-endpoint="'
         . radio_studio_h($_CONF['site_admin_url'] . '/plugins/radio/studio-api.php?program_id=' . $programId) . '"'
+        . ' data-radio-studio-stream-endpoint="'
+        . radio_studio_h($_CONF['site_admin_url'] . '/plugins/radio/studio-stream.php?program_id=' . $programId) . '"'
         . ' data-radio-csrf-name="' . radio_studio_h(CSRF_TOKEN) . '"'
         . ' data-radio-csrf-token="' . radio_studio_h($token) . '"'
         . ' data-empty-label="' . radio_studio_h($LANG_RADIO['program_media_search_empty']) . '"'
