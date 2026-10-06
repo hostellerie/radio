@@ -265,23 +265,21 @@ $programAdmin = file_get_contents($root . '/admin/programs.php');
 $rotationAdmin = file_get_contents($root . '/admin/rotation.php');
 $studioPage = file_get_contents($root . '/admin/studio.php');
 $studioApi = file_get_contents($root . '/admin/studio-api.php');
+$studioStream = file_get_contents($root . '/admin/studio-stream.php');
 $studioJs = file_get_contents($root . '/admin/radio-studio.js');
 $studioOutput = file_get_contents($root . '/lib/studio-output.inc.php');
 $studioLive = file_get_contents($root . '/lib/studio-live.inc.php');
-$studioYoutubeWorker = file_get_contents($root . '/bin/studio-youtube-live.php');
 $youtubeLib = file_get_contents($root . '/lib/youtube.inc.php');
 $legacyPreview = file_get_contents($root . '/admin/preview.php');
 
-$studioErrorHandlerPos = strpos($studioApi, 'set_error_handler(function');
-$studioShutdownHandlerPos = strpos($studioApi, 'register_shutdown_function(function');
-$studioLiveRequirePos = strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';");
 radio_contract_require(
-    $studioErrorHandlerPos !== false
-        && $studioShutdownHandlerPos !== false
-        && $studioLiveRequirePos !== false
-        && $studioErrorHandlerPos < $studioLiveRequirePos
-        && $studioShutdownHandlerPos < $studioLiveRequirePos,
-    'Radio Studio API must install its JSON fatal-error boundary before loading Studio Live dependencies.'
+    strpos($studioStream, "require_once dirname(__FILE__) . '/../../../lib-common.php';") !== false
+        && strpos($studioStream, "auth.inc.php") === false
+        && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';") !== false
+        && strpos($studioStream, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") !== false
+        && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-live.inc.php';") === false
+        && strpos($studioApi, "require_once dirname(__FILE__) . '/../lib/studio-output.inc.php';") === false,
+    'Radio Studio realtime output must use a dedicated JSON endpoint without Geeklog admin/auth.inc.php or realtime dependencies in the editorial API.'
 );
 
 radio_contract_require(
@@ -331,27 +329,31 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($studioPage, 'data-radio-studio-youtube') !== false
+        && strpos($studioPage, 'data-radio-studio-stream-endpoint') !== false
+        && strpos($studioPage, '/plugins/radio/studio-stream.php?program_id=') !== false
+        && strpos($studioJs, "studio.getAttribute('data-radio-studio-stream-endpoint')") !== false
         && strpos($studioJs, "studio_action', 'youtube_live_start'") !== false
         && strpos($studioJs, "youtubeLiveRecorder.start(1000)") !== false
         && strpos($studioJs, "studio_action', 'youtube_live_chunk'") !== false
         && strpos($studioJs, "studio_action', 'youtube_live_stop'") !== false
-        && strpos($studioApi, "if (\$studioAction === 'youtube_live_start')") !== false
-        && strpos($studioApi, "if (\$action === 'live_status')") !== false
+        && strpos($studioJs, "studioUrl('live_status', {}, streamEndpoint)") !== false
+        && strpos($studioStream, "if ($action === 'youtube_live_start')") !== false
+        && strpos($studioStream, "if ($action === 'youtube_live_chunk')") !== false
+        && strpos($studioStream, "if ($action === 'youtube_live_stop')") !== false
+        && strpos($studioStream, "if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'live_status')") !== false
+        && strpos($studioApi, "realtime_endpoint_moved") !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeStart') !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeAppend') !== false
         && strpos($studioLive, 'function RADIO_studioYoutubeCleanupStale') !== false
-        && strpos($studioLive, "studio_youtube_stale_session") !== false
-        && strpos($studioLive, "RADIO_youtubeStopPid(\$ffmpegPid)") !== false
-        && strpos($studioLive, "RADIO_studioYoutubeCleanupStale()") !== false
-        && strpos($studioYoutubeWorker, 'RADIO_youtubeStudioFfmpegCommand') !== false
-        && strpos($studioYoutubeWorker, "if (is_file(\$inputPath))") !== false
-        && strpos($studioYoutubeWorker, "@unlink(\$inputPath)") !== false
-        && strpos($studioYoutubeWorker, "Unable to build FFmpeg command") !== false
-        && strpos($studioYoutubeWorker, "\$offset >= 8388608") !== false
-        && strpos($studioYoutubeWorker, "@flock(\$compact, LOCK_EX)") !== false
-        && strpos($studioYoutubeWorker, "@ftruncate(\$compact, 0)") !== false
-        && strpos($youtubeLib, 'function RADIO_youtubeStudioFfmpegCommand') !== false,
-    'Radio Studio YouTube Live must use a separate control, bounded master-audio chunks and one persistent helper/FFmpeg session.'
+        && strpos($studioLive, 'function RADIO_studioYoutubeFindFfmpeg') !== false
+        && strpos($studioLive, 'function RADIO_studioYoutubeStopEncoder') !== false
+        && strpos($studioLive, "'tail -c +1 -F '") !== false
+        && strpos($studioLive, "'nohup setsid sh -c '") !== false
+        && strpos($studioLive, 'RADIO_youtubeStudioFfmpegCommand') !== false
+        && strpos($studioLive, 'RADIO_studioYoutubeFindPhpCli') === false
+        && strpos($youtubeLib, 'function RADIO_youtubeStudioFfmpegCommand') !== false
+        && !is_file($root . '/bin/studio-youtube-live.php'),
+    'Radio Studio YouTube Live must use the dedicated realtime endpoint and one detached tail-to-FFmpeg process group without a second PHP/Geeklog worker.'
 );
 
 radio_contract_require(
