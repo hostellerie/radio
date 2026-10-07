@@ -467,6 +467,7 @@ $LANG_confignames['radio'] = array(
     'whatsnew_limit' => 'Nombre maximal de contenus Radio dans Quoi de neuf',
     'stats_enabled' => 'Activer les statistiques d’écoute respectueuses de la vie privée ?',
     'stats_retention_days' => 'Conservation des statistiques (jours)',
+    'debug_logging' => 'Activer les journaux de débogage ?',
     'library_mode' => 'Mode de la médiathèque',
     'shared_storage_path' => 'Chemin du stockage média partagé',
     'shared_media_sync_interval' => 'Intervalle de synchronisation des métadonnées partagées (secondes)',
