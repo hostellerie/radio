@@ -507,6 +507,15 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function applyProgrammeDuck()') !== false
+        && strpos($publicPlayer, 'function releaseProgrammeDuck()') !== false
+        && strpos($publicPlayer, 'promise.then(function ()') !== false
+        && strpos($publicPlayer, 'applyProgrammeDuck();') !== false
+        && strpos($publicPlayer, 'sample.audio.onerror = releaseProgrammeDuck;') !== false,
+    'Studio pad jingles must duck the programme only after playback has actually started and restore it on failure/end.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function bufferedQueueElementFor') !== false
         && strpos($publicPlayer, 'function activateBufferedQueueItem') !== false
         && strpos($publicPlayer, "setItem(seekIndex, 0, true);") !== false
