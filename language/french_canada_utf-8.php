@@ -127,6 +127,7 @@ $LANG_RADIO = array(
     'download' => 'Télécharger',
     'back_to_library' => 'Retour à Radio',
     'public_empty' => 'Aucun contenu audio publié pour le moment.',
+    'public_disabled' => 'La radio publique est actuellement indisponible.',
     'public_schedule' => 'Programme de la radio',
     'duration_seconds' => 'Durée (secondes)',
     'listen_live' => 'Écouter en direct',
@@ -443,7 +444,7 @@ $LANG_configsubgroups['radio'] = array('sg_main' => 'Paramètres principaux');
 $LANG_tab['radio'] = array('tab_main' => 'Principal');
 $LANG_fs['radio'] = array('fs_main' => 'Général');
 $LANG_confignames['radio'] = array(
-    'enabled' => 'Activer Radio ?',
+    'enabled' => 'Activer la radio publique ?',
     'public_title' => 'Titre public',
     'default_replay_days' => 'Durée de replay par défaut (jours)',
     'allow_downloads' => 'Autoriser globalement les téléchargements ?',
