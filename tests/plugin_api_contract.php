@@ -186,6 +186,16 @@ radio_contract_require(
 
 $defaults = file_get_contents($root . '/install_defaults.php');
 $nowEndpoint = file_get_contents($root . '/public_html/now.php');
+$studioLog = file_get_contents($root . '/lib/studio-log.inc.php');
+radio_contract_require(
+    strpos($defaults, "'debug_logging' => 0") !== false
+        && strpos($english, "'debug_logging' => 'Enable debug logging?'") !== false
+        && strpos($french, "'debug_logging' => 'Activer les journaux de débogage ?'") !== false
+        && strpos($studioLog, "\$debugEnabled = !empty(\$_RADIO_CONF['debug_logging']);") !== false
+        && strpos($studioLog, "array('WARNING', 'ERROR')") !== false,
+    'Radio debug logging must be disabled by default while warnings and errors remain logged.'
+);
+
 radio_contract_require(
     strpos($defaults, "'transition_mode' => 'gapless'") !== false
         && strpos($defaults, "'crossfade_seconds' => 2") !== false
