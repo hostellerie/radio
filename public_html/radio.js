@@ -1345,15 +1345,7 @@
                             sample.audio.currentTime = 0;
                         } catch (error) {}
 
-                        // Briefly duck the programme while a pad jingle plays so speech/cues stay intelligible.
-                        if (programmeGain && context) {
-                            var nowTime = context.currentTime;
-                            programmeGain.gain.cancelScheduledValues(nowTime);
-                            programmeGain.gain.setValueAtTime(programmeGain.gain.value, nowTime);
-                            programmeGain.gain.linearRampToValueAtTime(Math.pow(10, -4 / 20), nowTime + 0.06);
-                        }
-
-                        sample.audio.onended = function () {
+                        function releaseProgrammeDuck() {
                             if (!programmeGain || !context) {
                                 return;
                             }
@@ -1361,11 +1353,36 @@
                             programmeGain.gain.cancelScheduledValues(releaseTime);
                             programmeGain.gain.setValueAtTime(programmeGain.gain.value, releaseTime);
                             programmeGain.gain.linearRampToValueAtTime(1, releaseTime + 0.28);
-                        };
+                        }
 
+                        function applyProgrammeDuck() {
+                            if (!programmeGain || !context) {
+                                return;
+                            }
+                            var nowTime = context.currentTime;
+                            programmeGain.gain.cancelScheduledValues(nowTime);
+                            programmeGain.gain.setValueAtTime(programmeGain.gain.value, nowTime);
+                            programmeGain.gain.linearRampToValueAtTime(Math.pow(10, -4 / 20), nowTime + 0.06);
+                        }
+
+                        sample.audio.onended = releaseProgrammeDuck;
+                        sample.audio.onerror = releaseProgrammeDuck;
+
+                        /*
+                         * Do not duck the programme until the pad has actually
+                         * started. Network/demux startup can take a moment even
+                         * for preloaded media; ducking before play() resolves
+                         * creates an audible hole before the jingle.
+                         */
                         var promise = sample.audio.play();
-                        if (promise && typeof promise.catch === 'function') {
-                            promise.catch(function () {});
+                        if (promise && typeof promise.then === 'function') {
+                            promise.then(function () {
+                                applyProgrammeDuck();
+                            }).catch(function () {
+                                releaseProgrammeDuck();
+                            });
+                        } else if (!sample.audio.paused) {
+                            applyProgrammeDuck();
                         }
                     }
 
