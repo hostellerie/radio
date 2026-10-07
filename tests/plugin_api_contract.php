@@ -870,11 +870,14 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, 'function plugin_configchange_radio($group, $changes = array())') !== false
         && strpos($functions, "in_array('enabled', \$changes, true)") !== false
-        && strpos($functions, 'function RADIO_notifyPublicAvailabilityChange()') !== false
+        && strpos($functions, 'function RADIO_queuePublicAvailabilityChange($enabled)') !== false
+        && strpos($functions, 'function RADIO_processPublicAvailabilityQueue($limit = 5)') !== false
+        && strpos($functions, 'function plugin_runScheduledTask_radio()') !== false
         && strpos($functions, "PLG_itemSaved(RADIO_externalId('media'") !== false
         && strpos($functions, "PLG_itemSaved(RADIO_externalId('program'") !== false
+        && strpos($functions, 'RADIO_queuePublicAvailabilityChange(RADIO_isEnabled());') !== false
         && strpos($functions, 'if (!RADIO_isEnabled())') !== false,
-    'Public Radio availability changes must re-emit lifecycle events and withdraw disabled Radio items from the sitemap.'
+    'Public Radio availability changes must queue bounded lifecycle events outside configuration saves and withdraw disabled Radio items from the sitemap.'
 );
 
 radio_contract_require(
