@@ -467,6 +467,7 @@ $LANG_confignames['radio'] = array(
     'whatsnew_limit' => 'Maximum Radio items in What’s New',
     'stats_enabled' => 'Enable privacy-preserving listening statistics?',
     'stats_retention_days' => 'Statistics retention (days)',
+    'debug_logging' => 'Enable debug logging?',
     'library_mode' => 'Media library mode',
     'shared_storage_path' => 'Shared media storage path',
     'shared_media_sync_interval' => 'Shared media metadata sync interval (seconds)',
