@@ -1830,16 +1830,29 @@
                         return;
                     }
 
+                    var jingleIntoMusic = String(items[index].media_type || '') === 'jingle'
+                        && items[index + 1]
+                        && String(items[index + 1].media_type || '') === 'music';
                     var declaredDuration = parseFloat(items[index].duration || 0) || 0;
                     var actualDuration = isFinite(audio.duration) && audio.duration > 0
                         ? audio.duration
                         : declaredDuration;
                     var remaining = Math.max(0, actualDuration - (audio.currentTime || 0));
-                    if (remaining > overlap + 0.12) {
-                        return;
-                    }
 
-                    if (!queuePreloadUrl || queuePreload.readyState < 3) {
+                    /*
+                     * The first jingle -> music transition can have buffered
+                     * bytes while the media element still reports HAVE_CURRENT_DATA
+                     * (readyState 2). Waiting for HAVE_FUTURE_DATA here can miss
+                     * the overlap window and leave a short gap on decoder startup.
+                     */
+                    var bufferedNext = queueBufferedAhead(queuePreload);
+                    var preloadReady = queuePreload.readyState >= 3
+                        || (jingleIntoMusic
+                            && queuePreload.readyState >= 2
+                            && bufferedNext >= Math.max(0.5, overlap));
+                    var startMargin = jingleIntoMusic ? 0.45 : 0.12;
+
+                    if (remaining > overlap + startMargin || !queuePreloadUrl || !preloadReady) {
                         return;
                     }
 
@@ -1863,9 +1876,6 @@
                                 return;
                             }
                             var progressValue = Math.min(1, (nowTime - startedAt) / (overlap * 1000));
-                            var jingleIntoMusic = String(items[index].media_type || '') === 'jingle'
-                                && items[index + 1]
-                                && String(items[index + 1].media_type || '') === 'music';
                             audio.volume = jingleIntoMusic ? 1 : (1 - progressValue);
                             queuePreload.volume = progressValue;
 
@@ -1906,7 +1916,7 @@
                     if (queueMixing || audio.paused || index + 1 >= items.length
                         || !itemPlayable(index) || !itemPlayable(index + 1)
                         || queuePreloadUrl !== (items[index + 1].stream_url || '')
-                        || queuePreload.readyState < 2) {
+                        || (queuePreload.readyState < 2 && queueBufferedAhead(queuePreload) <= 0)) {
                         return;
                     }
 
