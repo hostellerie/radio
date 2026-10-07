@@ -507,6 +507,15 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'function bufferedQueueElementFor') !== false
+        && strpos($publicPlayer, 'function activateBufferedQueueItem') !== false
+        && strpos($publicPlayer, "setItem(seekIndex, 0, true);") !== false
+        && strpos($publicPlayer, "queueBufferedAhead(queuePreload) > 0") !== false
+        && strpos($publicPlayer, "queueBufferedAhead(queueReserve) > 0") !== false,
+    'Radio Studio manual track selection must start immediately and reuse already-buffered preload/reserve audio.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function promoteQueuePreload') !== false
         && strpos($publicPlayer, 'queuePreload.readyState < 2') !== false
         && strpos($publicPlayer, 'if (promoteQueuePreload(followingIndex))') !== false,
