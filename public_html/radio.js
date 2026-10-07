@@ -2011,8 +2011,81 @@
                     }
                 }
 
+                function bufferedQueueElementFor(nextIndex) {
+                    if (!items[nextIndex] || !items[nextIndex].stream_url) {
+                        return '';
+                    }
+
+                    var targetUrl = items[nextIndex].stream_url;
+                    if (queuePreloadUrl === targetUrl
+                        && (queuePreload.readyState >= 2 || queueBufferedAhead(queuePreload) > 0)) {
+                        return 'preload';
+                    }
+                    if (queueReserveUrl === targetUrl
+                        && (queueReserve.readyState >= 2 || queueBufferedAhead(queueReserve) > 0)) {
+                        return 'reserve';
+                    }
+                    return '';
+                }
+
+                function activateBufferedQueueItem(nextIndex, localOffset, shouldPlay) {
+                    var slot = bufferedQueueElementFor(nextIndex);
+                    if (slot === '') {
+                        return false;
+                    }
+
+                    if (queueMixing) {
+                        stopQueueFade();
+                    }
+                    flush();
+                    started = false;
+
+                    var previousAudio = audio;
+                    if (slot === 'preload') {
+                        audio = queuePreload;
+                        queuePreload = queueReserve;
+                        queuePreloadUrl = queueReserveUrl;
+                        queueReserve = previousAudio;
+                        queueReserveUrl = '';
+                    } else {
+                        audio = queueReserve;
+                        queueReserve = previousAudio;
+                        queueReserveUrl = '';
+                    }
+
+                    index = nextIndex;
+                    audio.volume = 1;
+                    queuePreload.volume = 1;
+                    queueReserve.pause();
+                    queueReserve.volume = 1;
+                    queueReserve.removeAttribute('src');
+                    queueReserve.load();
+
+                    try {
+                        audio.currentTime = Math.max(0, localOffset || 0);
+                    } catch (error) {}
+
+                    refreshQueuePreload();
+                    maintainQueueBuffers();
+                    updateUi();
+
+                    if (shouldPlay) {
+                        var bufferedPlay = audio.play();
+                        if (bufferedPlay && typeof bufferedPlay.catch === 'function') {
+                            bufferedPlay.catch(function () {});
+                        }
+                    }
+                    return true;
+                }
+
                 function setItem(nextIndex, localOffset, shouldPlay) {
                     nextIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+
+                    if (nextIndex !== index
+                        && activateBufferedQueueItem(nextIndex, localOffset, shouldPlay)) {
+                        return;
+                    }
+
                     if (queueMixing) {
                         stopQueueFade();
                     }
@@ -2023,8 +2096,12 @@
                     index = nextIndex;
                     refreshQueuePreload();
                     var item = items[index];
-                    audio.src = item.stream_url || '';
-                    audio.load();
+                    var targetUrl = item.stream_url || '';
+
+                    if (audio.src !== targetUrl && audio.currentSrc !== targetUrl) {
+                        audio.src = targetUrl;
+                        audio.load();
+                    }
 
                     function applyOffset() {
                         try {
@@ -2083,7 +2160,7 @@
                     }
                     for (var seekIndex = 0; seekIndex < items.length; seekIndex++) {
                         if ((parseInt(items[seekIndex].item_id || 0, 10) || 0) === itemId) {
-                            setItem(seekIndex, 0, !audio.paused);
+                            setItem(seekIndex, 0, true);
                             break;
                         }
                     }
