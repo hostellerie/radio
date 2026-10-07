@@ -42,9 +42,9 @@ function RADIO_publicAccessAllowed()
         || SEC_hasRights('radio.admin,radio.upload,radio.schedule', 'OR');
 }
 
-function RADIO_requirePublicAccess($redirectToSite = false)
+function RADIO_requirePublicAccess($renderPublicMessage = false)
 {
-    global $_CONF;
+    global $_RADIO_CONF, $LANG_RADIO;
 
     if (RADIO_publicAccessAllowed()) {
         return;
@@ -52,15 +52,28 @@ function RADIO_requirePublicAccess($redirectToSite = false)
 
     header('Cache-Control: no-store, max-age=0');
 
-    if ($redirectToSite) {
-        COM_redirect(rtrim($_CONF['site_url'], '/') . '/');
+    // A deliberately disabled public Radio is a withdrawn resource, not an
+    // authorization failure or a redirect. 410 helps crawlers retire URLs
+    // that may previously have been published and submitted to search engines.
+    if (function_exists('http_response_code')) {
+        http_response_code(410);
+    } else {
+        header('HTTP/1.1 410 Gone');
     }
 
-    if (function_exists('http_response_code')) {
-        http_response_code(403);
-    } else {
-        header('HTTP/1.1 403 Forbidden');
+    if ($renderPublicMessage && function_exists('COM_createHTMLDocument')) {
+        $title = isset($_RADIO_CONF['public_title']) && trim((string) $_RADIO_CONF['public_title']) !== ''
+            ? trim((string) $_RADIO_CONF['public_title'])
+            : (isset($LANG_RADIO['plugin_name']) ? $LANG_RADIO['plugin_name'] : 'Radio');
+        $message = isset($LANG_RADIO['public_disabled'])
+            ? $LANG_RADIO['public_disabled']
+            : 'The public Radio is currently unavailable.';
+        $content = function_exists('COM_showMessageText')
+            ? COM_showMessageText($message, $title)
+            : '<p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
+        COM_output(COM_createHTMLDocument($content, array('pagetitle' => $title)));
     }
+
     exit;
 }
 
@@ -134,6 +147,60 @@ function RADIO_pathEndsWith($path, $suffix)
     }
 
     return substr($path, -strlen($suffix)) === $suffix;
+}
+
+/**
+ * Notify Geeklog integrations that Radio public availability changed.
+ *
+ * Re-emitting item-saved lifecycle events is intentional: consumers can
+ * resolve the item again and decide whether it is public. IndexNow, for
+ * example, can use its previously known public URL when Radio is disabled,
+ * while a later re-enable resolves the URL normally again.
+ */
+function RADIO_notifyPublicAvailabilityChange()
+{
+    global $_TABLES;
+
+    if (!function_exists('PLG_itemSaved') || !RADIO_isDatabaseCurrent()) {
+        return;
+    }
+
+    $media = DB_query(
+        "SELECT media_id FROM {$_TABLES['radio_media']} WHERE status='published' ORDER BY media_id"
+    );
+    while ($row = DB_fetchArray($media)) {
+        PLG_itemSaved(RADIO_externalId('media', (int) $row['media_id']), 'radio');
+    }
+
+    $programs = DB_query(
+        "SELECT program_id FROM {$_TABLES['radio_programs']} WHERE status='published' ORDER BY program_id"
+    );
+    while ($row = DB_fetchArray($programs)) {
+        PLG_itemSaved(RADIO_externalId('program', (int) $row['program_id']), 'radio');
+    }
+}
+
+/**
+ * React to Radio configuration changes.
+ *
+ * The configuration object is reloaded because the request-global copy may
+ * still contain values from before the configuration form was saved.
+ */
+function plugin_configchange_radio($group, $changes = array())
+{
+    global $_RADIO_CONF;
+
+    if ($group !== 'radio' || !is_array($changes) || !in_array('enabled', $changes, true)) {
+        return;
+    }
+
+    $radioConfig = config::get_instance();
+    $current = $radioConfig->get_config('radio');
+    if (is_array($current)) {
+        $_RADIO_CONF = $current;
+    }
+
+    RADIO_notifyPublicAvailabilityChange();
 }
 
 function plugin_getfootercode_radio()
@@ -5897,7 +5964,7 @@ function RADIO_compareItemModifiedDesc($a, $b)
 
 function plugin_collectSitemapItems_radio($uid = 1, $limit = 0)
 {
-    if (!RADIO_publicAccessAllowed()) {
+    if (!RADIO_isEnabled()) {
         return array();
     }
     global $_TABLES, $_CONF;
