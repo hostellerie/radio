@@ -10,11 +10,16 @@
 
 function RADIO_studioLog($event, $context = array(), $level = 'INFO')
 {
-    global $_CONF;
+    global $_CONF, $_RADIO_CONF;
 
     $level = strtoupper(trim((string) $level));
     if ($level === '') {
         $level = 'INFO';
+    }
+
+    $debugEnabled = !empty($_RADIO_CONF['debug_logging']);
+    if (!$debugEnabled && !in_array($level, array('WARNING', 'ERROR'), true)) {
+        return true;
     }
 
     $parts = array();
