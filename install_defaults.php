@@ -25,6 +25,7 @@ $_RADIO_DEFAULT = array(
     'whatsnew_limit' => 10,
     'stats_enabled' => 1,
     'stats_retention_days' => 90,
+    'debug_logging' => 0,
     'block_enabled' => 0,
     'block_isleft' => 0,
     'block_order' => 50,
@@ -63,6 +64,7 @@ function RADIO_configSortOrder()
         'whatsnew_limit' => 130,
         'stats_enabled' => 140,
         'stats_retention_days' => 150,
+        'debug_logging' => 155,
         'block_enabled' => 160,
         'block_isleft' => 170,
         'block_order' => 180,
@@ -81,7 +83,7 @@ function RADIO_configSortOrder()
 
 function RADIO_addConfigSetting($c, $name, $default, $sort)
 {
-    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode', 'youtube_enabled', 'youtube_mode', 'youtube_video_size', 'youtube_audio_bitrate'), true)
+    $type = in_array($name, array('enabled', 'allow_downloads', 'on_demand_enabled', 'fallback_enabled', 'whatsnew_enabled', 'stats_enabled', 'debug_logging', 'block_enabled', 'block_isleft', 'transition_mode', 'library_mode', 'media_delivery_mode', 'youtube_enabled', 'youtube_mode', 'youtube_video_size', 'youtube_audio_bitrate'), true)
         ? 'select'
         : 'text';
     $select = $name === 'transition_mode'
