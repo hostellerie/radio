@@ -128,6 +128,15 @@ function RADIO_ensureConfig()
         $current = array();
     }
 
+    // Remove settings from the short-lived 0.5.0 shared-library catalogue
+    // model. Radio 0.5.1+ uses shared files and embedded metadata only.
+    foreach (array_keys($current) as $name) {
+        if (strpos($name, 'shared_library_') === 0) {
+            $c->del($name, 'radio');
+            unset($current[$name]);
+        }
+    }
+
     foreach (RADIO_configSortOrder() as $name => $sort) {
         if (!array_key_exists($name, $current)) {
             RADIO_addConfigSetting($c, $name, $_RADIO_DEFAULT[$name], $sort);
