@@ -150,41 +150,149 @@ function RADIO_pathEndsWith($path, $suffix)
 }
 
 /**
- * Notify Geeklog integrations that Radio public availability changed.
+ * Path to the deferred public-availability lifecycle queue.
  *
- * Re-emitting item-saved lifecycle events is intentional: consumers can
- * resolve the item again and decide whether it is public. IndexNow, for
- * example, can use its previously known public URL when Radio is disabled,
- * while a later re-enable resolves the URL normally again.
+ * The queue is deliberately file-backed rather than stored in Geeklog's vars
+ * table so Radio remains compatible with Geeklog 2.1.1, where vars.value may
+ * still be too small for arbitrary queue payloads.
  */
-function RADIO_notifyPublicAvailabilityChange()
+function RADIO_publicAvailabilityQueuePath()
+{
+    $base = RADIO_storageDir();
+    return $base === '' ? '' : $base . 'public-availability-queue.json';
+}
+
+function RADIO_queuePublicAvailabilityChange($enabled)
+{
+    if (!RADIO_ensureStorage()) {
+        COM_errorLog('Radio: unable to queue public availability lifecycle events because storage is unavailable.', 1);
+        return false;
+    }
+
+    $path = RADIO_publicAvailabilityQueuePath();
+    if ($path === '') {
+        return false;
+    }
+
+    $state = array(
+        'enabled' => $enabled ? 1 : 0,
+        'media_after' => 0,
+        'program_after' => 0,
+        'phase' => 'media',
+        'queued_at' => time()
+    );
+
+    return @file_put_contents($path, json_encode($state), LOCK_EX) !== false;
+}
+
+function RADIO_readPublicAvailabilityQueue()
+{
+    $path = RADIO_publicAvailabilityQueuePath();
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return false;
+    }
+
+    $raw = @file_get_contents($path);
+    $state = $raw !== false ? json_decode($raw, true) : false;
+    return is_array($state) ? $state : false;
+}
+
+function RADIO_writePublicAvailabilityQueue($state)
+{
+    $path = RADIO_publicAvailabilityQueuePath();
+    if ($path === '' || !is_array($state)) {
+        return false;
+    }
+
+    return @file_put_contents($path, json_encode($state), LOCK_EX) !== false;
+}
+
+function RADIO_clearPublicAvailabilityQueue()
+{
+    $path = RADIO_publicAvailabilityQueuePath();
+    return $path === '' || !is_file($path) || @unlink($path);
+}
+
+/**
+ * Process a bounded number of public-availability lifecycle events.
+ *
+ * This must never run inside the configuration-save request: listeners such
+ * as IndexNow may perform network I/O for each item. Deferring the work keeps
+ * configuration saves deterministic and avoids blank pages/timeouts.
+ */
+function RADIO_processPublicAvailabilityQueue($limit = 5)
 {
     global $_TABLES;
 
     if (!function_exists('PLG_itemSaved') || !RADIO_isDatabaseCurrent()) {
-        return;
+        return 0;
     }
 
-    $media = DB_query(
-        "SELECT media_id FROM {$_TABLES['radio_media']} WHERE status='published' ORDER BY media_id"
-    );
-    while ($row = DB_fetchArray($media)) {
-        PLG_itemSaved(RADIO_externalId('media', (int) $row['media_id']), 'radio');
+    $state = RADIO_readPublicAvailabilityQueue();
+    if ($state === false) {
+        return 0;
     }
 
-    $programs = DB_query(
-        "SELECT program_id FROM {$_TABLES['radio_programs']} WHERE status='published' ORDER BY program_id"
-    );
-    while ($row = DB_fetchArray($programs)) {
-        PLG_itemSaved(RADIO_externalId('program', (int) $row['program_id']), 'radio');
+    $limit = max(1, min(20, (int) $limit));
+    $processed = 0;
+
+    while ($processed < $limit) {
+        if ($state['phase'] === 'media') {
+            $after = isset($state['media_after']) ? (int) $state['media_after'] : 0;
+            $result = DB_query(
+                "SELECT media_id FROM {$_TABLES['radio_media']} "
+                . "WHERE status='published' AND media_id>" . $after
+                . " ORDER BY media_id LIMIT 1"
+            );
+            $row = DB_fetchArray($result);
+            if (is_array($row) && isset($row['media_id'])) {
+                $id = (int) $row['media_id'];
+                $state['media_after'] = $id;
+                RADIO_writePublicAvailabilityQueue($state);
+                PLG_itemSaved(RADIO_externalId('media', $id), 'radio');
+                $processed++;
+                continue;
+            }
+
+            $state['phase'] = 'program';
+            RADIO_writePublicAvailabilityQueue($state);
+            continue;
+        }
+
+        $after = isset($state['program_after']) ? (int) $state['program_after'] : 0;
+        $result = DB_query(
+            "SELECT program_id FROM {$_TABLES['radio_programs']} "
+            . "WHERE status='published' AND program_id>" . $after
+            . " ORDER BY program_id LIMIT 1"
+        );
+        $row = DB_fetchArray($result);
+        if (is_array($row) && isset($row['program_id'])) {
+            $id = (int) $row['program_id'];
+            $state['program_after'] = $id;
+            RADIO_writePublicAvailabilityQueue($state);
+            PLG_itemSaved(RADIO_externalId('program', $id), 'radio');
+            $processed++;
+            continue;
+        }
+
+        RADIO_clearPublicAvailabilityQueue();
+        break;
     }
+
+    return $processed;
+}
+
+function plugin_runScheduledTask_radio()
+{
+    RADIO_processPublicAvailabilityQueue(5);
 }
 
 /**
  * React to Radio configuration changes.
  *
- * The configuration object is reloaded because the request-global copy may
- * still contain values from before the configuration form was saved.
+ * Only queue the lifecycle refresh here. Performing PLG_itemSaved() directly
+ * from the configuration request can block on integrations such as IndexNow
+ * and cause the configuration page to time out.
  */
 function plugin_configchange_radio($group, $changes = array())
 {
@@ -200,7 +308,7 @@ function plugin_configchange_radio($group, $changes = array())
         $_RADIO_CONF = $current;
     }
 
-    RADIO_notifyPublicAvailabilityChange();
+    RADIO_queuePublicAvailabilityChange(RADIO_isEnabled());
 }
 
 function plugin_getfootercode_radio()
