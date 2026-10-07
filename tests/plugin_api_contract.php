@@ -857,12 +857,24 @@ radio_contract_require(
 radio_contract_require(
     strpos($functions, 'function RADIO_isEnabled()') !== false
         && strpos($functions, 'function RADIO_publicAccessAllowed()') !== false
-        && strpos($functions, 'function RADIO_requirePublicAccess($redirectToSite = false)') !== false
+        && strpos($functions, 'function RADIO_requirePublicAccess($renderPublicMessage = false)') !== false
+        && strpos($functions, 'http_response_code(410)') !== false
+        && strpos($functions, "header('HTTP/1.1 410 Gone')") !== false
         && strpos($publicIndex, 'RADIO_requirePublicAccess(true);') !== false
         && strpos($publicProgram, 'RADIO_requirePublicAccess(true);') !== false
         && strpos($publicReplay, 'RADIO_requirePublicAccess(true);') !== false
         && strpos($publicSchedule, 'RADIO_requirePublicAccess(true);') !== false,
-    'Disabled Radio must redirect public HTML pages to the site index while allowing Radio administrative users through.'
+    'Disabled public Radio must return HTTP 410 for public HTML pages while allowing Radio administrative users through.'
+);
+
+radio_contract_require(
+    strpos($functions, 'function plugin_configchange_radio($group, $changes = array())') !== false
+        && strpos($functions, "in_array('enabled', $changes, true)") !== false
+        && strpos($functions, 'function RADIO_notifyPublicAvailabilityChange()') !== false
+        && strpos($functions, "PLG_itemSaved(RADIO_externalId('media'") !== false
+        && strpos($functions, "PLG_itemSaved(RADIO_externalId('program'") !== false
+        && strpos($functions, 'if (!RADIO_isEnabled())') !== false,
+    'Public Radio availability changes must re-emit lifecycle events and withdraw disabled Radio items from the sitemap.'
 );
 
 radio_contract_require(
