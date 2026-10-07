@@ -507,6 +507,14 @@ radio_contract_require(
 );
 
 radio_contract_require(
+    strpos($publicPlayer, 'var bufferedNext = queueBufferedAhead(queuePreload);') !== false
+        && strpos($publicPlayer, 'queuePreload.readyState >= 2') !== false
+        && strpos($publicPlayer, 'bufferedNext >= Math.max(0.5, overlap)') !== false
+        && strpos($publicPlayer, 'var startMargin = jingleIntoMusic ? 0.45 : 0.12;') !== false,
+    'First jingle-to-music transitions must accept real buffered audio before HAVE_FUTURE_DATA and start with extra decoder margin.'
+);
+
+radio_contract_require(
     strpos($publicPlayer, 'function applyProgrammeDuck()') !== false
         && strpos($publicPlayer, 'function releaseProgrammeDuck()') !== false
         && strpos($publicPlayer, 'promise.then(function ()') !== false
