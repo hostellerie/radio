@@ -201,6 +201,12 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
+    strpos($defaults, "strpos($name, 'shared_library_') === 0") !== false
+        && strpos($defaults, "$c->del($name, 'radio');") !== false,
+    'Radio configuration reconciliation must remove obsolete shared_library_* settings from development installations.'
+);
+
+radio_contract_require(
     strpos($versionFile, "RADIO_PLUGIN_VERSION', '0.6.2") !== false
         && strpos($updatesFile, "'0.3.0' => array(") !== false
         && strpos($updatesFile, "'next' => '0.3.1'") !== false
