@@ -869,7 +869,7 @@ radio_contract_require(
 
 radio_contract_require(
     strpos($functions, 'function plugin_configchange_radio($group, $changes = array())') !== false
-        && strpos($functions, "in_array('enabled', $changes, true)") !== false
+        && strpos($functions, "in_array('enabled', \$changes, true)") !== false
         && strpos($functions, 'function RADIO_notifyPublicAvailabilityChange()') !== false
         && strpos($functions, "PLG_itemSaved(RADIO_externalId('media'") !== false
         && strpos($functions, "PLG_itemSaved(RADIO_externalId('program'") !== false
