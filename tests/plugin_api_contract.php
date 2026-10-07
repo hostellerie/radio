@@ -201,8 +201,8 @@ radio_contract_require(
 $versionFile = file_get_contents($root . '/version.php');
 $updatesFile = file_get_contents($root . '/install_updates.php');
 radio_contract_require(
-    strpos($defaults, "strpos($name, 'shared_library_') === 0") !== false
-        && strpos($defaults, "$c->del($name, 'radio');") !== false,
+    strpos($defaults, "strpos(\$name, 'shared_library_') === 0") !== false
+        && strpos($defaults, "\$c->del(\$name, 'radio');") !== false,
     'Radio configuration reconciliation must remove obsolete shared_library_* settings from development installations.'
 );
 
