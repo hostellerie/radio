@@ -626,7 +626,9 @@ function RADIO_youtubeTarget($timestamp)
                 'start' => $timestamp,
                 'end' => 0,
                 'elapsed' => 0,
-                'remaining' => 0
+                // Bound the encoder to the programme length, rather than
+                // allowing a finished manual show to leave FFmpeg running.
+                'remaining' => max(0, (int) RADIO_programDuration((int) $program['program_id']))
             );
         }
     }
