@@ -253,6 +253,53 @@ if ($action === 'recording_abort') {
     ), $ok ? 200 : 400);
 }
 
+// Server-owned programme mode: start is a request processed by the existing
+// YouTube cron worker. No browser audio is uploaded in this mode.
+if ($action === 'youtube_server_status') {
+    radio_studio_stream_json(array('ok' => true,
+        'server_youtube' => RADIO_youtubeStatus()), 200);
+}
+if ($action === 'youtube_server_start') {
+    $config = RADIO_youtubeConfig();
+    $studio = RADIO_studioYoutubePublicStatus();
+    $server = RADIO_youtubeStatus();
+    if (empty($config['enabled']) || empty($config['stream_key'])) {
+        radio_studio_stream_json(array('ok' => false, 'error' => 'youtube_disabled'), 400);
+    }
+    if (in_array($studio['state'], array('starting','live','stopping'), true)) {
+        radio_studio_stream_json(array('ok' => false,
+            'error' => 'studio_youtube_already_live'), 409);
+    }
+    if (!empty($server['running']) || ((int) $server['pid'] > 1
+        && RADIO_youtubePidRunning((int) $server['pid']))) {
+        radio_studio_stream_json(array('ok' => false,
+            'error' => 'youtube_server_broadcast_active'), 409);
+    }
+    $ok = RADIO_youtubeSaveManualProgram($programId)
+        && RADIO_youtubeSetManualRequest(true);
+    radio_studio_stream_json(array('ok' => (bool) $ok,
+        'server_youtube' => RADIO_youtubeStatus(),
+        'message' => $ok ? 'Requested: waiting for YouTube cron worker' : ''),
+        $ok ? 200 : 500);
+}
+if ($action === 'youtube_server_stop') {
+    $server = RADIO_youtubeStatus();
+    $config = RADIO_youtubeConfig();
+    // Only the manually requested stream can be stopped here.
+    if (empty($config['manual_requested'])
+        || (int) $config['manual_program_id'] !== $programId
+        || (int) $server['program_id'] !== $programId
+        || strpos((string) $server['target_key'], 'manual:') !== 0) {
+        radio_studio_stream_json(array('ok' => false,
+            'error' => 'youtube_not_manual_program'), 409);
+    }
+    $pid = (int) $server['pid'];
+    $ok = RADIO_youtubeSetManualRequest(false)
+        && RADIO_youtubeStopManaged($pid);
+    radio_studio_stream_json(array('ok' => (bool) $ok,
+        'server_youtube' => RADIO_youtubeStatus()), $ok ? 200 : 500);
+}
+
 if ($action === 'youtube_live_start') {
     $error = '';
     $live = RADIO_studioYoutubeStart(
