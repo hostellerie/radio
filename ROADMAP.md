@@ -950,6 +950,37 @@ Candidates:
 - listening/download statistics;
 - remote provider adapters.
 
+## Server-owned broadcast convergence — implementation stages
+
+**Objective:** keep the proven manual/server-side programme engine as the reliable default transport. The existing browser-fed Studio live path remains a separate experimental mode until a persistent audio switch is available.
+
+### Stage 0 — safe coexistence (initial guard committed)
+
+- [x] Studio must not silently kill a functioning manual/scheduled FFmpeg publisher when Studio Live starts. Explicitly reject the takeover with `youtube_server_broadcast_active`.
+- [ ] Provide an operator-friendly message and server-live status/actions directly inside Studio, so the existing server programme broadcast is discoverable.
+- [ ] Audit the reverse direction (manual/scheduled encoder trying to start during Studio Live) with cross-process locking and a single active ingest lease.
+
+### Stage 1 — reusable server controller
+
+- [ ] Extract manual encoder start/stop/health into an authenticated, idempotent server-side controller callable from both admin YouTube and Studio.
+- [ ] Expose programme selection, planned show metadata, playlist cursor and manual programme start/stop in Studio **without** routing media through browser MediaRecorder.
+- [ ] Keep server-owned broadcasts independent of browser connection, using the current scheduled worker/cron or an available supervisor; clearly surface delayed cron starts.
+- [ ] Unify video/subtitle rendering with server mode; explicitly report which tracks follow the fixed programme timeline versus live DJ changes.
+- [ ] Preserve compatibility with manual and scheduled YouTube workflows, multisite ownership, ACL/CSRF and PHP 5.6 through 8.1.
+
+### Stage 2 — seamless Studio audio takeover and fallback
+
+- [ ] Prototype one persistent FFmpeg encoder with **two independently available audio sources**: server programme/fallback and browser master mix. Build a switching/mixing layer ahead of the ingest and validate uninterrupted RTMPS and timestamps.
+- [ ] Add pre-live, operator takeover, pause/standby, browser/network failure and reconnection modes with configurable, bounded timeouts.
+- [ ] Synchronize the actual DJ programme cursor, transitions and track titles; do not render manually reordered Studio tracks from a fixed schedule.
+- [ ] Audio transport needs bounded, sequence-aware buffering and backpressure. A POST-per-second media relay and consumed CSRF token per chunk is not the long-term transport.
+- [ ] Test against Tiger Protect/WAF constraints and shared-host process limits, and distinguish encoder alive from YouTube receiving data.
+- [ ] Only expose automatic failover after verified end-to-end tests of temporary browser loss, long disconnects, orphan cleanup, simultaneous starts and YouTube event continuity.
+
+**Operational limitation:** Stage 0 is not a seamless merger. The existing manual mode stays stable; the Studio browser mix still uses HTTP fragments and can stop on network or API failure. Do not market stage 2 features as shipped.
+
+---
+
 ## Future evolution proposal — resilient YouTube Live broadcast lifecycle (design only)
 
 **Status: proposed / not implemented.** This section documents an optional post-stabilization evolution. It does not change current Studio, manual or scheduled YouTube output behavior, and must not delay the current FFmpeg shutdown hardening.
