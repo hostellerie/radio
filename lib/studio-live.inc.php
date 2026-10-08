@@ -688,6 +688,55 @@ function RADIO_studioYoutubeRequestStop($sessionId, $uid, &$error)
     return RADIO_studioYoutubeStatus();
 }
 
+/**
+ * Administrative recovery for an abandoned Studio ingest.
+ * Never accept a PID from the HTTP request; use the persisted session only.
+ */
+function RADIO_studioYoutubeAdminStop($sessionId, &$error)
+{
+    $error = '';
+    $status = RADIO_studioYoutubeStatus();
+    if ($sessionId === '' || $sessionId !== (string) $status['session_id']) {
+        $error = 'studio_youtube_session_invalid';
+        return false;
+    }
+    $pid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
+    if ($pid > 1) {
+        // Guard against stale PID reuse: verify that this process is the
+        // detached Studio pipeline for the expected session input.
+        $lines = array();
+        $code = 1;
+        @exec('ps -p ' . $pid . ' -o args= 2>/dev/null', $lines, $code);
+        $args = implode(' ', $lines);
+        $expectedInput = RADIO_studioYoutubeInputPath($sessionId);
+        if ($code !== 0 || $expectedInput === ''
+            || strpos($args, 'tail -c +1 -F') === false
+            || strpos($args, $expectedInput) === false) {
+            $error = 'studio_youtube_process_unverified';
+            RADIO_studioYoutubeWriteStatus(array('last_error' => $error));
+            return false;
+        }
+    }
+    RADIO_studioYoutubeWriteStatus(array('state' => 'stopping',
+        'stop_requested' => true));
+    if ($pid > 1 && !RADIO_studioYoutubeStopEncoder($pid)) {
+        $error = 'studio_youtube_stop_failed';
+        RADIO_studioYoutubeWriteStatus(array('last_error' => $error));
+        return false;
+    }
+    $input = RADIO_studioYoutubeInputPath($sessionId);
+    if ($input !== '' && is_file($input)) {
+        @unlink($input);
+    }
+    if (!RADIO_studioYoutubeWriteStatus(array('state' => 'idle',
+        'helper_pid' => 0, 'ffmpeg_pid' => 0, 'stop_requested' => false,
+        'last_error' => '', 'stopped_at' => date('Y-m-d H:i:s')))) {
+        $error = 'studio_youtube_stop_failed';
+        return false;
+    }
+    return RADIO_studioYoutubeStatus();
+}
+
 function RADIO_studioYoutubePublicStatus()
 {
     $status = RADIO_studioYoutubeCleanupStale();
