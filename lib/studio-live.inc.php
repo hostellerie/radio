@@ -420,13 +420,13 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     $automatic = RADIO_youtubeStatus();
     $automaticPid = isset($automatic['pid']) ? (int) $automatic['pid'] : 0;
     if ($automaticPid > 1 && RADIO_youtubePidRunning($automaticPid)) {
-        RADIO_youtubeStopPid($automaticPid);
-        RADIO_youtubeWriteStatus(array(
-            'running' => false,
-            'pid' => 0,
-            'target_key' => '',
-            'last_error' => ''
-        ));
+        // The server-managed programme is a working broadcast. Never tear it
+        // down silently as a side effect of opening Studio. Until a real
+        // switchable server mixer exists, require an explicit stop first.
+        $error = 'youtube_server_broadcast_active';
+        RADIO_studioYoutubeTrace('Start rejected: ' . $error
+            . ' (server encoder PID ' . $automaticPid . ').');
+        return false;
     }
 
     RADIO_studioYoutubeTrace('Creating Studio YouTube session.');
