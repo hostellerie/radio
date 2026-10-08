@@ -110,6 +110,7 @@ function radio_studio_stream_check_token()
 
     $token = isset($_POST[CSRF_TOKEN]) ? trim((string) $_POST[CSRF_TOKEN]) : '';
     if ($token === '') {
+        RADIO_studioLog('stream_api.csrf_rejected', array('reason' => 'missing'), 'WARNING');
         return false;
     }
 
@@ -118,6 +119,9 @@ function radio_studio_stream_check_token()
         . DB_escapeString($token) . "'"
     );
     if (DB_error() || DB_numRows($result) !== 1) {
+        RADIO_studioLog('stream_api.csrf_rejected', array(
+            'reason' => DB_error() ? 'database_error' : 'missing_or_consumed'
+        ), 'WARNING');
         return false;
     }
 
@@ -126,13 +130,18 @@ function radio_studio_stream_check_token()
 
     $uid = isset($_USER['uid']) ? (int) $_USER['uid'] : 1;
     if ($uid !== (int) $row['owner_id']) {
+        RADIO_studioLog('stream_api.csrf_rejected', array('reason' => 'owner_mismatch'), 'WARNING');
         return false;
     }
 
     $ttl = isset($row['ttl']) ? (int) $row['ttl'] : 0;
     $created = isset($row['created']) ? strtotime($row['created']) : false;
 
-    return $ttl <= 0 || ($created !== false && ($created + $ttl) >= time());
+    $valid = $ttl <= 0 || ($created !== false && ($created + $ttl) >= time());
+    if (!$valid) {
+        RADIO_studioLog('stream_api.csrf_rejected', array('reason' => 'expired'), 'WARNING');
+    }
+    return $valid;
 }
 
 if (!SEC_hasRights('radio.schedule')) {
