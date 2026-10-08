@@ -114,7 +114,8 @@ function RADIO_studioYoutubeStatus()
         'chunks' => 0,
         'bytes' => 0,
         'stop_requested' => false,
-        'last_error' => ''
+        'last_error' => '',
+        'stopped_at' => ''
     );
 
     $path = RADIO_studioYoutubeStatePath();
