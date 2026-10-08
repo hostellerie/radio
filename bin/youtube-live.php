@@ -243,11 +243,12 @@ $config = RADIO_youtubeConfig();
  */
 $studioYoutubeStatus = RADIO_studioYoutubeStatus();
 if (RADIO_studioYoutubeActive($studioYoutubeStatus)) {
+    // Never terminate an established server broadcast just because a Studio
+    // session was detected. Report conflicting ownership for operator review.
     if ($running && $pid > 1) {
-        if (!RADIO_youtubeStopManaged($pid)) {
-            radio_youtube_worker_log('Failed to stop encoder before Studio takeover (PID ' . $pid . ').');
-            exit(5);
-        }
+        radio_youtube_worker_log('Conflicting Studio and server YouTube encoders; refusing automatic takeover.');
+        RADIO_youtubeWriteStatus(array('last_error' => 'youtube_ingest_ownership_conflict'));
+        exit(5);
     }
     RADIO_youtubeWriteStatus(array(
         'running' => false,
