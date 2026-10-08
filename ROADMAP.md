@@ -950,6 +950,48 @@ Candidates:
 - listening/download statistics;
 - remote provider adapters.
 
+## Future evolution proposal — resilient YouTube Live broadcast lifecycle (design only)
+
+**Status: proposed / not implemented.** This section documents an optional post-stabilization evolution. It does not change current Studio, manual or scheduled YouTube output behavior, and must not delay the current FFmpeg shutdown hardening.
+
+### Product experience and lifecycle
+
+- [ ] Define an explicit state machine: `offline → preparing/connecting → pre-live → on-air ↔ paused → outro → stopping → stopped`, plus `reconnecting`, `failover` and `error` paths. Clearly separate *encoder connected*, *YouTube ingest receiving media* and *YouTube broadcast publicly live*; YouTube's start/stop and auto-stop options may affect these independently.
+- [ ] **Open live / pre-live:** establish the RTMPS connection, then deliberately start the public event when appropriate. Display a branded "Starting soon" scene, optional quiet background music, programme title and optional countdown to let viewers arrive without starting the Studio playlist.
+- [ ] **Start programme:** switch to the Studio master mix on operator command, maintaining the existing broadcast/event and one persistent encoder where technically feasible.
+- [ ] **Pause / intermission:** immediately replace the programme with a continuous, valid server-generated audio/video holding scene, preserving the connection. Support planned breaks and emergency interruptions, optional countdown and background music. Never represent simply starving FFmpeg of audio as a reliable pause.
+- [ ] **Resume:** return to the current Studio mix with a controlled fade/crossfade, avoiding duplicate playback and unexpected jingles.
+- [ ] **End show / outro:** show a configurable thanks/subscribe/next-appointment screen with optional audio and a bounded, configurable duration; only then gracefully stop the encoder and verify its termination.
+- [ ] **Emergency stop:** provide a separate immediate stop command that bypasses the outro, without falsely reporting success when FFmpeg/its descendants remain alive.
+- [ ] Allow reusable image/video scene templates, translated labels and optional programme-specific overrides configured in `admin/plugins/radio/youtube.php`; expose the minimal controls in `studio.php` without overloading the current live transport controls.
+- [ ] Apply the same lifecycle/holding/outro concept to **Scheduled YouTube output** and manual server-side output when useful, with explicit policy for event boundaries, recurrence, overrides and next scheduled programme.
+
+### Browser loss and continuity
+
+- [ ] Move ownership of the YouTube ingest and fallback source to a **server-side broadcast controller**. The browser remains the preferred live audio source and operator console, not the sole continuity source. Preserve one encoder/RTMPS ingest whenever supported, but document restart/recovery behavior when it cannot be maintained.
+- [ ] Add a bounded heartbeat/watchdog for the Studio source. Distinguish intentional silence from missing transport; do not depend only on `pagehide` or an unreliable unload request.
+- [ ] On browser/network loss, transition to a safe server-owned intermission scene first; after a configurable grace period either remain in intermission or begin server-side programme playback according to operator policy.
+- [ ] Use the existing Geeklog programme as a **possible fallback playlist**: server playback must resolve local/authorized playable media and respect programme sequencing, jingles, durations and transition rules. It must not assume that the original programme timeline matches a DJ's actual manual ordering.
+- [ ] Synchronize a lightweight, authoritative programme cursor (active item, offset, order/version, transport state, transitions, last acknowledged command and update timestamp) between Studio and server; validate that cursor is still usable before fallback starts.
+- [ ] On Studio reconnection, show whether server fallback/intermission is active and require a clear operator-controlled reclaim/handoff, with a fade rather than silently starting two sources.
+- [ ] Consider what to do when the browser closes while pre-live, paused, during the outro or while stopped; each transition needs a deterministic timeout and operator-visible status.
+- [ ] A server-produced holding feed requires encoding resources even during a pause; measure and budget shared-hosting CPU, IO and process quotas rather than promising reduced load.
+
+### Architecture and safety gates
+
+- [ ] Prototype a persistent audio/video source switch or mixer in front of one encoder; compare relay/FIFO, persistent FFmpeg filtergraph and dedicated service designs, emphasizing smooth transitions, backpressure, failure detection and minimal hosting requirements.
+- [ ] Explicitly assess limits of shared hosting: long-lived processes, binaries, process-group signaling, cron interval, shell restrictions and blocked network egress. Use feature detection and disable unsupported capabilities with honest diagnostics.
+- [ ] Preserve Studio/manual/scheduled **single-ingest ownership** across starts, stops, timeouts, overlapping cron invocations, PID reuse, crashes and rapid restarts; never launch two publishers using the same stream key.
+- [ ] Separate encoder health, actual media flow and YouTube platform status; do not infer a successful public broadcast or clean shutdown from a local JSON state flag alone.
+- [ ] Keep tracked PID/PGID, process identity, cleanup confirmation, bounded signal escalation, stop-result errors and last verified shutdown timestamps. Never kill unrelated or reused PIDs.
+- [ ] Build operator controls with ACL + CSRF, explicit action audit, bounded uploads, protected media paths and redacted stream secrets. State changes must be idempotent; do not expose controller commands to unauthenticated clients.
+- [ ] Avoid indefinite retries, unbounded buffers or sleep loops in web PHP requests. Implement cleanup/watchdog with bounded scheduled or supervisor-driven work when available.
+- [ ] Provide a read-only operational health capability for Monitor and clear site-wide admin alerts for orphaned encoders and failed stops, without creating a dependency on Monitor.
+- [ ] Validate transitions end-to-end (pre-live/live/pause/resume/outro/stop), browser close/crash/reconnect, 5–60-minute pauses, YouTube ingest interruption/auto-stop behavior, missing FFmpeg capabilities, scheduled takeovers, multi-site isolation and process leak/CPU tests on shared hosting and VPS.
+- [ ] Keep this work in a future dedicated development branch after current Radio stabilization; implement incrementally with a demo/prototype and no breaking changes to currently published releases.
+
+---
+
 ## 1.0.0 — Stable
 
 Required before 1.0:
