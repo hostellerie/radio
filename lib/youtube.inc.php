@@ -1363,6 +1363,21 @@ function RADIO_youtubeWriteStudioOverlay($programId, $trackTitle)
     return true;
 }
 
+function RADIO_youtubeWriteStudioAss($programId, &$error)
+{
+    $error = '';
+    $program = RADIO_getProgram((int) $programId, false);
+    if ($program === false) {
+        $error = 'youtube_program_missing';
+        return false;
+    }
+    return RADIO_youtubeWriteAss(array(
+        'program_id' => (int) $programId,
+        'program_title' => isset($program['title']) ? (string) $program['title'] : '',
+        'elapsed' => 0
+    ), $error);
+}
+
 function RADIO_youtubeStudioFfmpegCommand($programId, &$error, $ffmpegPath = 'ffmpeg', $videoMode = 'stationcard')
 {
     $error = '';
@@ -1384,7 +1399,7 @@ function RADIO_youtubeStudioFfmpegCommand($programId, &$error, $ffmpegPath = 'ff
         $ffmpegPath = 'ffmpeg';
     }
 
-    $videoMode = in_array($videoMode, array('stationcard','drawtext','showwaves','color'), true)
+    $videoMode = in_array($videoMode, array('stationcard','ass','drawtext','showwaves','color'), true)
         ? $videoMode
         : 'color';
 
@@ -1457,7 +1472,7 @@ function RADIO_youtubeStudioFfmpegCommand($programId, &$error, $ffmpegPath = 'ff
             . 'asetpts=PTS-STARTPTS[yaudio]'
     );
 
-    if ($renderVisualizer && ($videoMode === 'stationcard' || $videoMode === 'showwaves')) {
+    if ($renderVisualizer && ($videoMode === 'stationcard' || $videoMode === 'ass' || $videoMode === 'showwaves')) {
         $filters[] = '[yaudio]asplit=2[aout][awave]';
         $filters[] = '[awave]showwaves=s=' . $waveWidth . 'x' . $waveHeight
             . ':mode=' . $waveformStyle . ':rate=25:colors=' . $palette['primary'] . '[wave]';
@@ -1477,7 +1492,15 @@ function RADIO_youtubeStudioFfmpegCommand($programId, &$error, $ffmpegPath = 'ff
         $filters[] = '[' . $videoInputIndex . ':v]null[background]';
     }
 
-    if ($videoMode === 'stationcard' || $videoMode === 'drawtext') {
+    if ($videoMode === 'ass') {
+        $assError = '';
+        $ass = RADIO_youtubeWriteStudioAss($programId, $assError);
+        if ($ass === false) {
+            $error = $assError !== '' ? $assError : 'youtube_ass_write_failed';
+            return false;
+        }
+        $filters[] = "[background]subtitles='" . RADIO_youtubeFilterPath($ass) . "'[card]";
+    } elseif ($videoMode === 'stationcard' || $videoMode === 'drawtext') {
         $textFilters = array(
             "drawtext=font=Sans:textfile='" . RADIO_youtubeFilterPath(RADIO_youtubeOverlayPath('station'))
                 . "':reload=1:fontcolor=" . $palette['secondary'] . ":fontsize=22:x=(w-text_w)/2:y=h*0.10",
