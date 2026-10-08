@@ -1547,6 +1547,24 @@ function RADIO_youtubePidRunning($pid)
     return $code === 0;
 }
 
+/**
+ * Transition to idle only after the managed encoder exits.
+ * Keep its PID and error state available for inspection and retries.
+ */
+function RADIO_youtubeStopManaged($pid)
+{
+    $pid = (int) $pid;
+    if ($pid > 1 && !RADIO_youtubeStopPid($pid)) {
+        RADIO_youtubeWriteStatus(array('running' => true, 'pid' => $pid,
+            'last_error' => 'youtube_stop_failed'));
+        return false;
+    }
+    return RADIO_youtubeWriteStatus(array('running' => false, 'pid' => 0,
+        'target_key' => '', 'program_id' => 0, 'program_title' => '',
+        'schedule_id' => 0, 'target_end' => 0, 'last_error' => '',
+        'stopped_at' => date('Y-m-d H:i:s')));
+}
+
 function RADIO_youtubeStopPid($pid)
 {
     $pid = (int) $pid;
