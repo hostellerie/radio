@@ -957,7 +957,7 @@ Candidates:
 ### Stage 0 — safe coexistence (initial guard committed)
 
 - [x] Studio must not silently kill a functioning manual/scheduled FFmpeg publisher when Studio Live starts. Explicitly reject the takeover with `youtube_server_broadcast_active`.
-- [ ] Provide an operator-friendly message and server-live status/actions directly inside Studio, so the existing server programme broadcast is discoverable.
+- [x] Add Studio buttons to request a server-owned manual programme start (via the existing cron worker) and stop its own matching manual broadcast, including guarded ownership checks. Initial UI feedback is provided; continuous state refresh remains pending.
 - [ ] Audit the reverse direction (manual/scheduled encoder trying to start during Studio Live) with cross-process locking and a single active ingest lease.
 
 ### Stage 1 — reusable server controller
