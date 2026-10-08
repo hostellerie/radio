@@ -535,9 +535,12 @@
 
     function studioPost(formData) {
         return queueStudioPost(function () {
-            if (tokenName && tokenValue) {
-                formData.append(tokenName, tokenValue);
-            }
+            function send(attempt) {
+                // FormData is reused for a CSRF recovery retry: replace the
+                // consumed token instead of appending a second value.
+                if (tokenName && tokenValue) {
+                    formData.set(tokenName, tokenValue);
+                }
             if (!formData.has('program_id')) {
                 formData.append('program_id', String(programId));
             }
@@ -600,13 +603,21 @@
 
                         throw new Error(responseType + ':' + detail);
                     }
+                    // Only serialized POST replies may rotate this one-time
+                    // token. Concurrent read-only polls must not overwrite it.
                     updateToken(data);
                     if (!response.ok || !data.ok) {
+                        if (data.error === 'invalid_token' && attempt === 0
+                            && data.csrf_token) {
+                            return send(1);
+                        }
                         throw new Error(data.error || ('http_' + response.status));
                     }
                     return data;
                 });
             });
+            }
+            return send(0);
         });
     }
 
@@ -942,7 +953,6 @@
         }).then(function (response) {
             return response.json();
         }).then(function (data) {
-            updateToken(data);
             if (data.ok && data.youtube_live) {
                 setYoutubeLiveUi(data.youtube_live);
             }
@@ -1487,7 +1497,6 @@
                         throw new Error(kind + ':' + detail);
                     }
 
-                    updateToken(data);
                     updateBroadcast(data);
 
                     if (!response.ok || !data.ok) {
@@ -1643,7 +1652,6 @@
                 if (requestRevision !== stateRevision || mutationInFlight > 0) {
                     return;
                 }
-                updateToken(data);
                 if (!data.ok) {
                     return;
                 }
