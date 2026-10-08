@@ -654,3 +654,4 @@ $LANG_RADIO['youtube_shutdown_confirmed'] = 'Arrêt de FFmpeg confirmé';
 $LANG_RADIO['youtube_studio_shutdown_confirmed'] = 'Live YouTube Studio arrêté : arrêt de l’encodeur confirmé.';
 $LANG_RADIO['youtube_studio_stop_unconfirmed'] = 'Arrêt du Studio non confirmé : %s';
 $LANG_RADIO['youtube_manual_shutdown_confirmed'] = 'Live YouTube arrêté ; arrêt de FFmpeg confirmé.';
+$LANG_RADIO['youtube_health_studio_mode'] = 'Studio en direct';
