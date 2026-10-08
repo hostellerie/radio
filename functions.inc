@@ -410,6 +410,11 @@ function RADIO_adminLiveHealthBanner()
         $message = $LANG_RADIO['youtube_health_idle'];
     }
 
+    // A healthy idle state requires no persistent admin banner.
+    if ($state === 'idle') {
+        return '';
+    }
+
     $url = isset($_CONF['site_admin_url'])
         ? rtrim((string) $_CONF['site_admin_url'], '/') . '/plugins/radio/youtube.php'
         : '#';
