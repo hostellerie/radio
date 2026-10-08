@@ -330,7 +330,105 @@ function plugin_getfootercode_radio()
         $footer .= RADIO_adminScriptTag();
     }
 
+    // Visible throughout Geeklog administration, not only within Radio.
+    if (strpos($path, '/admin/') !== false
+        && function_exists('SEC_hasRights') && SEC_hasRights('radio.admin')) {
+        $footer .= RADIO_adminLiveHealthBanner();
+    }
+
     return $footer;
+}
+
+/**
+ * Site-wide administration indicator for encoder health.
+ *
+ * A recorded idle state is not proof that FFmpeg has exited. Check the
+ * operating-system process list as well, without exposing stream keys or
+ * command-line arguments in HTML. The process probe is read-only.
+ */
+function RADIO_adminLiveHealthBanner()
+{
+    global $_CONF;
+
+    $youtube = $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
+    $studio = $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
+    if (!is_readable($youtube) || !is_readable($studio)) {
+        return '';
+    }
+    require_once $youtube;
+    require_once $studio;
+
+    $studioState = RADIO_studioYoutubeStatus();
+    $outputState = RADIO_youtubeStatus();
+    $studioPid = isset($studioState['helper_pid']) ? (int) $studioState['helper_pid'] : 0;
+    $outputPid = isset($outputState['pid']) ? (int) $outputState['pid'] : 0;
+    $studioExpected = in_array(isset($studioState['state']) ? $studioState['state'] : '',
+        array('starting', 'live', 'stopping'), true);
+    $outputExpected = !empty($outputState['running']);
+    $liveProcessCount = 0;
+    $recognized = false;
+
+    // Only inspect current account processes. Never send their arguments to browsers.
+    if (function_exists('exec') && function_exists('get_current_user')) {
+        $user = trim((string) get_current_user());
+        if ($user !== '' && preg_match('/^[a-zA-Z0-9_.-]+$/', $user)) {
+            $lines = array();
+            $exit = 1;
+            @exec('ps -u ' . escapeshellarg($user) . ' -o pid=,args= 2>/dev/null', $lines, $exit);
+            if ($exit === 0) {
+                $recognized = true;
+                foreach ($lines as $line) {
+                    if (preg_match('/^\\s*([0-9]+)\\s+(.+)$/', $line, $match)
+                        && preg_match('~(?:^|/|\\s)ffmpeg(?:\\s|$)~i', $match[2])
+                        && !preg_match('~(?:ps -u|sh -c|bash -c)~i', $match[2])) {
+                        ++$liveProcessCount;
+                    }
+                }
+            }
+        }
+    }
+
+    $trackedAlive = ($studioPid > 1 && RADIO_youtubePidRunning($studioPid))
+        || ($outputPid > 1 && RADIO_youtubePidRunning($outputPid));
+    $expected = $studioExpected || $outputExpected;
+    if ($recognized && $liveProcessCount > 0 && !$expected) {
+        $state = 'warning';
+        $message = 'ALERTE : FFmpeg actif sans direct déclaré (' . $liveProcessCount . ' processus).';
+    } elseif ($expected && ($trackedAlive || ($recognized && $liveProcessCount > 0))) {
+        $state = 'live';
+        $mode = $studioExpected ? 'Studio Live' :
+            (!empty($outputState['schedule_id']) ? 'Scheduled YouTube output' : 'YouTube Live manuel');
+        $message = 'DIRECT ACTIF : ' . $mode . ' · FFmpeg détecté.';
+    } elseif ($expected) {
+        $state = 'warning';
+        $message = 'ATTENTION : diffusion déclarée mais encodeur non confirmé.';
+    } elseif (!$recognized) {
+        $state = 'unknown';
+        $message = 'YouTube Live : vérification des processus indisponible.';
+    } else {
+        $state = 'idle';
+        $message = 'YouTube Live arrêté · aucun processus FFmpeg détecté.';
+    }
+
+    $url = isset($_CONF['site_admin_url'])
+        ? rtrim((string) $_CONF['site_admin_url'], '/') . '/plugins/radio/youtube.php'
+        : '#';
+    $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    $bg = $state === 'live' ? '#125e39' : ($state === 'warning' ? '#912b21' :
+        ($state === 'unknown' ? '#544c21' : '#343a40'));
+    return '<style id="radio-live-global-style">#radio-live-global-banner{position:fixed;'
+        . 'z-index:2147483000;top:0;left:0;right:0;min-height:34px;box-sizing:border-box;'
+        . 'padding:7px 16px;text-align:center;font:600 13px/20px system-ui,sans-serif;'
+        . 'background:' . $bg . ';color:#fff}#radio-live-global-banner a{color:#fff;'
+        . 'text-decoration:underline;margin-left:14px}</style>'
+        . '<script>(function(){function show(){if(document.getElementById("radio-live-global-banner"))return;'
+        . 'var bar=document.createElement("div");bar.id="radio-live-global-banner";'
+        . 'bar.innerHTML=' . json_encode($message . ' <a href="' . $url . '">YouTube administration</a>') . ';'
+        . 'document.body.insertBefore(bar,document.body.firstChild);'
+        . 'document.body.style.paddingTop="38px";}'
+        . 'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",show);'
+        . 'else show();})();</script>';
 }
 
 function RADIO_statsEnabled()
