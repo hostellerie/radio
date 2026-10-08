@@ -454,14 +454,19 @@ function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
     }
 
     $videoMode = 'color';
-    if (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')
-        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay')
-        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+    $waves = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')
+        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay');
+    $hasText = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext');
+    $hasAss = RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'subtitles');
+    if ($waves && $hasText) {
         $videoMode = 'stationcard';
-    } elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'drawtext')) {
+    } elseif ($waves && $hasAss) {
+        // Use the same libass text rendering as manual YouTube output.
+        // Timeline-based track labels follow programme order, not DJ overrides.
+        $videoMode = 'ass';
+    } elseif ($hasText) {
         $videoMode = 'drawtext';
-    } elseif (RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'showwaves')
-        && RADIO_youtubeFfmpegHasFilter($ffmpegPath, 'overlay')) {
+    } elseif ($waves) {
         $videoMode = 'showwaves';
     }
 
