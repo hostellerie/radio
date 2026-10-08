@@ -348,7 +348,7 @@ function plugin_getfootercode_radio()
  */
 function RADIO_adminLiveHealthBanner()
 {
-    global $_CONF;
+    global $_CONF, $LANG_RADIO;
 
     $youtube = $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
     $studio = $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
@@ -393,26 +393,27 @@ function RADIO_adminLiveHealthBanner()
     $expected = $studioExpected || $outputExpected;
     if ($recognized && $liveProcessCount > 0 && !$expected) {
         $state = 'warning';
-        $message = 'ALERTE : FFmpeg actif sans direct déclaré (' . $liveProcessCount . ' processus).';
+        $message = sprintf($LANG_RADIO['youtube_health_orphan'], $liveProcessCount);
     } elseif ($expected && ($trackedAlive || ($recognized && $liveProcessCount > 0))) {
         $state = 'live';
         $mode = $studioExpected ? 'Studio Live' :
-            (!empty($outputState['schedule_id']) ? 'Scheduled YouTube output' : 'YouTube Live manuel');
-        $message = 'DIRECT ACTIF : ' . $mode . ' · FFmpeg détecté.';
+            (!empty($outputState['schedule_id']) ? $LANG_RADIO['youtube_health_scheduled_mode'] : $LANG_RADIO['youtube_health_manual_mode']);
+        $message = sprintf($LANG_RADIO['youtube_health_active'], $mode);
     } elseif ($expected) {
         $state = 'warning';
-        $message = 'ATTENTION : diffusion déclarée mais encodeur non confirmé.';
+        $message = $LANG_RADIO['youtube_health_unconfirmed'];
     } elseif (!$recognized) {
         $state = 'unknown';
-        $message = 'YouTube Live : vérification des processus indisponible.';
+        $message = $LANG_RADIO['youtube_health_unavailable'];
     } else {
         $state = 'idle';
-        $message = 'YouTube Live arrêté · aucun processus FFmpeg détecté.';
+        $message = $LANG_RADIO['youtube_health_idle'];
     }
 
     $url = isset($_CONF['site_admin_url'])
         ? rtrim((string) $_CONF['site_admin_url'], '/') . '/plugins/radio/youtube.php'
         : '#';
+    $linkLabel = htmlspecialchars($LANG_RADIO['youtube_health_admin_link'], ENT_QUOTES, 'UTF-8');
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     $url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
     $bg = $state === 'live' ? '#125e39' : ($state === 'warning' ? '#912b21' :
@@ -424,7 +425,7 @@ function RADIO_adminLiveHealthBanner()
         . 'text-decoration:underline;margin-left:14px}</style>'
         . '<script>(function(){function show(){if(document.getElementById("radio-live-global-banner"))return;'
         . 'var bar=document.createElement("div");bar.id="radio-live-global-banner";'
-        . 'bar.innerHTML=' . json_encode($message . ' <a href="' . $url . '">YouTube administration</a>') . ';'
+        . 'bar.innerHTML=' . json_encode($message . ' <a href="' . $url . '">' . $linkLabel . '</a>') . ';'
         . 'document.body.insertBefore(bar,document.body.firstChild);'
         . 'document.body.style.paddingTop="38px";}'
         . 'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",show);'
