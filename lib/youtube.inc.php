@@ -1647,5 +1647,13 @@ function RADIO_youtubeStopPid($pid)
         }
     }
     @exec('kill -KILL ' . $pid . ' 2>/dev/null');
-    return !RADIO_youtubePidRunning($pid);
+    // Process teardown is asynchronous; a single immediate probe can still
+    // see the old PID and force an unnecessary second Stop button press.
+    for ($i = 0; $i < 20; $i++) {
+        if (!RADIO_youtubePidRunning($pid)) {
+            return true;
+        }
+        usleep(100000);
+    }
+    return false;
 }
