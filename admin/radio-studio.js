@@ -24,6 +24,9 @@
     var recordState = studio.querySelector('[data-radio-studio-record-state]');
     var youtubeButton = studio.querySelector('[data-radio-studio-youtube]');
     var youtubeState = studio.querySelector('[data-radio-studio-youtube-state]');
+    var serverYoutubeStart = studio.querySelector('[data-radio-studio-server-youtube-start]');
+    var serverYoutubeStop = studio.querySelector('[data-radio-studio-server-youtube-stop]');
+    var serverYoutubeStatus = studio.querySelector('[data-radio-studio-server-youtube-status]');
     var broadcastActive = false;
     var youtubeLiveActive = false;
     var youtubeLiveStarting = false;
@@ -1023,6 +1026,42 @@
         data.append('track_title', title);
         studioPost(data).catch(function () {
             // Metadata failure must not interrupt the audio stream.
+        });
+    }
+
+    function serverYoutubeAction(action) {
+        if (!serverYoutubeStatus) {
+            return;
+        }
+        if (action === 'youtube_server_stop'
+            && !window.confirm('Stop the server-owned YouTube programme?')) {
+            return;
+        }
+        if (serverYoutubeStart) { serverYoutubeStart.disabled = true; }
+        if (serverYoutubeStop) { serverYoutubeStop.disabled = true; }
+        serverYoutubeStatus.textContent = 'Contacting server…';
+        var data = new FormData();
+        data.append('studio_action', action);
+        studioPost(data).then(function (result) {
+            var live = result.server_youtube || {};
+            serverYoutubeStatus.textContent = result.message
+                || (live.running ? 'Server broadcast active' : 'Server broadcast stopped');
+        }).catch(function (error) {
+            serverYoutubeStatus.textContent = 'Server live: ' + String(error.message || error);
+        }).then(function () {
+            if (serverYoutubeStart) { serverYoutubeStart.disabled = false; }
+            if (serverYoutubeStop) { serverYoutubeStop.disabled = false; }
+        });
+    }
+
+    if (serverYoutubeStart) {
+        serverYoutubeStart.addEventListener('click', function () {
+            serverYoutubeAction('youtube_server_start');
+        });
+    }
+    if (serverYoutubeStop) {
+        serverYoutubeStop.addEventListener('click', function () {
+            serverYoutubeAction('youtube_server_stop');
         });
     }
 
