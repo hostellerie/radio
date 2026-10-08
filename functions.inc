@@ -396,7 +396,7 @@ function RADIO_adminLiveHealthBanner()
         $message = sprintf($LANG_RADIO['youtube_health_orphan'], $liveProcessCount);
     } elseif ($expected && ($trackedAlive || ($recognized && $liveProcessCount > 0))) {
         $state = 'live';
-        $mode = $studioExpected ? 'Studio Live' :
+        $mode = $studioExpected ? $LANG_RADIO['youtube_health_studio_mode'] :
             (!empty($outputState['schedule_id']) ? $LANG_RADIO['youtube_health_scheduled_mode'] : $LANG_RADIO['youtube_health_manual_mode']);
         $message = sprintf($LANG_RADIO['youtube_health_active'], $mode);
     } elseif ($expected) {
