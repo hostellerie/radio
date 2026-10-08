@@ -270,7 +270,8 @@ if ($action === 'youtube_server_start') {
         radio_studio_stream_json(array('ok' => false,
             'error' => 'studio_youtube_already_live'), 409);
     }
-    if (!empty($server['running']) || ((int) $server['pid'] > 1
+    if (!empty($config['manual_requested'])
+        || !empty($server['running']) || ((int) $server['pid'] > 1
         && RADIO_youtubePidRunning((int) $server['pid']))) {
         radio_studio_stream_json(array('ok' => false,
             'error' => 'youtube_server_broadcast_active'), 409);
