@@ -311,9 +311,22 @@ if ($action === 'youtube_server_stop') {
         radio_studio_stream_json(array('ok' => false,
             'error' => 'youtube_not_manual_program'), 409);
     }
-    $pid = (int) $server['pid'];
-    $ok = RADIO_youtubeSetManualRequest(false)
-        && ($pending || RADIO_youtubeStopManaged($pid));
+    $controlLock = RADIO_youtubeControlLock();
+    $ok = false;
+    if ($controlLock !== false) {
+        $current = RADIO_youtubeStatus();
+        $currentConfig = RADIO_youtubeConfig();
+        $stillPending = !empty($currentConfig['manual_requested'])
+            && (int) $currentConfig['manual_program_id'] === $programId
+            && empty($current['running']) && (int) $current['pid'] < 2;
+        $stillManual = !empty($currentConfig['manual_requested'])
+            && (int) $currentConfig['manual_program_id'] === $programId
+            && (string) $current['target_key'] === 'manual:' . $programId;
+        if ($stillPending || $stillManual) {
+            $ok = RADIO_youtubeStopManualLocked();
+        }
+        RADIO_youtubeControlUnlock($controlLock);
+    }
     radio_studio_stream_json(array('ok' => (bool) $ok,
         'server_youtube' => RADIO_youtubeStatus()), $ok ? 200 : 500);
 }
