@@ -77,6 +77,16 @@ global $_CONF;
 require_once $_CONF['path'] . 'plugins/radio/functions.inc';
 require_once $_CONF['path'] . 'plugins/radio/lib/youtube.inc.php';
 require_once $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
+$youtubeControlLock = RADIO_youtubeControlLock();
+if ($youtubeControlLock === false) {
+    // Another worker or administrative stop is modifying the ingest state.
+    radio_youtube_worker_stderr("YouTube Live control busy; retry on next cron cycle.\n");
+    exit(0);
+}
+register_shutdown_function(function () use (&$youtubeControlLock) {
+    RADIO_youtubeControlUnlock($youtubeControlLock);
+});
+
 
 function radio_youtube_worker_log($message)
 {
