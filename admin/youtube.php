@@ -156,6 +156,10 @@ function radio_youtube_status_html($status)
         $html .= '</p>';
     }
 
+    if (!empty($status['stopped_at']) && !$reportedRunning) {
+        $html .= '<p class="radio-admin__notice"><strong>FFmpeg shutdown confirmed</strong> · '
+            . radio_youtube_h($status['stopped_at']) . '</p>';
+    }
     if (!empty($status['last_error'])) {
         $errorKey = (string) $status['last_error'];
         $errorText = isset($LANG_RADIO[$errorKey]) ? $LANG_RADIO[$errorKey] : $errorKey;
@@ -326,19 +330,10 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $liveStatus = RADIO_youtubeStatus();
         $suppressed = RADIO_youtubeSuppressScheduledOccurrence($liveStatus);
         $pid = isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0;
-        $stopped = $pid < 2 || RADIO_youtubeStopPid($pid);
+        $stopped = $pid < 2 || RADIO_youtubeStopManaged($pid);
 
-        if ($suppressed && $stopped) {
-            RADIO_youtubeWriteStatus(array(
-                'running' => false,
-                'pid' => 0,
-                'target_key' => '',
-                'program_id' => 0,
-                'program_title' => '',
-                'schedule_id' => 0,
-                'target_end' => 0,
-                'last_error' => ''
-            ));
+        if ($suppressed && $stopped && $pid < 2) {
+            RADIO_youtubeStopManaged($pid);
         }
 
         $ok = $suppressed && $stopped;
@@ -347,9 +342,12 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_request'])) {
+        $beforeStop = RADIO_youtubeStatus();
         $ok = RADIO_youtubeSetManualRequest(false);
+        $pid = isset($beforeStop['pid']) ? (int) $beforeStop['pid'] : 0;
+        $ok = $ok && RADIO_youtubeStopManaged($pid);
         $message = COM_showMessageText(
-            $ok ? $LANG_RADIO['youtube_stop_requested'] : $LANG_RADIO['youtube_save_failed'],
+            $ok ? 'YouTube Live stopped; FFmpeg shutdown confirmed.' : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
     }
