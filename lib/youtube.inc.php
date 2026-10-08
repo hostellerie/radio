@@ -1609,16 +1609,17 @@ function RADIO_youtubeControlUnlock($handle)
 function RADIO_youtubeStopManualLocked()
 {
     $status = RADIO_youtubeStatus();
-    if (!RADIO_youtubeSetManualRequest(false)) {
-        return false;
-    }
     $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
     $key = isset($status['target_key']) ? (string) $status['target_key'] : '';
-    // Do not terminate scheduled output by pressing the manual stop control.
+    // Never modify the manual request if the active encoder belongs to a schedule.
     if ($pid > 1 && strpos($key, 'manual:') !== 0) {
         return false;
     }
-    return RADIO_youtubeStopManaged($pid);
+    // Stop first: a failed termination must remain visible and retriable.
+    if (!RADIO_youtubeStopManaged($pid)) {
+        return false;
+    }
+    return RADIO_youtubeSetManualRequest(false);
 }
 
 function RADIO_youtubeStopManaged($pid)
