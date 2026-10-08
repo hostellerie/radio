@@ -541,81 +541,81 @@
                 if (tokenName && tokenValue) {
                     formData.set(tokenName, tokenValue);
                 }
-            if (!formData.has('program_id')) {
-                formData.append('program_id', String(programId));
-            }
+                if (!formData.has('program_id')) {
+                    formData.append('program_id', String(programId));
+                }
 
-            var targetEndpoint = mutationEndpoint || endpoint;
-            var studioAction = typeof formData.get === 'function'
-                ? String(formData.get('studio_action') || '')
-                : '';
-            if (studioAction.indexOf('recording_') === 0
-                || studioAction.indexOf('youtube_live_') === 0) {
-                targetEndpoint = streamEndpoint;
-            }
+                var targetEndpoint = mutationEndpoint || endpoint;
+                var studioAction = typeof formData.get === 'function'
+                    ? String(formData.get('studio_action') || '')
+                    : '';
+                if (studioAction.indexOf('recording_') === 0
+                    || studioAction.indexOf('youtube_live_') === 0) {
+                    targetEndpoint = streamEndpoint;
+                }
 
-            return fetch(targetEndpoint, {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin',
-                cache: 'no-store'
-            }).then(function (response) {
-                return response.text().then(function (text) {
-                    var data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (error) {
-                        var responseType = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
-                        var detail = 'http_' + response.status;
-                        if (response.redirected) {
-                            detail += '_redirected';
-                        }
+                return fetch(targetEndpoint, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                }).then(function (response) {
+                    return response.text().then(function (text) {
+                        var data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (error) {
+                            var responseType = /^\s*</.test(text) ? 'html_response' : 'invalid_json';
+                            var detail = 'http_' + response.status;
+                            if (response.redirected) {
+                                detail += '_redirected';
+                            }
 
-                        if (responseType === 'html_response') {
-                            var titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-                            if (titleMatch && titleMatch[1]) {
-                                var title = titleMatch[1]
-                                    .replace(/<[^>]+>/g, ' ')
-                                    .replace(/\s+/g, ' ')
-                                    .trim();
-                                if (title) {
-                                    detail += '_' + title.substring(0, 120);
+                            if (responseType === 'html_response') {
+                                var titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                                if (titleMatch && titleMatch[1]) {
+                                    var title = titleMatch[1]
+                                        .replace(/<[^>]+>/g, ' ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim();
+                                    if (title) {
+                                        detail += '_' + title.substring(0, 120);
+                                    }
                                 }
                             }
-                        }
 
-                        var serverStage = response.headers.get('X-Radio-Studio-Stage');
-                        if (serverStage) {
-                            detail += '_stage_' + serverStage;
-                        }
-
-                        if (!text || !text.trim()) {
-                            detail += '_empty_response';
-                        } else if (responseType === 'invalid_json') {
-                            var plain = text
-                                .replace(/\s+/g, ' ')
-                                .trim()
-                                .substring(0, 160);
-                            if (plain) {
-                                detail += '_' + plain;
+                            var serverStage = response.headers.get('X-Radio-Studio-Stage');
+                            if (serverStage) {
+                                detail += '_stage_' + serverStage;
                             }
-                        }
 
-                        throw new Error(responseType + ':' + detail);
-                    }
-                    // Only serialized POST replies may rotate this one-time
-                    // token. Concurrent read-only polls must not overwrite it.
-                    updateToken(data);
-                    if (!response.ok || !data.ok) {
-                        if (data.error === 'invalid_token' && attempt === 0
-                            && data.csrf_token) {
-                            return send(1);
+                            if (!text || !text.trim()) {
+                                detail += '_empty_response';
+                            } else if (responseType === 'invalid_json') {
+                                var plain = text
+                                    .replace(/\s+/g, ' ')
+                                    .trim()
+                                    .substring(0, 160);
+                                if (plain) {
+                                    detail += '_' + plain;
+                                }
+                            }
+
+                            throw new Error(responseType + ':' + detail);
                         }
-                        throw new Error(data.error || ('http_' + response.status));
-                    }
-                    return data;
+                        // Only serialized POST replies may rotate this one-time
+                        // token. Concurrent read-only polls must not overwrite it.
+                        updateToken(data);
+                        if (!response.ok || !data.ok) {
+                            if (data.error === 'invalid_token' && attempt === 0
+                                && data.csrf_token) {
+                                return send(1);
+                            }
+                            throw new Error(data.error || ('http_' + response.status));
+                        }
+                        return data;
+                    });
                 });
-            });
             }
             return send(0);
         });
