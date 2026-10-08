@@ -244,7 +244,10 @@ $config = RADIO_youtubeConfig();
 $studioYoutubeStatus = RADIO_studioYoutubeStatus();
 if (RADIO_studioYoutubeActive($studioYoutubeStatus)) {
     if ($running && $pid > 1) {
-        RADIO_youtubeStopPid($pid);
+        if (!RADIO_youtubeStopManaged($pid)) {
+            radio_youtube_worker_log('Failed to stop encoder before Studio takeover (PID ' . $pid . ').');
+            exit(5);
+        }
     }
     RADIO_youtubeWriteStatus(array(
         'running' => false,
@@ -298,7 +301,7 @@ if (!$running) {
 $target = RADIO_youtubeTarget(time());
 if ($target === false) {
     if ($running) {
-        $stopped = RADIO_youtubeStopPid($pid);
+        $stopped = RADIO_youtubeStopManaged($pid);
         if ($stopped) {
             radio_youtube_worker_log(
                 'YouTube Live stopped'
@@ -307,6 +310,7 @@ if ($target === false) {
             );
         } else {
             radio_youtube_worker_log('Unable to stop YouTube Live process (PID ' . $pid . ').');
+            exit(5);
         }
     }
     RADIO_youtubeWriteStatus(array(
