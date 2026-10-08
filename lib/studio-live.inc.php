@@ -223,7 +223,11 @@ function RADIO_studioYoutubeCleanupStale()
      * running; this is how browser/network loss is bounded without a PHP worker.
      */
     if ($helperRunning) {
-        RADIO_studioYoutubeStopEncoder($helperPid);
+        if (!RADIO_studioYoutubeStopEncoder($helperPid)) {
+            RADIO_studioYoutubeWriteStatus(array('state' => 'stopping',
+                'stop_requested' => true, 'last_error' => 'studio_youtube_stop_failed'));
+            return RADIO_studioYoutubeStatus();
+        }
     }
 
     $ffmpegPid = isset($status['ffmpeg_pid']) ? (int) $status['ffmpeg_pid'] : 0;
@@ -323,16 +327,34 @@ function RADIO_studioYoutubeStopEncoder($pid)
      * Studio Live is launched with setsid, so the returned PID is also the
      * process-group id. Stop the whole tail -> FFmpeg pipeline in one action.
      */
-    @exec('kill -TERM -' . $pid . ' 2>/dev/null');
+    // Check the entire process group, since its shell leader can exit first.
+    // The double dash prevents negative PGIDs from being parsed as options.
+    $target = '-- -' . $pid;
+    $out = array();
+    $code = 1;
+    @exec('/bin/kill -0 ' . $target . ' 2>/dev/null', $out, $code);
+    if ($code !== 0) {
+        return true;
+    }
+    @exec('/bin/kill -TERM ' . $target . ' 2>/dev/null');
     for ($i = 0; $i < 15; $i++) {
         usleep(100000);
-        if (!RADIO_youtubePidRunning($pid)) {
+        $code = 1;
+        @exec('/bin/kill -0 ' . $target . ' 2>/dev/null', $out, $code);
+        if ($code !== 0) {
             return true;
         }
     }
-
-    @exec('kill -KILL -' . $pid . ' 2>/dev/null');
-    return !RADIO_youtubePidRunning($pid);
+    @exec('/bin/kill -KILL ' . $target . ' 2>/dev/null');
+    for ($i = 0; $i < 10; $i++) {
+        usleep(100000);
+        $code = 1;
+        @exec('/bin/kill -0 ' . $target . ' 2>/dev/null', $out, $code);
+        if ($code !== 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function RADIO_studioYoutubeStart($programId, $mime, $uid, &$error)
@@ -642,7 +664,11 @@ function RADIO_studioYoutubeRequestStop($sessionId, $uid, &$error)
      */
     usleep(500000);
     $encoderPid = isset($status['helper_pid']) ? (int) $status['helper_pid'] : 0;
-    RADIO_studioYoutubeStopEncoder($encoderPid);
+    if (!RADIO_studioYoutubeStopEncoder($encoderPid)) {
+        RADIO_studioYoutubeWriteStatus(array('last_error' => 'studio_youtube_stop_failed'));
+        $error = 'studio_youtube_stop_failed';
+        return false;
+    }
 
     $inputPath = RADIO_studioYoutubeInputPath($sessionId);
     if ($inputPath !== '' && is_file($inputPath)) {
@@ -654,7 +680,8 @@ function RADIO_studioYoutubeRequestStop($sessionId, $uid, &$error)
         'helper_pid' => 0,
         'ffmpeg_pid' => 0,
         'stop_requested' => false,
-        'last_error' => ''
+        'last_error' => '',
+        'stopped_at' => date('Y-m-d H:i:s')
     ));
 
     return RADIO_studioYoutubeStatus();
