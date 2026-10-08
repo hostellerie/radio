@@ -1030,6 +1030,39 @@
         });
     }
 
+    function refreshServerYoutubeStatus() {
+        if (!serverYoutubeStatus || pollStopped) { return; }
+        fetch(studioUrl('youtube_server_status', {}, streamEndpoint), {
+            credentials: 'same-origin', cache: 'no-store'
+        }).then(function (response) {
+            if (!response.ok) { throw new Error('HTTP ' + response.status); }
+            return response.json();
+        }).then(function (data) {
+            if (!data.ok || !data.server_youtube) { return; }
+            var live = data.server_youtube;
+            var mine = parseInt(live.program_id || live.manual_program_id || 0, 10) === programId;
+            var active = live.state === 'running';
+            var pending = live.state === 'pending';
+            serverYoutubeStatus.textContent = active
+                ? 'Server live: ' + (live.program_title || 'programme')
+                : (pending ? 'Server YouTube: awaiting cron start' : 'Server YouTube: idle');
+            if (live.last_error) {
+                serverYoutubeStatus.textContent += ' · ' + live.last_error;
+            }
+            if (serverYoutubeStart) { serverYoutubeStart.disabled = active || pending; }
+            if (serverYoutubeStop) {
+                serverYoutubeStop.disabled = !(mine && (active || pending)
+                    && live.manual_requested && (!active || String(live.target_key).indexOf('manual:') === 0));
+            }
+        }).catch(function (error) {
+            serverYoutubeStatus.textContent = 'Server status unavailable: ' + error.message;
+        });
+    }
+    if (serverYoutubeStatus) {
+        refreshServerYoutubeStatus();
+        window.setInterval(refreshServerYoutubeStatus, 10000);
+    }
+
     function serverYoutubeAction(action) {
         if (!serverYoutubeStatus) {
             return;
@@ -1047,6 +1080,7 @@
             var live = result.server_youtube || {};
             serverYoutubeStatus.textContent = result.message
                 || (live.running ? 'Server broadcast active' : 'Server broadcast stopped');
+            refreshServerYoutubeStatus();
         }).catch(function (error) {
             serverYoutubeStatus.textContent = 'Server live: ' + String(error.message || error);
         }).then(function () {
