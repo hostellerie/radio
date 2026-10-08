@@ -247,6 +247,37 @@ if (!$running && $pid > 0) {
 $config = RADIO_youtubeConfig();
 
 /*
+ * The finite manual encoder can end by itself when FFmpeg reaches -t. Do not
+ * treat that normal exit as a request to start the same programme again.
+ * Also fail closed on premature encoder disappearance: report the fault and
+ * require an explicit fresh start, rather than creating repeated YouTube lives.
+ */
+if (!$running && $pid > 1
+    && !empty($config['manual_requested'])
+    && !empty($status['target_key'])
+    && strpos((string) $status['target_key'], 'manual:') === 0) {
+    $started = !empty($status['started_at'])
+        ? strtotime((string) $status['started_at']) : false;
+    $duration = RADIO_programDuration((int) $status['program_id']);
+    $completed = $started !== false && $duration > 0
+        && time() >= $started + $duration;
+    if (!RADIO_youtubeSetManualRequest(false)) {
+        RADIO_youtubeWriteStatus(array(
+            'last_error' => 'youtube_manual_request_clear_failed'));
+        exit(5);
+    }
+    RADIO_youtubeStopManaged(0);
+    if (!$completed) {
+        RADIO_youtubeWriteStatus(array(
+            'last_error' => 'youtube_ffmpeg_exited_early'));
+        radio_youtube_worker_log('Manual live encoder exited before programme end; automatic restart suppressed.');
+        exit(5);
+    }
+    radio_youtube_worker_log('Manual live completed; request cleared after FFmpeg exit.');
+    exit(0);
+}
+
+/*
  * The Studio master mix owns the single YouTube ingest while Studio Live is
  * starting, live or stopping. Never let the automatic worker launch a second
  * RTMP encoder against the same stream key.
