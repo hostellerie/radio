@@ -966,7 +966,9 @@ Candidates:
 - [x] Wait briefly after forced encoder termination before declaring stop failure; report confirmation only after the PID is gone.
 - [x] When a manual programme reaches its configured duration, the cron worker now stops FFmpeg even if it is still running, and clears the manual request only after confirmed shutdown.
 - [x] Set FFmpeg's output duration limit for manual programmes; the worker subsequently reconciles the completed process and resets state.
-- [ ] Runtime test on o2switch: manual stop once, natural end of programme, overlap with cron, no second encoder and no stale active banner.
+- [x] User-confirmed on o2switch: automatic end of a manual programme and disappearance of FFmpeg processes.
+- [x] Hide the site-wide health banner when the system is normally idle; retain active, warning and unknown states.
+- [ ] Validate manual Stop on the first click, concurrent cron runs, and no second encoder on o2switch.
 - [x] Suppress cron relaunch after normal FFmpeg end-of-duration, and fail closed with an explicit error if the finite manual encoder exits prematurely.
 - [x] Preserve stop retry information and avoid clearing the request before a failed manual stop.
 - [ ] Handle programmes edited during transmission (duration change); verify natural completion, early exit, and stop confirmation on o2switch.
