@@ -362,10 +362,12 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_request'])) {
-        $beforeStop = RADIO_youtubeStatus();
-        $ok = RADIO_youtubeSetManualRequest(false);
-        $pid = isset($beforeStop['pid']) ? (int) $beforeStop['pid'] : 0;
-        $ok = $ok && RADIO_youtubeStopManaged($pid);
+        $controlLock = RADIO_youtubeControlLock();
+        $ok = false;
+        if ($controlLock !== false) {
+            $ok = RADIO_youtubeStopManualLocked();
+            RADIO_youtubeControlUnlock($controlLock);
+        }
         $message = COM_showMessageText(
             $ok ? 'YouTube Live stopped; FFmpeg shutdown confirmed.' : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
