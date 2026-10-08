@@ -1574,6 +1574,51 @@ function RADIO_youtubePidRunning($pid)
  * Transition to idle only after the managed encoder exits.
  * Keep its PID and error state available for inspection and retries.
  */
+/**
+ * Coordinate cron worker and administrative start/stop requests per site.
+ * The lock is held only for bounded worker operations, never for an encoder's lifetime.
+ */
+function RADIO_youtubeControlLock()
+{
+    $path = RADIO_youtubeStatePath();
+    if ($path === '') {
+        return false;
+    }
+    $handle = @fopen($path . '.control.lock', 'c');
+    if ($handle === false) {
+        return false;
+    }
+    if (!@flock($handle, LOCK_EX | LOCK_NB)) {
+        @fclose($handle);
+        return false;
+    }
+    return $handle;
+}
+
+function RADIO_youtubeControlUnlock($handle)
+{
+    if (is_resource($handle)) {
+        @flock($handle, LOCK_UN);
+        @fclose($handle);
+    }
+}
+
+/** Called by admin and Studio stop actions; caller must hold control lock. */
+function RADIO_youtubeStopManualLocked()
+{
+    $status = RADIO_youtubeStatus();
+    if (!RADIO_youtubeSetManualRequest(false)) {
+        return false;
+    }
+    $pid = isset($status['pid']) ? (int) $status['pid'] : 0;
+    $key = isset($status['target_key']) ? (string) $status['target_key'] : '';
+    // Do not terminate scheduled output by pressing the manual stop control.
+    if ($pid > 1 && strpos($key, 'manual:') !== 0) {
+        return false;
+    }
+    return RADIO_youtubeStopManaged($pid);
+}
+
 function RADIO_youtubeStopManaged($pid)
 {
     $pid = (int) $pid;
