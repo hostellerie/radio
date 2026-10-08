@@ -911,6 +911,8 @@
                 label = studio.getAttribute('data-youtube-live-active-label') || 'YouTube LIVE';
             } else if (state === 'stopping') {
                 label = studio.getAttribute('data-youtube-live-stopping-label') || 'Stopping YouTube Live…';
+            } else if (state === 'idle' && live.stopped_at) {
+                label = 'YouTube Live stopped · FFmpeg shutdown confirmed (' + live.stopped_at + ')';
             } else if (state === 'error') {
                 label = youtubeLiveErrorText(live.last_error || '');
             }
