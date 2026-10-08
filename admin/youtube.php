@@ -157,7 +157,7 @@ function radio_youtube_status_html($status)
     }
 
     if (!empty($status['stopped_at']) && !$reportedRunning) {
-        $html .= '<p class="radio-admin__notice"><strong>FFmpeg shutdown confirmed</strong> · '
+        $html .= '<p class="radio-admin__notice"><strong>' . radio_youtube_h($LANG_RADIO['youtube_shutdown_confirmed']) . '</strong> · '
             . radio_youtube_h($status['stopped_at']) . '</p>';
     }
     if (!empty($status['last_error'])) {
@@ -342,8 +342,8 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             }
         }
         $message = COM_showMessageText(
-            $ok ? 'Studio YouTube stopped: encoder shutdown confirmed.'
-                : 'Studio stop NOT confirmed: ' . $error,
+            $ok ? $LANG_RADIO['youtube_studio_shutdown_confirmed']
+                : sprintf($LANG_RADIO['youtube_studio_stop_unconfirmed'], $error),
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_scheduled_occurrence'])) {
@@ -369,7 +369,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             RADIO_youtubeControlUnlock($controlLock);
         }
         $message = COM_showMessageText(
-            $ok ? 'YouTube Live stopped; FFmpeg shutdown confirmed.' : $LANG_RADIO['youtube_save_failed'],
+            $ok ? $LANG_RADIO['youtube_manual_shutdown_confirmed'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
     }
