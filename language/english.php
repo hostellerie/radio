@@ -642,3 +642,15 @@ $LANG_RADIO['youtube_last_ffmpeg_error'] = 'Last FFmpeg message';
 $LANG_RADIO['schedule_end_automatic'] = 'End time is calculated automatically from the selected programme duration.';
 
 $LANG_RADIO['schedule_program_duration_invalid'] = 'The selected programme has no valid duration and cannot be scheduled.';
+$LANG_RADIO['youtube_health_orphan'] = 'WARNING: FFmpeg is running without a declared live broadcast (%d processes).';
+$LANG_RADIO['youtube_health_scheduled_mode'] = 'Scheduled YouTube output';
+$LANG_RADIO['youtube_health_manual_mode'] = 'Manual YouTube Live';
+$LANG_RADIO['youtube_health_active'] = 'LIVE: %s · FFmpeg detected.';
+$LANG_RADIO['youtube_health_unconfirmed'] = 'WARNING: broadcast declared active but encoder not confirmed.';
+$LANG_RADIO['youtube_health_unavailable'] = 'YouTube Live: process verification unavailable.';
+$LANG_RADIO['youtube_health_idle'] = 'YouTube Live stopped · no FFmpeg process detected.';
+$LANG_RADIO['youtube_health_admin_link'] = 'YouTube administration';
+$LANG_RADIO['youtube_shutdown_confirmed'] = 'FFmpeg shutdown confirmed';
+$LANG_RADIO['youtube_studio_shutdown_confirmed'] = 'Studio YouTube stopped: encoder shutdown confirmed.';
+$LANG_RADIO['youtube_studio_stop_unconfirmed'] = 'Studio stop NOT confirmed: %s';
+$LANG_RADIO['youtube_manual_shutdown_confirmed'] = 'YouTube Live stopped; FFmpeg shutdown confirmed.';
