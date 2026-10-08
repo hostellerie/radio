@@ -553,7 +553,8 @@
                     ? String(formData.get('studio_action') || '')
                     : '';
                 if (studioAction.indexOf('recording_') === 0
-                    || studioAction.indexOf('youtube_live_') === 0) {
+                    || studioAction.indexOf('youtube_live_') === 0
+                    || studioAction.indexOf('youtube_server_') === 0) {
                     targetEndpoint = streamEndpoint;
                 }
 
