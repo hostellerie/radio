@@ -278,9 +278,14 @@ if (RADIO_studioYoutubeActive($studioYoutubeStatus)) {
 
 $visualSignature = RADIO_youtubeVisualSignature($config);
 
-if (!$running
-    && isset($config['mode']) && $config['mode'] === 'manual'
-    && !empty($config['manual_requested'])
+/*
+ * A manual programme is finite even when FFmpeg is still connected. The
+ * previous completion guard ran only when the PID was already gone, which
+ * allowed a live manual encoder to continue until a second operator Stop.
+ * Respect the recorded first start time and confirm encoder shutdown before
+ * clearing the manual request. Runs on each cron tick.
+ */
+if (!empty($config['manual_requested'])
     && !empty($status['target_key'])
     && strpos((string) $status['target_key'], 'manual:') === 0
     && !empty($status['started_at'])
@@ -288,18 +293,26 @@ if (!$running
     $startedAt = strtotime((string) $status['started_at']);
     $duration = RADIO_programDuration((int) $status['program_id']);
     if ($startedAt !== false && $duration > 0 && time() >= ($startedAt + $duration)) {
-        RADIO_youtubeSetManualRequest(false);
-        RADIO_youtubeWriteStatus(array(
-            'running' => false,
-            'pid' => 0,
-            'target_key' => '',
-            'last_error' => ''
-        ));
+        $stopped = !$running || RADIO_youtubeStopManaged($pid);
+        if (!$stopped) {
+            RADIO_youtubeWriteStatus(array('last_error' => 'youtube_auto_stop_failed'));
+            radio_youtube_worker_log('Manual programme ended but encoder could not be stopped (PID ' . $pid . ').');
+            exit(5);
+        }
+        if (!RADIO_youtubeSetManualRequest(false)) {
+            RADIO_youtubeWriteStatus(array('last_error' => 'youtube_manual_request_clear_failed'));
+            radio_youtube_worker_log('Manual programme stopped but could not clear start request.');
+            exit(5);
+        }
+        if (!$running) {
+            RADIO_youtubeStopManaged(0);
+        }
         radio_youtube_worker_log(
-            'Manual programme completed: ' . (string) $status['program_title'] . '.'
+            'Manual programme finished; FFmpeg shutdown confirmed: '
+            . (string) $status['program_title'] . '.'
         );
         if (!$quiet) {
-            echo "YouTube Live manual programme completed.\n";
+            echo "YouTube Live manual programme completed and stopped.\n";
         }
         exit(0);
     }
