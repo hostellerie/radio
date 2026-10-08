@@ -967,7 +967,9 @@ Candidates:
 - [x] When a manual programme reaches its configured duration, the cron worker now stops FFmpeg even if it is still running, and clears the manual request only after confirmed shutdown.
 - [x] Set FFmpeg's output duration limit for manual programmes; the worker subsequently reconciles the completed process and resets state.
 - [ ] Runtime test on o2switch: manual stop once, natural end of programme, overlap with cron, no second encoder and no stale active banner.
-- [ ] Handle programmes edited during transmission (duration change) and unexpected early encoder exit without relaunch loops.
+- [x] Suppress cron relaunch after normal FFmpeg end-of-duration, and fail closed with an explicit error if the finite manual encoder exits prematurely.
+- [x] Preserve stop retry information and avoid clearing the request before a failed manual stop.
+- [ ] Handle programmes edited during transmission (duration change); verify natural completion, early exit, and stop confirmation on o2switch.
 - [ ] Audit process identity/PID reuse and partial stop errors before a stable release.
 
 ### Stage 1 — reusable server controller
