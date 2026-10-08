@@ -960,6 +960,16 @@ Candidates:
 - [x] Add Studio buttons to request server-owned manual programme start via the existing cron worker and stop or cancel the matching manual request. Poll read-only status every 10 seconds (pending/running/idle, programme and errors), and guard against automatic worker termination of a conflicting active server encoder.
 - [ ] Audit the reverse direction (manual/scheduled encoder trying to start during Studio Live) with cross-process locking and a single active ingest lease.
 
+### Manual YouTube lifecycle reliability — October 2026
+
+- [x] Stop button for manual live uses a per-site control lock shared with the cron worker, so concurrent cron updates cannot race the administrative stop.
+- [x] Wait briefly after forced encoder termination before declaring stop failure; report confirmation only after the PID is gone.
+- [x] When a manual programme reaches its configured duration, the cron worker now stops FFmpeg even if it is still running, and clears the manual request only after confirmed shutdown.
+- [x] Set FFmpeg's output duration limit for manual programmes; the worker subsequently reconciles the completed process and resets state.
+- [ ] Runtime test on o2switch: manual stop once, natural end of programme, overlap with cron, no second encoder and no stale active banner.
+- [ ] Handle programmes edited during transmission (duration change) and unexpected early encoder exit without relaunch loops.
+- [ ] Audit process identity/PID reuse and partial stop errors before a stable release.
+
 ### Stage 1 — reusable server controller
 
 - [ ] Extract manual encoder start/stop/health into an authenticated, idempotent server-side controller callable from both admin YouTube and Studio.
