@@ -326,6 +326,26 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $ok ? $LANG_RADIO['youtube_start_requested'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
+    } elseif (isset($_POST['youtube_stop_studio'])) {
+        $studioLib = $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
+        $error = 'studio_youtube_module_unavailable';
+        $ok = false;
+        if (is_readable($studioLib)) {
+            require_once $studioLib;
+            $studioBefore = RADIO_studioYoutubeStatus();
+            $sessionId = isset($_POST['studio_session_id'])
+                ? (string) $_POST['studio_session_id'] : '';
+            if ($sessionId !== '' && hash_equals((string) $studioBefore['session_id'], $sessionId)) {
+                $ok = RADIO_studioYoutubeAdminStop($sessionId, $error) !== false;
+            } else {
+                $error = 'studio_youtube_session_invalid';
+            }
+        }
+        $message = COM_showMessageText(
+            $ok ? 'Studio YouTube stopped: encoder shutdown confirmed.'
+                : 'Studio stop NOT confirmed: ' . $error,
+            $LANG_RADIO['youtube_live']
+        );
     } elseif (isset($_POST['youtube_stop_scheduled_occurrence'])) {
         $liveStatus = RADIO_youtubeStatus();
         $suppressed = RADIO_youtubeSuppressScheduledOccurrence($liveStatus);
@@ -372,6 +392,13 @@ if (!$youtubeConfig['enabled'] || trim((string) $youtubeConfig['stream_key']) ==
         . '</p>';
 }
 
+$studioLib = $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
+$studioStatus = array();
+if (is_readable($studioLib)) {
+    require_once $studioLib;
+    $studioStatus = RADIO_studioYoutubeStatus();
+}
+
 $content .= '<section class="radio-admin__panel radio-youtube-status">'
     . '<h2>' . radio_youtube_h($LANG_RADIO['youtube_status']) . '</h2>'
     . '<div id="radio-youtube-status" data-status-url="'
@@ -389,8 +416,23 @@ $content .= '<section class="radio-admin__panel radio-youtube-status">'
     . '</button></p>'
     . '<p><small>' . radio_youtube_h($LANG_RADIO['youtube_stop_current_schedule_help']) . '</small></p>'
     . '<input type="hidden" name="' . CSRF_TOKEN . '" value="' . radio_youtube_h($token) . '">'
-    . '</form>'
-    . '</section>';
+    . '</form>';
+if (!empty($studioStatus['session_id'])
+    && in_array(isset($studioStatus['state']) ? $studioStatus['state'] : '',
+        array('starting', 'live', 'stopping'), true)) {
+    $content .= '<div class="radio-admin__notice"><strong>Studio Live session</strong> · '
+        . radio_youtube_h(isset($studioStatus['program_title']) ? $studioStatus['program_title'] : '')
+        . ' · PID ' . (int) $studioStatus['helper_pid']
+        . '</div><form method="post" action="" '
+        . 'onsubmit="return confirm(&quot;Stop this Studio YouTube session and its encoder?&quot;)">'
+        . '<input type="hidden" name="studio_session_id" value="'
+        . radio_youtube_h($studioStatus['session_id']) . '">'
+        . '<input type="hidden" name="' . CSRF_TOKEN . '" value="'
+        . radio_youtube_h($token) . '">'
+        . '<p><button type="submit" name="youtube_stop_studio" value="1">'
+        . 'Force stop Studio Live (verify FFmpeg shutdown)</button></p></form>';
+}
+$content .= '</section>';
 
 $content .= '<section class="radio-admin__panel"><h2>'
     . radio_youtube_h($LANG_RADIO['youtube_manual_live']) . '</h2>'
