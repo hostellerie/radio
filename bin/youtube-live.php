@@ -375,7 +375,7 @@ if ($running && isset($status['target_key']) && $status['target_key'] === $targe
 if ($running) {
     $previousTitle = isset($status['program_title']) ? (string) $status['program_title'] : '';
     $sameTarget = isset($status['target_key']) && (string) $status['target_key'] === (string) $target['key'];
-    $stopped = RADIO_youtubeStopPid($pid);
+    $stopped = RADIO_youtubeStopManaged($pid);
     if ($stopped) {
         if (!$sameTarget) {
             radio_youtube_worker_log(
@@ -386,6 +386,7 @@ if ($running) {
         }
     } else {
         radio_youtube_worker_log('Unable to stop previous YouTube Live process (PID ' . $pid . ').');
+        exit(5);
     }
 }
 
