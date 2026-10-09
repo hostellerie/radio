@@ -1580,7 +1580,7 @@ function RADIO_youtubePidRunning($pid)
  * Coordinate cron worker and administrative start/stop requests per site.
  * The lock is held only for bounded worker operations, never for an encoder's lifetime.
  */
-function RADIO_youtubeControlLock()
+function RADIO_youtubeControlLock($waitMilliseconds = 0)
 {
     $path = RADIO_youtubeStatePath();
     if ($path === '') {
@@ -1590,11 +1590,19 @@ function RADIO_youtubeControlLock()
     if ($handle === false) {
         return false;
     }
-    if (!@flock($handle, LOCK_EX | LOCK_NB)) {
-        @fclose($handle);
-        return false;
-    }
-    return $handle;
+    $waitMilliseconds = max(0, min(5000, (int) $waitMilliseconds));
+    $deadline = microtime(true) + ($waitMilliseconds / 1000);
+    do {
+        if (@flock($handle, LOCK_EX | LOCK_NB)) {
+            return $handle;
+        }
+        if (microtime(true) >= $deadline) {
+            break;
+        }
+        usleep(100000);
+    } while (true);
+    @fclose($handle);
+    return false;
 }
 
 function RADIO_youtubeControlUnlock($handle)
