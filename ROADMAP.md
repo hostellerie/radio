@@ -968,7 +968,8 @@ Candidates:
 - [x] Set FFmpeg's output duration limit for manual programmes; the worker subsequently reconciles the completed process and resets state.
 - [x] User-confirmed on o2switch: automatic end of a manual programme and disappearance of FFmpeg processes.
 - [x] Hide the site-wide health banner when the system is normally idle; retain active, warning and unknown states.
-- [ ] Validate manual Stop on the first click, concurrent cron runs, and no second encoder on o2switch.
+- [x] Use one per-site worker/admin control lock for manual start, manual stop, scheduled occurrence stop, and Studio server start/stop; operator actions wait up to 3 seconds while cron completes.
+- [ ] Validate manual Stop on the first click, concurrent cron runs, and no second encoder on o2switch (not yet runtime-tested).
 - [x] Suppress cron relaunch after normal FFmpeg end-of-duration, and fail closed with an explicit error if the finite manual encoder exits prematurely.
 - [x] Preserve stop retry information and avoid clearing the request before a failed manual stop.
 - [ ] Handle programmes edited during transmission (duration change); verify natural completion, early exit, and stop confirmation on o2switch.
