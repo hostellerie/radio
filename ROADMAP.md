@@ -40,6 +40,41 @@ Before the first stable release, re-evaluate whether Radio should keep the trans
 
 ---
 
+## Release verification — 9 October 2026
+
+This section records evidence separately from source-code implementation, so checkboxes do not imply deployment or full runtime acceptance.
+
+### Confirmed on the operator's o2switch hosting
+
+- [x] A manually started YouTube programme reached its end and FFmpeg terminated automatically.
+- [x] No remaining FFmpeg processes were detected after that completed programme.
+
+### Implemented on `develop-1.0`; runtime acceptance still required
+
+- [x] Shared per-site worker/admin control lock with bounded waiting for operator start/stop actions.
+- [x] Refuse a manual Start when an active/pending manual or Studio stream would be displaced.
+- [x] Guard server-owned YouTube start/stop commands from Studio; poll pending/running/idle server state.
+- [x] Manual programme FFmpeg duration limit and cron reconciliation; suppress duplicate restart after natural finish or unexpected early exit.
+- [x] Hide the site-wide YouTube health banner only when idle is positively confirmed. Retain alerts and live notices.
+- [x] Use Radio language strings for global health notices and YouTube stop/shutdown messages (English and French France).
+- [ ] Verify first-click manual Stop including forced shutdown and stop-failure retry.
+- [ ] Test cron overlap, simultaneous Studio/manual start requests and PID reuse/process ownership; reject a second ingest without killing an unrelated process.
+- [ ] Test scheduled output start/end and manual suppression of only the active scheduled occurrence.
+- [ ] Check language output under English and French France Geeklog site configuration.
+- [ ] Check unexpected early FFmpeg exit, programme-duration edits during live, WAF 403/503 and Studio browser disconnect.
+- [ ] Run PHP 5.6/8.1/8.3 syntax/CI checks, ZIP structure verification, install/upgrade/runtime matrix; create and inspect a `dist` archive only once ready.
+
+### Architectural work not yet implemented
+
+- [ ] Single authenticated, idempotent server broadcast controller for both admin YouTube and Studio.
+- [ ] Persistently running audio switch between server programme audio and Studio's post-FX mix, with safe fallback after browser disconnect.
+- [ ] Track/metadata overlay synchronized with actual live DJ choices rather than only a fixed programme ASS timeline.
+- [ ] Pre-live, pause/holding scene, reconnection, outro and end-to-end YouTube live event continuity.
+
+**Scope note:** existing Studio server start/stop buttons control a *manual server programme*. They do not make the browser DJ mixer independent of HTTP uploads and they do not perform seamless source takeover. The current source branch version is 0.6.2, development; no new deployable release is asserted.
+
+---
+
 ## Implementation status snapshot — 0.6.2
 
 The original roadmap was intentionally broad. The implementation has now advanced beyond the initial 0.1.x foundation in several areas.
