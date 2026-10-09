@@ -4,7 +4,7 @@ Modern audio and web radio plugin for Geeklog with media management, playlists, 
 
 ## Media availability model
 
-Radio 0.5.1 separates publication from the ways a media item can be used:
+Radio 0.6.2 (development) separates publication from the ways a media item can be used:
 
 - **Published** — the media is active and may be used by Radio.
 - **On demand** — the media may be exposed individually to visitors in the public catalogue, item pages, podcast/feed collections and public playlists.
@@ -17,7 +17,7 @@ Existing installations keep the availability flags enabled by default during upg
 
 ## Media classification
 
-Radio 0.5.1 keeps three complementary organization layers without overloading the technical media type:
+Radio 0.6.2 (development) keeps three complementary organization layers without overloading the technical media type:
 
 - **Category** — the primary editorial classification.
 - **Collection** — a deliberate grouping such as a special programme, station package or thematic set.
@@ -35,7 +35,7 @@ Radio also uses adaptive N+1/N+2 buffering in its live players and programme Stu
 
 ## Multisite shared media
 
-Radio 0.5.1 keeps the default installation fully local and adds one opt-in **Shared media** mode.
+Radio 0.6.2 (development) keeps the default installation fully local and adds one opt-in **Shared media** mode.
 
 - **Local** — the default. Each Geeklog site keeps its own catalogue and its own Radio storage.
 - **Shared media** — every site keeps its own Radio database rows, permissions, publication state, programmes, schedules and statistics, while all sites point to the same audio directory.
@@ -90,8 +90,51 @@ request. The PHP fallback uses larger chunks, and statistics retention cleanup i
 longer run for every listener event.
 
 
-## YouTube Live beta
+## YouTube Live — server broadcasts and experimental Studio mode
 
-Radio can send selected scheduled programmes to YouTube Live through an optional server-side FFmpeg worker while leaving the current Studio, web players and Automatic Radio behaviour unchanged.
+**Status:** development branch `develop-1.0`, plugin version **0.6.2** (`RADIO_RELEASE_STATUS=development`). Do not assume that changes in the branch have been included in an installed `dist` ZIP. Runtime behaviour depends on the installed build.
 
-The first beta supports manual tests and selected existing Radio schedule entries, with local programme media only. See `docs/YOUTUBE-LIVE.md` for server requirements, configuration and the worker/cron command.
+Radio currently provides **two separate YouTube output paths**:
+
+| Capability | Manual/scheduled server YouTube | Browser-fed Studio YouTube |
+| --- | --- | --- |
+| Audio source | Local programme files read on the server | Post-FX browser master mix uploaded in chunks |
+| FFmpeg encoder | Detached server encoder controlled by CLI worker/cron | Detached encoder fed by a browser-to-server HTTP relay |
+| Browser may disconnect | Yes, server programme continues | No guaranteed continuity |
+| Programme/track graphics | FFmpeg `subtitles`/ASS timeline and artwork | `drawtext` where available; ASS timeline fallback when `subtitles` is available |
+| Live DJ reordering reflected in titles | Not applicable to the fixed server timeline | **Not yet reliably synchronized** with manually reordered tracks |
+| Seamless switching between the two paths | **Not implemented** | **Not implemented** |
+
+### Server YouTube operation
+
+From **Radio → YouTube Live** (`admin/plugins/radio/youtube.php`), authorized administrators can configure an RTMP/RTMPS destination, select manual programmes and eligible scheduled slots, and control a manual live. Programmes for server YouTube currently require playable **local media files**.
+
+The CLI worker (`bin/youtube-live.php`) reconciles the manual request or selected schedule with FFmpeg. It uses a per-site control lock shared with manual Start/Stop and Studio server-live controls. A manual programme has a finite FFmpeg output duration; its completion and disappearance of FFmpeg processes **were confirmed by the operator on o2switch in October 2026**. This is a targeted live result, not comprehensive regression testing.
+
+Manual stop waits briefly for a busy worker lock and confirms process termination before clearing the request. Starting a new manual programme is rejected while another server live, a pending manual request or a Studio live is active. Stopping a scheduled occurrence is separate from stopping a manual programme.
+
+The global administration health banner is hidden in a **healthy idle state**. It remains visible for live output, unconfirmed process state, unexpected FFmpeg processes and unavailable process checks. Messages are supplied by the Radio language files, including English and French France, rather than hard-coded in the banner.
+
+### Studio YouTube operation
+
+The Studio provides an interactive browser DJ mixer with recording and browser-fed YouTube Live, which currently relies on frequent authenticated HTTP uploads. This experimental path can still be interrupted by browser/network loss or host security filtering. A reliable server fallback, a persistent audio switch, and an uninterrupted YouTube event during takeover **are not yet implemented**.
+
+Studio also exposes **Server YouTube** and **Stop server live** controls for requesting a manual server programme through the existing cron worker, with server status polling approximately every 10 seconds. Those controls do **not** yet route the DJ mix into the server programme encoder. A server start may remain pending until the next cron run.
+
+### FFmpeg and operational notes
+
+- FFmpeg requires H.264/AAC encoding and RTMP(S) output support. For the manual programme video templates, `subtitles` (libass), `overlay` and `showwaves` support provide the full visual treatment.
+- On the tested o2switch FFmpeg build, `overlay` and `showwaves` are available but `drawtext` is missing. Studio has an ASS-based rendering fallback; fixed programme timelines do not necessarily match live DJ overrides.
+- Monitor the process identity, the stream state and the YouTube ingestion separately. An FFmpeg process being alive does not prove that YouTube is broadcasting publicly.
+- Do not disable hosting WAF protections permanently to accommodate Studio chunk uploads; use a narrow hosting exception after validation.
+- A stream key is a credential and may be exposed in process arguments; never include it in diagnostics.
+
+See [YouTube Live operating notes](docs/YOUTUBE-LIVE.md), [development roadmap](ROADMAP.md), and [pre-release testing](docs/PRE_RELEASE_TESTING.md). Some older operating and test documents retain historical version references and should be reconciled before a stable release.
+
+## Release and validation status
+
+**Confirmed on the operator's o2switch installation:** end of a manual programme automatically stops its stream and FFmpeg processes disappear.
+
+**Code present but not fully validated end to end:** first-click manual stop, cron/admin concurrency, prevention of overlapping server/Studio encoders, Studio CSRF and WAF handling, and the localized/idle-hidden global banner.
+
+**Pending before stable release:** run PHP syntax and packaging checks against the built archive, test Geeklog 2.1.1 / 2.2.2 and supported PHP versions, validate both manual and scheduled broadcasts, and perform a short Studio live regression. No claim is made here that a new distribution archive has been generated or deployed.
