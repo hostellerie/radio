@@ -289,8 +289,22 @@ if ($action === 'youtube_server_start') {
         radio_studio_stream_json(array('ok' => false,
             'error' => 'youtube_server_broadcast_active'), 409);
     }
-    $ok = RADIO_youtubeSaveManualProgram($programId)
-        && RADIO_youtubeSetManualRequest(true);
+    $controlLock = RADIO_youtubeControlLock(3000);
+    $ok = false;
+    if ($controlLock !== false) {
+        $current = RADIO_youtubeStatus();
+        $currentConfig = RADIO_youtubeConfig();
+        $studioNow = RADIO_studioYoutubePublicStatus();
+        if (empty($currentConfig['manual_requested'])
+            && empty($current['running'])
+            && ((int) $current['pid'] < 2
+                || !RADIO_youtubePidRunning((int) $current['pid']))
+            && !in_array($studioNow['state'], array('starting','live','stopping'), true)) {
+            $ok = RADIO_youtubeSaveManualProgram($programId)
+                && RADIO_youtubeSetManualRequest(true);
+        }
+        RADIO_youtubeControlUnlock($controlLock);
+    }
     radio_studio_stream_json(array('ok' => (bool) $ok,
         'server_youtube' => RADIO_youtubeStatus(),
         'message' => $ok ? 'Requested: waiting for YouTube cron worker' : ''),
@@ -311,7 +325,7 @@ if ($action === 'youtube_server_stop') {
         radio_studio_stream_json(array('ok' => false,
             'error' => 'youtube_not_manual_program'), 409);
     }
-    $controlLock = RADIO_youtubeControlLock();
+    $controlLock = RADIO_youtubeControlLock(3000);
     $ok = false;
     if ($controlLock !== false) {
         $current = RADIO_youtubeStatus();
