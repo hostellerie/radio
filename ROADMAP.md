@@ -62,7 +62,8 @@ This section records evidence separately from source-code implementation, so che
 - [ ] Test scheduled output start/end and manual suppression of only the active scheduled occurrence.
 - [ ] Check language output under English and French France Geeklog site configuration.
 - [ ] Check unexpected early FFmpeg exit, programme-duration edits during live, WAF 403/503 and Studio browser disconnect.
-- [ ] Run PHP 5.6/8.1/8.3 syntax/CI checks, ZIP structure verification, install/upgrade/runtime matrix; create and inspect a `dist` archive only once ready.
+- [x] Distribution ZIP creation is automated in the project workflow; no manual archive creation task is needed.
+- [ ] Verify the automated packaging result and archive contents for the intended commit, PHP 5.6/8.1/8.3 checks, and Geeklog install/upgrade/runtime matrix before deployment.
 
 ### Architectural work not yet implemented
 
