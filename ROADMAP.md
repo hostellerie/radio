@@ -969,6 +969,7 @@ Candidates:
 - [x] User-confirmed on o2switch: automatic end of a manual programme and disappearance of FFmpeg processes.
 - [x] Hide the site-wide health banner when the system is normally idle; retain active, warning and unknown states.
 - [x] Use one per-site worker/admin control lock for manual start, manual stop, scheduled occurrence stop, and Studio server start/stop; operator actions wait up to 3 seconds while cron completes.
+- [x] Guard the administration's manual Start against already-running server broadcasts, pending manual requests and active Studio sessions; validate selected programme before changing state.
 - [ ] Validate manual Stop on the first click, concurrent cron runs, and no second encoder on o2switch (not yet runtime-tested).
 - [x] Suppress cron relaunch after normal FFmpeg end-of-duration, and fail closed with an explicit error if the finite manual encoder exits prematurely.
 - [x] Preserve stop retry information and avoid clearing the request before a failed manual stop.
