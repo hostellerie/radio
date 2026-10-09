@@ -92,7 +92,7 @@ longer run for every listener event.
 
 ## YouTube Live — server broadcasts and experimental Studio mode
 
-**Status:** development branch `develop-1.0`, plugin version **0.6.2** (`RADIO_RELEASE_STATUS=development`). Do not assume that changes in the branch have been included in an installed `dist` ZIP. Runtime behaviour depends on the installed build.
+**Status:** development branch `develop-1.0`, plugin version **0.6.2** (`RADIO_RELEASE_STATUS=development`). Distribution ZIP archives are generated automatically by the project's packaging workflow; confirm that the generated ZIP corresponds to the intended commit before installing it. Runtime behaviour depends on the installed build.
 
 Radio currently provides **two separate YouTube output paths**:
 
@@ -137,4 +137,4 @@ See [YouTube Live operating notes](docs/YOUTUBE-LIVE.md), [development roadmap](
 
 **Code present but not fully validated end to end:** first-click manual stop, cron/admin concurrency, prevention of overlapping server/Studio encoders, Studio CSRF and WAF handling, and the localized/idle-hidden global banner.
 
-**Pending before stable release:** run PHP syntax and packaging checks against the built archive, test Geeklog 2.1.1 / 2.2.2 and supported PHP versions, validate both manual and scheduled broadcasts, and perform a short Studio live regression. No claim is made here that a new distribution archive has been generated or deployed.
+**Pending before stable release:** run PHP syntax and packaging checks against the built archive, test Geeklog 2.1.1 / 2.2.2 and supported PHP versions, validate both manual and scheduled broadcasts, and perform a short Studio live regression. Automatic archive generation is part of the repository workflow; generation alone does not establish successful validation or deployment on the hosting server.
