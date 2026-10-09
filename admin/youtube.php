@@ -318,10 +318,15 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_start_request'])) {
-        $saved = RADIO_youtubeSaveManualProgram(
-            isset($_POST['manual_program_id']) ? (int) $_POST['manual_program_id'] : 0
-        );
-        $ok = $saved && RADIO_youtubeSetManualRequest(true);
+        $controlLock = RADIO_youtubeControlLock(3000);
+        $ok = false;
+        if ($controlLock !== false) {
+            $saved = RADIO_youtubeSaveManualProgram(
+                isset($_POST['manual_program_id']) ? (int) $_POST['manual_program_id'] : 0
+            );
+            $ok = $saved && RADIO_youtubeSetManualRequest(true);
+            RADIO_youtubeControlUnlock($controlLock);
+        }
         $message = COM_showMessageText(
             $ok ? $LANG_RADIO['youtube_start_requested'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
@@ -347,22 +352,27 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_scheduled_occurrence'])) {
-        $liveStatus = RADIO_youtubeStatus();
-        $suppressed = RADIO_youtubeSuppressScheduledOccurrence($liveStatus);
-        $pid = isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0;
-        $stopped = $pid < 2 || RADIO_youtubeStopManaged($pid);
-
-        if ($suppressed && $stopped && $pid < 2) {
-            RADIO_youtubeStopManaged($pid);
+        $controlLock = RADIO_youtubeControlLock(3000);
+        $ok = false;
+        if ($controlLock !== false) {
+            $liveStatus = RADIO_youtubeStatus();
+            $scheduleId = isset($liveStatus['schedule_id'])
+                ? (int) $liveStatus['schedule_id'] : 0;
+            $key = isset($liveStatus['target_key'])
+                ? (string) $liveStatus['target_key'] : '';
+            if ($scheduleId > 0 && strpos($key, 'schedule:' . $scheduleId . ':') === 0) {
+                $suppressed = RADIO_youtubeSuppressScheduledOccurrence($liveStatus);
+                $pid = isset($liveStatus['pid']) ? (int) $liveStatus['pid'] : 0;
+                $ok = $suppressed && RADIO_youtubeStopManaged($pid);
+            }
+            RADIO_youtubeControlUnlock($controlLock);
         }
-
-        $ok = $suppressed && $stopped;
         $message = COM_showMessageText(
             $ok ? $LANG_RADIO['youtube_scheduled_occurrence_stopped'] : $LANG_RADIO['youtube_save_failed'],
             $LANG_RADIO['youtube_live']
         );
     } elseif (isset($_POST['youtube_stop_request'])) {
-        $controlLock = RADIO_youtubeControlLock();
+        $controlLock = RADIO_youtubeControlLock(3000);
         $ok = false;
         if ($controlLock !== false) {
             $ok = RADIO_youtubeStopManualLocked();
