@@ -321,10 +321,28 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $controlLock = RADIO_youtubeControlLock(3000);
         $ok = false;
         if ($controlLock !== false) {
-            $saved = RADIO_youtubeSaveManualProgram(
-                isset($_POST['manual_program_id']) ? (int) $_POST['manual_program_id'] : 0
-            );
-            $ok = $saved && RADIO_youtubeSetManualRequest(true);
+            $current = RADIO_youtubeStatus();
+            $config = RADIO_youtubeConfig();
+            $currentPid = isset($current['pid']) ? (int) $current['pid'] : 0;
+            $alreadyRunning = $currentPid > 1 && RADIO_youtubePidRunning($currentPid);
+            $studioActive = false;
+            $studioLib = $_CONF['path'] . 'plugins/radio/lib/studio-live.inc.php';
+            if (is_readable($studioLib)) {
+                require_once $studioLib;
+                $studioActive = RADIO_studioYoutubeActive(RADIO_studioYoutubeStatus());
+            }
+            // Never replace an existing live or pending request by overwriting
+            // its programme ID. The operator must stop it explicitly first.
+            if (!$alreadyRunning && !$studioActive && empty($config['manual_requested'])) {
+                $selectedProgramId = isset($_POST['manual_program_id'])
+                    ? (int) $_POST['manual_program_id'] : 0;
+                $program = $selectedProgramId > 0
+                    ? RADIO_getProgram($selectedProgramId, true) : false;
+                if ($program !== false) {
+                    $saved = RADIO_youtubeSaveManualProgram($selectedProgramId);
+                    $ok = $saved && RADIO_youtubeSetManualRequest(true);
+                }
+            }
             RADIO_youtubeControlUnlock($controlLock);
         }
         $message = COM_showMessageText(
